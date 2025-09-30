@@ -1,0 +1,28 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Hotel System API",
+        "version": "0.1.0"
+    },
+    "paths": {
+        "/api/ops/ping": {
+            "get": {
+                "tags": [
+                    "ops"
+                ],
+                "summary": "Ping",
+                "operationId": "ping_api_ops_ping_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,15 @@
+# PM-Hub T0 Snapshot Check (21:19:44)
+## BE-Core
+FAIL  - OpenAPI 스냅샷 없음(be_openapi.json 미존재/빈 파일)
+FAIL  - /api/me (with token) 응답 이상(user 필드 미검출)
+FAIL  - /api/me (without token) 401 아님 (인증가드 문제 가능)
+PASS  - /api/menu (with token) JSON 수집
+FAIL  - /api/closing/calendar 응답에 items 키 미검출
+PASS  - Alembic heads/current 상태 수집됨 (be_alembic_status.txt)
+## FE-Core
+PASS  - axios 사용 흔적 없음 (스캔파일 비어있음/미생성 아님)
+PASS  - X-Internal-Token 헤더 삽입 코드 존재
+PASS  - 라우터 meta.requiresAuth 사용 흔적 존재
+PASS  - 401 처리 및 /login 리다이렉트 관련 코드 흔적 존재
+## QA
+FAIL  - QA 상태코드 수집 미흡 또는 401 미확인

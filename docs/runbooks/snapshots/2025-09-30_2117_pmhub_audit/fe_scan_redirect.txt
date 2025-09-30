@@ -1,0 +1,7 @@
+src/router/index.ts:14:  { path: '/', redirect: { name: 'dashboard' } },
+src/router/index.ts:59:  { path: '/:pathMatch(.*)*', redirect: { name: 'dashboard' } },
+src/router/index.ts:77:        const redirect = (to.query.redirect as string) || '/dashboard'
+src/router/index.ts:78:        return { path: redirect }
+src/router/index.ts:89:    return { name: 'login', query: { redirect: to.fullPath } }
+src/views/Login.vue:45:    const redirect = (route.query.redirect as string) || '/dashboard'
+src/views/Login.vue:46:    router.replace(redirect)

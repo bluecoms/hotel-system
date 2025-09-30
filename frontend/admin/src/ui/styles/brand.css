@@ -1,0 +1,9 @@
+:root {
+  --brand-primary:  #0EA5E9;
+  --brand-bg:       #F8FAFC;
+  --brand-surface:  #FFFFFF;
+  --brand-radius:   20px;
+}
+html, body, #app { background: var(--brand-bg); }
+.v-card { border-radius: var(--brand-radius); }
+.cursor-pointer { cursor: pointer; }

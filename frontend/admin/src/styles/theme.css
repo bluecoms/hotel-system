@@ -1,0 +1,54 @@
+/* ========= GLOBAL THEME (모던 라이트) ========= */
+:root{
+  --bg1:#f3f6fb;            /* 페이지 배경 */
+  --line:#e7ecf4;           /* 얇은 경계선 */
+  --card-radius:14px;
+  --shadow-1:0 2px 10px rgba(20, 40, 90, .06);
+  --shadow-2:0 8px 24px rgba(20, 40, 90, .08);
+
+  --ink-1:#0f172a; --ink-2:#475569; --ink-3:#64748b;
+  --brand:#2563eb; --ok:#10b981; --warn:#f59e0b; --bad:#ef4444;
+}
+
+html,body,#app{
+  height:100%;
+  background: linear-gradient(180deg, var(--bg1), #fff 40%);
+  color: var(--ink-1);
+  letter-spacing:.1px;
+  font-family: Inter,"Noto Sans KR",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Apple SD Gothic Neo","Noto Sans","맑은 고딕","Malgun Gothic",sans-serif;
+}
+
+/* Vuetify 기본 컴포넌트 톤 통일 */
+.v-application .v-card{ border-radius:var(--card-radius)!important; border:1px solid var(--line); box-shadow:var(--shadow-1); }
+.v-btn{ border-radius:10px!important; }
+.v-field--variant-outlined{ border-radius:10px; }
+.v-chip{ border-radius:999px; }
+.v-alert{ border-radius:12px; }
+
+/* 테이블 스킨(전역) */
+.v-table{ border-radius:12px; border:1px solid var(--line); box-shadow:var(--shadow-1); }
+.v-table thead th{ background:#f7f9fd; color:var(--ink-2); font-weight:600; }
+.v-table tbody tr:nth-child(even){ background:#fbfdff; }
+
+/* ====== 유틸리티 ====== */
+.panel{ background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow-1); }
+.row{ display:flex; align-items:center; gap:12px; }
+.space{ flex:1; }
+.gap6{gap:6px}.gap8{gap:8px}.gap12{gap:12px}.gap16{gap:16px}
+.muted{ color:var(--ink-3) }
+
+/* Native select / date를 카드와 어울리게 */
+select, input[type="date"]{
+  appearance:none; -webkit-appearance:none;
+  border:1px solid var(--line); border-radius:10px;
+  padding:8px 10px; background:#fff; color:var(--ink-1);
+  outline:none;
+}
+select:focus, input[type="date"]:focus{ border-color:#cbdaf7; box-shadow:0 0 0 3px rgba(37,99,235,.12); }
+
+/* KPI 카드 안 숫자 강조(공통) */
+.kpi-value{ font-size:2rem; font-weight:800; letter-spacing:.2px; }
+.kpi-sub{ color:var(--ink-3); }
+
+/* 툴팁 살짝 진하게 */
+.v-overlay__content .v-card.text-body-2{ border-radius:10px; }

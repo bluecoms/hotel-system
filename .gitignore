@@ -1,0 +1,5 @@
+# repo inventory outputs
+docs/runbooks/snapshots/inventory_*.csv
+docs/runbooks/snapshots/inventory_*.json
+docs/runbooks/snapshots/tree_*.txt
+docs/runbooks/snapshots/regulation_draft_*.json

@@ -1,0 +1,2 @@
+src/stores/auth.ts:30:    handle401() {
+src/stores/auth.ts:36:      this.handle401()

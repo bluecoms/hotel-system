@@ -1,0 +1,5 @@
+# alembic heads
+  FAILED: No config file 'alembic.ini' found, or file has no '[alembic]' section
+
+# alembic current
+  FAILED: No config file 'alembic.ini' found, or file has no '[alembic]' section

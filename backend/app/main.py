@@ -1,0 +1,1855 @@
+from fastapi import FastAPI, Depends, Header, HTTPException, UploadFile, File, Form, Query, Body
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse, FileResponse
+from typing import Optional, List
+from datetime import datetime, date as dt_date, timedelta
+import os, csv, io, shutil, re, traceback
+
+from sqlalchemy import select, or_, desc, text
+from sqlalchemy.orm import Session
+
+from app.core.settings import settings
+from app.core.me_router import router as me_router
+from app.operations.closing.router import router as closing_router
+from app.db.session import db_dep, engine
+from app.db.base import Base
+
+from app.models.user import User
+from app.models.employee import Employee, UserEmployeeMap
+from app.models.upload import UploadSession, UploadedFile
+from app.models.keyword import Keyword
+from app.models.closing import ClosingDay
+from app.models.ota import OTAOrder
+
+from app.schemas import (
+    ApproveBody, UserCreate, CreateFromEmpIn,
+    EmployeeIn, EmployeeListOut, EmployeeDetailOut, EmployeeUpdate,
+    DayStatusBody, RestoreBody, KeywordIn, KeywordOut
+)
+
+# -------------------------------
+# Auth (DEV 우회 + 롤 체크)
+# -------------------------------
+ROLES = {"SUPERADMIN":"SUPERADMIN", "ADMIN":"ADMIN"}
+
+def require_token_local(x_internal_token: Optional[str] = Header(None, alias="X-Internal-Token")):
+    if settings.APP_ENV.lower() == "dev":
+        return True
+    if not x_internal_token or x_internal_token != settings.INTERNAL_API_TOKEN:
+        raise HTTPException(401, "Unauthorized")
+    return True
+
+def _merge_db_roles(user_dict: dict, db: Session) -> dict:
+    try:
+        from app.models.user import User as _User
+        from app.models.role import Role, UserRole
+        u = db.query(_User).filter(_User.email == user_dict.get("email")).first()
+        if not u:
+            return user_dict
+        rows = db.query(Role.code)\
+                 .join(UserRole, UserRole.role_id == Role.id)\
+                 .filter(UserRole.user_id == u.id, Role.is_active.is_(True))\
+                 .all()
+        db_roles = [c for (c,) in rows]
+        merged = sorted(set((user_dict.get("roles") or []) + db_roles))
+        user_dict["roles"] = merged
+        return user_dict
+    except Exception as _e:
+        return user_dict
+
+def current_user(
+    x_internal_token: Optional[str] = Header(None, alias="X-Internal-Token"),
+    x_debug_role: Optional[str] = Header(None, alias="X-Debug-Role"),
+    db: Session = Depends(db_dep),
+):
+    if settings.APP_ENV.lower() == "dev":
+        role = (x_debug_role or ROLES["SUPERADMIN"]).upper()
+        if role not in ROLES.values():
+            role = ROLES["SUPERADMIN"]
+        user = {"email":"admin@example.com","name":"Admin","roles":[role]}
+        return _merge_db_roles(user, db)
+
+    if not x_internal_token or x_internal_token != settings.INTERNAL_API_TOKEN:
+        raise HTTPException(401, "Unauthorized")
+
+    user = {"email":"admin@example.com","name":"Admin","roles":[ROLES["ADMIN"]]}
+    return _merge_db_roles(user, db)
+
+def require_roles(need: List[str]):
+    def _dep(user = Depends(current_user)):
+        roles = set(user.get("roles", []))
+        if not roles.intersection(set(need)):
+            raise HTTPException(403, "Forbidden")
+        return user
+    return _dep
+
+# --- 결제수단 정규화 ---
+PAY_METHOD_ALIASES = {
+    "현금":"CASH","카드":"CARD","신용카드":"CARD",
+    "간편":"WALLET","간편결제":"WALLET",
+    "네이버":"NAVER_PAY","카카오":"KAKAO_PAY","제로":"ZEROPAY","제로페이":"ZEROPAY",
+    "상품권":"GIFT","포인트":"POINT","외상":"HOUSE","기타":"OTHER",
+}
+def _canon_method(name: str) -> str:
+    s = (name or "").strip().lower()
+    for k, v in PAY_METHOD_ALIASES.items():
+        if k.lower() in s:
+            return v
+    return (s.upper() or "OTHER")
+
+# -------------------------------
+# App
+# -------------------------------
+app = FastAPI(title="Hotel Admin API", openapi_url="/api/openapi.json", docs_url="/api/docs")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], allow_credentials=True,
+    allow_methods=["*"], allow_headers=["*"]
+)
+
+app.include_router(me_router)
+app.include_router(closing_router)
+
+@app.on_event("startup")
+def on_startup():
+    # 1) 스키마 1차 생성 (없으면 생성)
+    Base.metadata.create_all(bind=engine)
+
+    # --- upload_files 컬럼 보강 ---
+    try:
+        with engine.begin() as conn:
+            cols = {r[1] for r in conn.execute(text("PRAGMA table_info(upload_files)"))}
+            if "part_key" not in cols:
+                conn.execute(text("ALTER TABLE upload_files ADD COLUMN part_key VARCHAR(120) DEFAULT ''"))
+            if "created_at" not in cols:
+                conn.execute(text("ALTER TABLE upload_files ADD COLUMN created_at TIMESTAMP"))
+    except Exception as e:
+        print("[startup:migrate] upload_files alter failed:", e)
+
+    # --- employees 컬럼 보강 (누락시 ALTER) ---
+    try:
+        with engine.begin() as conn:
+            added = _ensure_employees_schema(conn)
+            if added:
+                print("[startup:migrate] employees added:", ", ".join(added))
+    except Exception as e:
+        print("[startup:migrate] employees alter failed:", e)
+
+    # --- roles/user_roles 스키마 점검 & 오염본 백업(rename) ---
+    try:
+        with engine.begin() as conn:
+            cols_roles = {r[1] for r in conn.execute(text("PRAGMA table_info(roles)"))}
+            if cols_roles and "id" not in cols_roles:
+                conn.execute(text("ALTER TABLE roles RENAME TO roles_bad_20250928"))
+                print("[startup:migrate] renamed broken table 'roles' -> roles_bad_20250928")
+
+            cols_user_roles = {r[1] for r in conn.execute(text("PRAGMA table_info(user_roles)"))}
+            if cols_user_roles and not {"user_id", "role_id"} <= cols_user_roles:
+                conn.execute(text("ALTER TABLE user_roles RENAME TO user_roles_bad_20250928"))
+                print("[startup:migrate] renamed broken table 'user_roles' -> user_roles_bad_20250928")
+    except Exception as e:
+        print("[startup:migrate] roles/user_roles check failed:", e)
+
+    # --- roles / user_roles 재생성 + 시드 ---
+    try:
+        Base.metadata.create_all(bind=engine)
+        from sqlalchemy.orm import Session
+        from app.models.role import Role
+        with Session(bind=engine) as db:
+            def ensure(code: str, name: str):
+                if not db.query(Role).filter(Role.code == code).first():
+                    db.add(Role(code=code, name=name, is_active=True))
+                    db.commit()
+            ensure("ADMIN", "Admin")
+            ensure("SUPERADMIN", "Super Admin")
+    except Exception as e:
+        print("[startup:migrate] roles seed failed:", e)
+
+# -------------------------------
+# Excel/CSV → 정규 CSV 헬퍼
+# -------------------------------
+OLE_MAGIC = b"\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1"  # .xls (OLE)
+ZIP_MAGIC = b"PK"                                   # .xlsx (zip)
+
+def _looks_like_xlsx(filename: Optional[str], head: bytes) -> bool:
+    fn = (filename or "").lower()
+    return fn.endswith(".xlsx") or head.startswith(ZIP_MAGIC)
+
+def _looks_like_xls(head: bytes) -> bool:
+    return head.startswith(OLE_MAGIC)
+
+# --- XLSX → CSV (openpyxl)
+
+def _xlsx_to_csv_text(raw: bytes) -> str:
+    try:
+        import openpyxl, io, csv
+    except Exception:
+        raise HTTPException(415, "XLSX not supported. Install openpyxl or upload CSV/XLS.")
+    wb = openpyxl.load_workbook(io.BytesIO(raw), data_only=True, read_only=True)
+    ws = wb[wb.sheetnames[0]]
+    out = io.StringIO(); w = csv.writer(out, lineterminator="\n")
+    for row in ws.iter_rows(values_only=True):
+        w.writerow(["" if v is None else str(v) for v in row])
+    return out.getvalue()
+
+# --- OLE XLS → CSV (xlrd 1.2.0)
+
+def _xls_to_csv_text(raw: bytes) -> str:
+    try:
+        import xlrd  # 1.2.0
+    except Exception:
+        raise HTTPException(415, "XLS not supported. Install xlrd==1.2.0 or upload CSV/XLSX.")
+    book = xlrd.open_workbook(file_contents=raw)
+    sh = book.sheet_by_index(0)
+    import io, csv
+    out = io.StringIO(); w = csv.writer(out, lineterminator="\n")
+    for r in range(sh.nrows):
+        vals = []
+        for c in range(sh.ncols):
+            v = sh.cell_value(r, c)
+            if isinstance(v, float) and v.is_integer():
+                v = int(v)
+            vals.append("" if v is None else str(v))
+        w.writerow(vals)
+    return out.getvalue()
+
+# --- HTML <table> → CSV
+
+def _html_table_to_csv_text(html_text: str) -> str:
+    import re, html, io, csv
+    tables = re.findall(r"<table.*?>.*?</table>", html_text, flags=re.I|re.S)
+    if not tables:
+        return html_text
+
+    def table_to_rows(t: str) -> list[list[str]]:
+        rows = []
+        for tr in re.findall(r"<tr.*?>(.*?)</tr>", t, flags=re.I|re.S):
+            cells = re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", tr, flags=re.I|re.S)
+            row = []
+            for c in cells:
+                txt = re.sub(r"<.*?>", "", c, flags=re.S)
+                txt = html.unescape(txt).strip()
+                row.append(txt)
+            if any(x.strip() for x in row):
+                rows.append(row)
+        return rows
+
+    candidates = [table_to_rows(t) for t in tables]
+    candidates.sort(key=lambda r: (len(r), max((len(x) for x in r), default=0)), reverse=True)
+    rows = candidates[0]
+
+    out = io.StringIO(); w = csv.writer(out, lineterminator="\n")
+    for r in rows:
+        w.writerow(r)
+    return out.getvalue()
+
+# --- bytes → text (guess enc)
+
+def _bytes_to_text_guess(raw: bytes) -> str:
+    for enc in ("utf-8-sig", "cp949", "euc-kr"):
+        try:
+            return raw.decode(enc)
+        except Exception:
+            pass
+    return raw.decode("utf-8", errors="ignore")
+
+# --- 헤더 승격
+
+def _promote_header(csv_text: str) -> str:
+    """여러 줄 상단에서 가장 '헤더처럼' 보이는 라인을 골라 승격"""
+    import io, csv, re
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    if not rows:
+        return csv_text
+
+    KW = [
+        "총매출","실매출","결제합계","합계","총계","금액","현금","카드","신용","부가세","영수",
+        "순매출","판매","매출","일자","date","요일","dept","부서","매장","코너",
+        "method","방법","수단","입금","정산","배달","쿠폰","제휴","회원","포장","환급",
+        "folio","전표","영수증","예약","category","계정","적요","비고"
+    ]
+
+    def score(row):
+        nz = [c for c in row if str(c).strip() != ""]
+        if not nz:
+            return -10**9
+        uniq = len(set([str(c).strip().lower() for c in nz])); dup = len(nz) - uniq
+        nonnum = sum(1 for c in nz if not re.fullmatch(r"[\d,.\-]+", str(c)))
+        kwcount = sum(1 for c in nz for k in KW if k.lower() in str(c).lower())
+        return kwcount*5 + uniq*2 + nonnum*0.5 - dup*1.5
+
+    best_idx, best_score = -1, -10**9
+    for i, r in enumerate(rows[:60]):
+        s = score(r)
+        if s > best_score or (s == best_score and i > best_idx):
+            best_idx, best_score = i, s
+
+    if best_idx < 0:
+        return csv_text
+
+    out = io.StringIO(); w = csv.writer(out, lineterminator="\n")
+    w.writerow([str(c).strip() for c in rows[best_idx]])
+    for d in rows[best_idx+1:]:
+        w.writerow(d)
+    return out.getvalue()
+
+# --- 기타 유틸
+
+def _strip_bom_text(s: str) -> str:
+    return s.lstrip("\ufeff")
+
+# DictReader가 남는 컬럼을 key=None 으로 담을 때가 있음 → 안전하게 key 문자열만 사용
+
+def _str_keys(row: dict) -> List[str]:
+    return [k for k in row.keys() if isinstance(k, str)]
+
+# 합계/잔액/이월 등 요약 행 필터
+
+def _is_summary_row(r: dict) -> bool:
+    try:
+        text = " ".join([str(v or "") for v in r.values()]).lower()
+    except Exception:
+        return False
+    return any(word in text for word in ["합계","총계","잔액","이월","소계","총합","누계"]) or not any(str(v or "").strip() for v in r.values())
+
+# 업로드 바이트 → CSV 텍스트로 변환
+
+def _read_upload_to_csv_text(file: UploadFile) -> tuple[str, str]:
+    raw = file.file.read()
+    head = raw[:8]
+    low4k = raw[:4096].lower()
+
+    # 1) HTML 테이블 우선
+    if b"<table" in low4k and b"</table>" in low4k:
+        text = _bytes_to_text_guess(raw)
+        csv_text = _html_table_to_csv_text(text)
+    # 2) XLSX
+    elif _looks_like_xlsx(file.filename, head):
+        csv_text = _xlsx_to_csv_text(raw)
+    # 3) OLE XLS
+    elif _looks_like_xls(head):
+        csv_text = _xls_to_csv_text(raw)
+    # 4) Text/CSV
+    else:
+        text = _bytes_to_text_guess(raw)
+        csv_text = _html_table_to_csv_text(text) if "<table" in text.lower() else text
+
+    # 헤더 승격
+    csv_text = _promote_header(csv_text)
+    if not csv_text.endswith("\n"):
+        csv_text += "\n"
+    return csv_text, ".csv"
+
+def _table_cols(conn, name: str) -> set[str]:
+    try:
+        rows = conn.execute(text(f"PRAGMA table_info({name})")).fetchall()
+        return {r[1] for r in rows}
+    except Exception:
+        return set()
+
+# 우리가 모델에서 참조하는 employees 컬럼 집합
+EMPLOYEES_COLDEFS = [
+    "dept VARCHAR(120) DEFAULT ''",
+    "title VARCHAR(120) DEFAULT ''",
+    "phone VARCHAR(40) DEFAULT ''",
+    "email VARCHAR(120) DEFAULT ''",
+    "address VARCHAR(255) DEFAULT ''",
+    "position VARCHAR(80) DEFAULT ''",
+    "rank VARCHAR(80) DEFAULT ''",
+    "hire_date DATE",
+    "leave_date DATE",
+    "rrn_mask VARCHAR(20) DEFAULT ''",
+    "bank_name VARCHAR(60) DEFAULT ''",
+    "account_mask VARCHAR(60) DEFAULT ''",
+    "account_last4 VARCHAR(8) DEFAULT ''",
+    "memo TEXT DEFAULT ''",
+    "created_at TIMESTAMP",
+    "updated_at TIMESTAMP",
+    # SoftDelete mixin
+    "deleted_at TIMESTAMP",
+    "deleted_by VARCHAR(120) DEFAULT ''",
+]
+
+def _ensure_employees_schema(conn) -> list[str]:
+    """
+    employees 테이블이 존재한다고 가정하고, 위 컬럼이 없으면 ALTER TABLE로 추가.
+    추가된 컬럼 이름 리스트를 반환.
+    """
+    added = []
+    cols = _table_cols(conn, "employees")
+    if not cols:
+        return added  # 테이블 자체가 없으면 Base.create_all 쪽에서 생성됨
+    for coldef in EMPLOYEES_COLDEFS:
+        name = coldef.split()[0]
+        if name not in cols:
+            try:
+                conn.execute(text(f"ALTER TABLE employees ADD COLUMN {coldef}"))
+                added.append(name)
+            except Exception as e:
+                print("[startup:migrate] employees add col fail:", coldef, e)
+    return added
+
+# ---- Debug endpoints (safe to keep in dev) ----
+@app.get("/api/_debug/dburl")
+def dbg_dburl():
+    # 현재 SQLAlchemy가 여는 DB URL 확인용
+    return {"url": str(engine.url)}
+
+@app.get("/api/_debug/columns")
+def dbg_columns():
+    with engine.begin() as conn:
+        return {
+            "employees": sorted(list(_table_cols(conn, "employees"))),
+            "roles": sorted(list(_table_cols(conn, "roles"))),
+            "user_roles": sorted(list(_table_cols(conn, "user_roles"))),
+            "upload_files": sorted(list(_table_cols(conn, "upload_files"))),
+        }
+
+@app.post("/api/_debug/fix-employees")
+def dbg_fix_employees():
+    """
+    employees에 누락된 컬럼을 즉시 추가(ALTER TABLE). 추가된 컬럼 목록을 반환.
+    업로드 500이 계속이면 이걸 한 번 호출하고 재시도하면 됩니다.
+    """
+    with engine.begin() as conn:
+        added = _ensure_employees_schema(conn)
+        cols = sorted(list(_table_cols(conn, "employees")))
+    return {"added": added, "columns": cols}
+
+
+# -------------------------------
+# 표준 스키마 정규화
+# -------------------------------
+
+def _pick(row: dict, candidates: list[str]) -> str:
+    for k in candidates:
+        if k in row and row[k] is not None:
+            v = str(row[k]).strip()
+            if v != "":
+                return v
+    return ""
+
+_date_pat = re.compile(r"(\d{4})[.\-\/(](\d{1,2})[.\-\/(](\d{1,2})")
+
+def _dateonly(s: str) -> str:
+    m = _date_pat.search(s or "")
+    if not m: return ""
+    y, mo, d = m.groups()
+    return f"{int(y):04d}-{int(mo):02d}-{int(d):02d}"
+
+def _norm_amount(x: str) -> float:
+    s = (x or "")
+    s = s.replace(",", "").replace("₩", "").replace("￦", "").replace("원", "")
+    s = s.replace("\u00a0", "").replace("\u2009", "").replace(" ", "")
+    if s.startswith("(") and s.endswith(")"):
+        s = "-" + s[1:-1]
+    if s.endswith("-") and s[:-1].replace(".", "", 1).isdigit():
+        s = "-" + s[:-1]
+    s = s.replace("−", "-").replace("–", "-")
+    try:
+        return float(s or 0)
+    except:
+        return 0.0
+
+def _normalize_rooms_status(csv_text: str, business_date: str) -> str:
+    rdr = csv.DictReader(io.StringIO(_strip_bom_text(csv_text)))
+    out = io.StringIO(); fieldnames = ["room_no","status_code","is_dirty","hk_note"]
+    w = csv.DictWriter(out, fieldnames=fieldnames, lineterminator="\n")
+    w.writeheader()
+    for r in rdr:
+        room_no = _pick(r, ["room_no","객실","객실번호","배정객실","객실명","호수"])
+        if not room_no: continue
+        memo = _pick(r, ["hk_note","메모","비고","특이사항","비고사항"])
+        cin  = _pick(r, ["입실일시","체크인","check_in","입실일자","체크인일자"])  # noqa: F401
+        cout = _pick(r, ["퇴실일시","체크아웃","check_out","퇴실일자","체크아웃일자"])  # noqa: F401
+        status = "OCC"
+        if cout:
+            cout_d = _dateonly(cout)
+            if cout_d and cout_d <= business_date:
+                status = "OUT"
+        w.writerow({"room_no": room_no, "status_code": status, "is_dirty": "0", "hk_note": memo})
+    return out.getvalue()
+
+# kind: sales_front | fnb_sales
+def _normalize_sales_like(csv_text: str, kind: str, *, business_date: str = "", part_key_hint: str = "") -> str:
+    rdr = csv.DictReader(io.StringIO(_strip_bom_text(csv_text)))
+    out = io.StringIO()
+    if kind == "sales_front":
+        fns = ["date","folio_no","amount","currency","note"]
+        w = csv.DictWriter(out, fieldnames=fns, lineterminator="\n"); w.writeheader()
+        for r in rdr:
+            if _is_summary_row(r):
+                continue
+            date  = _pick(r, ["date","일자","거래일자","거래일시","승인일자","매출일자"]) or business_date
+            folio = _pick(r, ["folio_no","전표","전표번호","영수증","영수증번호","예약번호","Folio","Folio No"])
+            amt   = _pick(r, ["amount","결제금액","금액","매출","총액","합계","매출금액","실매출","순매출"]) 
+            if not _norm_amount(amt):
+                pay_cols = [k for k in _str_keys(r) if any(p in k for p in [
+                    "카드","현금","이체","간편","네이버","카카오","제로페이","상품권","포인트","총매출","합계"
+                ])]
+                amt = str(sum(_norm_amount(r.get(k, "")) for k in pay_cols))
+            curr  = _pick(r, ["currency","통화","화폐","CCY"]) or "KRW"
+            note  = _pick(r, ["note","메모","비고","설명","채널","채널명","원천","출처"]) 
+            if not _norm_amount(amt):
+                continue
+            w.writerow({"date": _dateonly(date), "folio_no": folio, "amount": str(int(_norm_amount(amt))), "currency": curr, "note": note})
+    else:  # fnb_sales
+        fns = ["date","dept","amount","currency","note"]
+        w = csv.DictWriter(out, fieldnames=fns, lineterminator="\n"); w.writeheader()
+        for r in rdr:
+            if _is_summary_row(r):
+                continue
+            date = _pick(r, ["date","일자","거래일자","거래일시","승인일자","매출일자"]) or business_date
+            dept = _pick(r, ["dept","부서","매장","코너","부문","점포","카운터"]) or part_key_hint or "Restaurant"
+            amt  = _pick(r, ["amount","결제금액","금액","매출","판매금액","합계","실매출","총매출","총매출액","순매출","매출금액"])
+            a = _norm_amount(amt)
+            if not a:
+                sum_cols = [k for k in _str_keys(r) if any(p in k for p in ["합계","총액","총계","총매출","실매출","순매출","매출금액","판매합계"])]
+                a = sum(_norm_amount(r.get(k, "")) for k in sum_cols)
+            if not a:
+                pay_cols = [k for k in _str_keys(r) if any(p in k for p in [
+                    "카드","현금","이체","간편","네이버","카카오","제로페이","상품권","포인트","배민","요기요","쿠팡","앱"
+                ])]
+                a = sum(_norm_amount(r.get(k, "")) for k in pay_cols)
+            if not a:
+                continue
+            curr = _pick(r, ["currency","통화","화폐","CCY"]) or "KRW"
+            note = _pick(r, ["note","메모","비고","설명"]) 
+            w.writerow({"date": _dateonly(date), "dept": dept, "amount": str(int(a)), "currency": curr, "note": note})
+    return out.getvalue()
+
+def _normalize_expenses(csv_text: str) -> str:
+    rdr = csv.DictReader(io.StringIO(_strip_bom_text(csv_text)))
+    out = io.StringIO(); fns = ["date","category","amount","currency","note"]
+    w = csv.DictWriter(out, fieldnames=fns, lineterminator="\n"); w.writeheader()
+    for r in rdr:
+        if _is_summary_row(r):
+            continue
+        date = _pick(r, ["date","일자","지출일자","승인일자","거래일자","거래일시"]) 
+        cat  = _pick(r, ["category","분류","항목","계정","계정과목","카테고리","코드","적요"]) or "Expense"
+        amt  = _pick(r, ["출금금액","출금","지출금액","인출금액","지급금액","금액"])  # 출금 계열만
+        curr = _pick(r, ["currency","통화","화폐","CCY"]) or "KRW"
+        note = _pick(r, ["note","메모","비고","설명","거래내용","내용","적요"]) 
+        a = _norm_amount(amt)
+        if not a: continue
+        w.writerow({"date": _dateonly(date), "category": cat, "amount": str(int(a)), "currency": curr, "note": note})
+    return out.getvalue()
+
+def _normalize_pay_settlement(csv_text: str, part_key_hint: str = "") -> str:
+    rdr = csv.DictReader(io.StringIO(_strip_bom_text(csv_text)))
+    out = io.StringIO(); fns = ["date","method","amount","currency","note"]
+    w = csv.DictWriter(out, fieldnames=fns, lineterminator="\n"); w.writeheader()
+    for r in rdr:
+        if _is_summary_row(r):
+            continue
+        date = _pick(r, ["date","일자","입금일자","승인일자","거래일자","거래일시"]) 
+        mtd  = _pick(r, ["method","방법","수단","결제수단","입금수단","은행","카드사","계좌","채널"]) or part_key_hint or "Unknown"
+        amt  = _pick(r, ["입금금액","입금","거래금액","금액","입금액","수납금액"])  # 입금 계열만
+        curr = _pick(r, ["currency","통화","화폐","CCY"]) or "KRW"
+        note = _pick(r, ["note","메모","비고","설명","내용","적요"]) 
+        a = _norm_amount(amt)
+        if not a: continue
+        w.writerow({"date": _dateonly(date), "method": mtd, "amount": str(int(a)), "currency": curr, "note": note})
+    return out.getvalue()
+
+DATASETS = {
+    "rooms_status": "room_no,status_code,is_dirty,hk_note",
+    "sales_front":  "date,folio_no,amount,currency,note",
+    "fnb_sales":    "date,dept,amount,currency,note",
+    "fnb_items": "date,dept,item_code,item_name,qty,amount,currency,note",
+    "expenses":     "date,category,amount,currency,note",
+    "pay_settlement":"date,method,amount,currency,note",
+}
+ALIASES = {
+    "fnb_payments": "fnb_tenders",
+    "fnb_menu":     "fnb_items",
+}
+REQUIRED_DATASETS = ["rooms_status","sales_front","fnb_sales","fnb_item","expenses","pay_settlement"]
+
+def _resolve_dataset(ds: str) -> str:
+    ds = ds.strip()
+    if ds in DATASETS: return ds
+    if ds in ALIASES: return ALIASES[ds]
+    raise HTTPException(404, "unknown dataset")
+
+def _normalize_csv_for_dataset(dataset: str, csv_text: str, business_date: str, part_key_hint: str = "") -> str:
+    header_line = _strip_bom_text((csv_text.splitlines() or [""])[0])
+    want = DATASETS[dataset].split(",")
+    got  = [h.strip() for h in header_line.split(",")]
+    if len(got) == len(want) and all((a==b) for a,b in zip(got,want)):
+        return csv_text if csv_text.endswith("\n") else (csv_text+"\n")
+
+    if dataset == "rooms_status":
+        return _normalize_rooms_status(csv_text, business_date)
+    if dataset == "sales_front":
+        return _normalize_sales_like(csv_text, "sales_front", business_date=business_date)
+    if dataset == "fnb_sales":
+        return _normalize_sales_like(csv_text, "fnb_sales", business_date=business_date, part_key_hint=part_key_hint)
+    if dataset == "expenses":
+        return _normalize_expenses(csv_text)
+    if dataset == "pay_settlement":
+        return _normalize_pay_settlement(csv_text, part_key_hint)
+
+    # --- 추가 ---
+    if dataset == "fnb_tenders":
+        return _normalize_fnb_tenders(csv_text, business_date, part_key_hint)
+    if dataset == "fnb_items":
+        return _normalize_fnb_items(csv_text, business_date, part_key_hint)
+
+    raise HTTPException(400, f"normalizer-missing: {dataset}")
+
+def _normalize_fnb_pay_by_method(csv_text: str, business_date: str, part_key_hint: str = "") -> str:
+    """
+    결제수단별(현금/카드/간편/네이버/카카오/제로페이/상품권/포인트/외상/기타...) 컬럼을 훑어
+    금액>0 인 것만 행으로 방출. dept는 파일에 있지 않아도 part_key로 보전 가능.
+    표준 스키마: date,method,amount,currency,note
+    """
+    rdr = csv.DictReader(io.StringIO(_strip_bom_text(csv_text)))
+    out = io.StringIO(); fns = ["date","method","amount","currency","note"]
+    w = csv.DictWriter(out, fieldnames=fns, lineterminator="\n"); w.writeheader()
+
+    for r in rdr:
+        if _is_summary_row(r): 
+            continue
+        curr = _pick(r, ["currency","통화","화폐","CCY"]) or "KRW"
+        # 카드사 개별 컬럼/결제 컬럼 전부 스캔
+        for k in _str_keys(r):
+            key_l = k.lower()
+            if any(p in key_l for p in ["현금","카드","신용","간편","네이버","카카오","제로","상품권","포인트","외상","기타"]):
+                amt = _norm_amount(r.get(k, ""))
+                if not amt:
+                    continue
+                method = _canon_method(k)
+                note = _pick(r, ["부서","업장","코너","dept"]) or part_key_hint or ""
+                w.writerow({"date": _dateonly(business_date), "method": method, "amount": str(int(amt)), "currency": curr, "note": note})
+    return out.getvalue()
+
+def _normalize_fnb_tenders(csv_text: str, business_date: str, part_key_hint: str = "") -> str:
+    rdr = csv.DictReader(io.StringIO(_strip_bom_text(csv_text)))
+    out = io.StringIO()
+    fns = ["date","dept","method","amount","currency","note"]
+    w = csv.DictWriter(out, fieldnames=fns, lineterminator="\n"); w.writeheader()
+
+    for r in rdr:
+        if _is_summary_row(r):
+            continue
+        date = _pick(r, ["date","일자","거래일자","거래일시","승인일자","매출일자"]) or business_date
+        dept = _pick(r, ["dept","부서","매장","코너","부문","점포"]) or part_key_hint or "Restaurant"
+        mtd  = _pick(r, ["method","결제수단","수단","방법","입금수단","은행","카드사","채널","지불수단"])
+        note = _pick(r, ["note","메모","비고","설명","적요"])
+        amt  = _pick(r, ["amount","금액","합계","실매출","총매출","매출합계","결제금액","입금금액"])
+        a = _norm_amount(amt)
+        if not a:
+            # 행에 여러 수단 컬럼이 펼쳐진 경우 합산
+            pay_cols = [k for k in _str_keys(r) if any(p in k for p in [
+                "현금","카드","간편","네이버","카카오","제로페이","상품권","포인트","이체"
+            ])]
+            if pay_cols:
+                for k in pay_cols:
+                    val = _norm_amount(r.get(k, ""))
+                    if val:
+                        w.writerow({
+                            "date": _dateonly(date), "dept": dept,
+                            "method": k, "amount": str(int(val)),
+                            "currency": "KRW", "note": note
+                        })
+                continue
+        if not a:
+            continue
+        w.writerow({
+            "date": _dateonly(date), "dept": dept,
+            "method": mtd or "Unknown",
+            "amount": str(int(a)), "currency": "KRW", "note": note
+        })
+    return out.getvalue()
+
+
+def _normalize_fnb_items(csv_text: str, business_date: str, part_key_hint: str = "") -> str:
+    rdr = csv.DictReader(io.StringIO(_strip_bom_text(csv_text)))
+    out = io.StringIO()
+    fns = ["date","dept","item_code","item_name","qty","amount","currency","note"]
+    w = csv.DictWriter(out, fieldnames=fns, lineterminator="\n"); w.writeheader()
+
+    for r in rdr:
+        if _is_summary_row(r):
+            continue
+        date = _pick(r, ["date","일자","거래일자","거래일시","승인일자","매출일자"]) or business_date
+        dept = _pick(r, ["dept","부서","매장","코너","부문","점포"]) or part_key_hint or "Restaurant"
+        code = _pick(r, ["item_code","상품코드","코드","메뉴코드","품목코드"])
+        name = _pick(r, ["item_name","상품명","품목","메뉴명","메뉴","품명"])
+        qty  = _pick(r, ["qty","수량","판매수량","수","건수"])
+        amt  = _pick(r, ["amount","금액","합계","매출","판매금액","실매출","총매출","매출금액"])
+        note = _pick(r, ["note","메모","비고","설명","적요"])
+
+        q = 0
+        try:
+            q = int(float((qty or "0").replace(",","").strip() or "0"))
+        except:
+            q = 0
+        a = _norm_amount(amt)
+        if not (name and (q or a)):
+            continue
+
+        w.writerow({
+            "date": _dateonly(date), "dept": dept,
+            "item_code": code, "item_name": name,
+            "qty": str(q), "amount": str(int(a)),
+            "currency": "KRW", "note": note
+        })
+    return out.getvalue()
+
+# -------------------------------
+# 필수/현재 파트 유틸
+# -------------------------------
+DEFAULT_REQUIRED_PARTS = {}
+
+def _required_parts_for(db: Session, dataset: str) -> list[str]:
+    group = f"required.parts.{dataset}"
+    rows = db.query(Keyword).filter(
+        Keyword.group_name == group, Keyword.is_active.is_(True)
+    ).order_by(Keyword.weight.desc(), Keyword.k.asc()).all()
+    parts = [ (r.k or "").strip() for r in rows if (r.k or "").strip() ]
+    if parts:
+        return sorted(set(parts))
+    return DEFAULT_REQUIRED_PARTS.get(dataset, [])
+
+def _present_parts_for(db: Session, session_id: int) -> list[str]:
+    rows = db.query(UploadedFile.part_key).filter(UploadedFile.session_id == session_id).all()
+    parts = [ (pk or "").strip() for (pk,) in rows if (pk or "").strip() ]
+    return sorted(set(parts))
+
+# -------------------------------
+# Core & Menu
+# -------------------------------
+@app.get("/api/ping")
+def ping(): return {"ok": True, "env": settings.APP_ENV}
+
+@app.get("/api/me")
+def me(user = Depends(current_user)): return user
+
+@app.get("/api/menu")
+def menu():
+    ADMINS = ["ADMIN", "SUPERADMIN"]
+    return {"items":[
+        {"label":"Dashboard",     "to":"/dashboard",      "roles": ADMINS},
+        {"label":"Closing",       "to":"/closing",        "roles": ADMINS},
+        {"label":"Closing Board", "to":"/closing/board",  "roles": ADMINS},
+        {"label":"Employees",     "to":"/employees",      "roles": ADMINS},
+        {"label":"Users",         "to":"/admin/users",    "roles": ["SUPERADMIN"]},
+        {"label":"Keywords",      "to":"/keywords",       "roles": ADMINS},
+        {"label":"OTA",           "to":"/ota",            "roles": ADMINS},
+    ]}
+
+# -------------------------------
+# Users
+# -------------------------------
+@app.post("/api/users", dependencies=[Depends(require_token_local)])
+def create_user(p: UserCreate, db: Session = Depends(db_dep), _=Depends(require_roles([ROLES["SUPERADMIN"]]))):
+    has = db.execute(select(User).where(User.email == p.email)).scalar_one_or_none()
+    if has: raise HTTPException(400, "email-exists")
+    u = User(email=p.email, name=p.name, is_active=p.is_active)
+    db.add(u); db.commit(); db.refresh(u)
+    return {"ok": True, "id": u.id}
+
+@app.put("/api/users/{user_id}/approve", dependencies=[Depends(require_token_local)])
+def approve_user(user_id: int, body: ApproveBody, db: Session = Depends(db_dep), _=Depends(require_roles([ROLES["SUPERADMIN"]]))):
+    u = db.get(User, user_id)
+    if not u: raise HTTPException(404, "user not found")
+    u.is_active = bool(body.is_active); db.commit()
+    return {"ok": True, "user_id": user_id, "is_active": u.is_active}
+
+@app.get("/api/users", dependencies=[Depends(require_token_local)])
+def list_users(q: str = "", page: int = 1, size: int = 20, db: Session = Depends(db_dep)):
+    page = max(1, page); size = max(1, min(100, size))
+    stmt = select(User)
+    if q:
+        like = f"%{q}%"
+        stmt = stmt.where(or_(User.email.ilike(like), User.name.ilike(like)))
+    total_rows = db.execute(stmt).scalars().all()
+    rows = db.execute(stmt.offset((page-1)*size).limit(size)).scalars().all()
+    items=[]
+    for u in rows:
+        m = db.query(UserEmployeeMap).filter(UserEmployeeMap.user_id==u.id).first()
+        items.append({"id":u.id,"email":u.email,"name":u.name,"is_active":u.is_active,"employee_id":(m.employee_id if m else None)})
+    return {"total": len(total_rows), "page": page, "size": size, "items": items}
+
+@app.put("/api/users/{user_id}/employee/{emp_id}", dependencies=[Depends(require_token_local)])
+def map_user_employee(user_id:int, emp_id:int, db: Session = Depends(db_dep)):
+    u = db.get(User, user_id); e = db.get(Employee, emp_id)
+    if not u or not e: raise HTTPException(404, "user or employee not found")
+    m = db.query(UserEmployeeMap).filter(UserEmployeeMap.user_id==user_id).first()
+    if m: m.employee_id = emp_id
+    else: db.add(UserEmployeeMap(user_id=user_id, employee_id=emp_id))
+    db.commit()
+    return {"ok": True}
+
+@app.delete("/api/users/{user_id}", dependencies=[Depends(require_token_local)])
+def soft_delete_user(user_id: int, db: Session = Depends(db_dep), _=Depends(require_roles([ROLES["SUPERADMIN"]]))):
+    u = db.get(User, user_id)
+    if not u: raise HTTPException(404, "user not found")
+    u.is_active = False
+    db.commit()
+    return {"ok": True, "id": user_id, "is_active": u.is_active}
+
+# NEW: 사원에서 앱계정 생성 + 매핑
+@app.post("/api/users/from-employee", dependencies=[Depends(require_token_local)])
+def create_user_from_employee(
+    p: CreateFromEmpIn,
+    db: Session = Depends(db_dep),
+    _=Depends(require_roles([ROLES["SUPERADMIN"]]))
+):
+    e = db.query(Employee).filter(
+        Employee.emp_no == p.emp_no,
+        Employee.deleted_at.is_(None)
+    ).first()
+    if not e:
+        raise HTTPException(404, "employee-not-found")
+
+    has = db.query(User).filter(User.email == p.email).first()
+    if has:
+        raise HTTPException(400, "email-exists")
+
+    u = User(email=p.email, name=(p.name or e.name), is_active=bool(p.is_active))
+    db.add(u); db.flush()
+    db.add(UserEmployeeMap(user_id=u.id, employee_id=e.id))
+    db.commit(); db.refresh(u)
+    return {"ok": True, "user_id": u.id, "employee_id": e.id}
+
+# -------------------------------
+# Employees
+# -------------------------------
+@app.get("/api/employees", dependencies=[Depends(require_token_local)])
+def list_employees(q: str = "", page: int = 1, size: int = 20, db: Session = Depends(db_dep)):
+    page = max(1, page); size = max(1, min(100, size))
+    stmt = select(Employee).where(Employee.deleted_at.is_(None))
+    if q:
+        like = f"%{q}%"
+        stmt = stmt.where(or_(Employee.emp_no.ilike(like), Employee.name.ilike(like),
+                              Employee.dept.ilike(like), Employee.title.ilike(like)))
+    total = db.execute(stmt).scalars().all()
+    rows = db.execute(stmt.offset((page - 1) * size).limit(size)).scalars().all()
+    items = [{"id":e.id,"emp_no":e.emp_no,"name":e.name,"dept":e.dept,"title":e.title} for e in rows]
+    return {"total": len(total), "page": page, "size": size, "items": items}
+
+@app.post("/api/employees", dependencies=[Depends(require_token_local)])
+def create_employee(body: EmployeeIn, db: Session = Depends(db_dep), _=Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))):
+    e = Employee(**body.model_dump())
+    db.add(e); db.commit(); db.refresh(e)
+    return {"ok":True,"id":e.id}
+
+@app.delete("/api/employees/{emp_id}", dependencies=[Depends(require_token_local)])
+def soft_delete_employee(emp_id: int, db: Session = Depends(db_dep), user=Depends(require_roles([ROLES["SUPERADMIN"]]))):
+    e = db.get(Employee, emp_id)
+    if not e: raise HTTPException(404, "not found")
+    if e.deleted_at:
+        return {"ok": True, "already_deleted": True}
+    e.soft_delete(by=user["email"])
+    db.commit()
+    return {"ok": True}
+
+@app.post("/api/employees/import-csv", dependencies=[Depends(require_token_local)])
+def import_employees_csv(file: UploadFile = File(...), db: Session = Depends(db_dep),
+                         _=Depends(require_roles([ROLES["SUPERADMIN"]]))):
+    """
+    [호환용] 과거 'CSV 전용' 엔드포인트 이름을 유지.
+    내부는 새 로직과 동일하게 CSV/XLS/XLSX/HTML <table> 모두 자동 파싱.
+    """
+    try:
+        rows = _to_rows(file)  # <-- 통합 파서 사용
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(400, f"read-failed: {e}")
+
+    if not rows:
+        raise HTTPException(400, "empty file")
+
+    headers = [ (_h or "").strip().lower() for _h in rows[0] ]
+    idx = {h:i for i,h in enumerate(headers)}
+    def col(*names: str) -> int:
+        for n in names:
+            if n in idx: return idx[n]
+        return -1
+    get = lambda r,i: (r[i].strip() if 0 <= i < len(r) else "")
+
+    i_empno = col("emp_no","사번"); i_name = col("name","이름")
+    i_dept  = col("dept","부서");   i_title = col("title","직책","직무")
+    i_pos   = col("position","직위"); i_phone = col("phone","연락처","휴대폰","폰")
+    i_email = col("email","이메일"); i_addr = col("address","주소")
+    i_hire  = col("hire_date","입사일"); i_leave = col("leave_date","퇴사일")
+    i_rrn   = col("rrn","rrn_mask","주민","주민번호")
+    i_bank  = col("bank_name","은행","은행명"); i_acct = col("account","account_no","계좌","계좌번호")
+    i_memo  = col("memo","메모","비고")
+
+    import datetime as dt
+    def to_date(s: str):
+        s = (s or "").strip()
+        for fmt in ("%Y-%m-%d","%Y.%m.%d","%Y/%m/%d","%y-%m-%d","%y.%m.%d","%y/%m/%d"):
+            try: return dt.datetime.strptime(s, fmt).date()
+            except: pass
+        return None
+
+    created = updated = 0
+    for r in rows[1:]:
+        emp_no = get(r, i_empno); name = get(r, i_name)
+        if not emp_no or not name: continue
+
+        dept=get(r,i_dept); title=get(r,i_title); position=get(r,i_pos)
+        phone=get(r,i_phone); email=get(r,i_email); address=get(r,i_addr)
+        hire_date=to_date(get(r,i_hire)); leave_date=to_date(get(r,i_leave))
+        rrn_mask=_mask_rrn(get(r,i_rrn)); bank_name=get(r,i_bank)
+        acct_mask,last4=_mask_account(get(r,i_acct)); memo=get(r,i_memo)
+
+        e = db.query(Employee).filter(Employee.emp_no == emp_no).first()
+        if e:
+            e.name, e.dept, e.title = name, dept, title
+            e.position, e.phone, e.email, e.address = position, phone, email, address
+            e.hire_date, e.leave_date = hire_date, leave_date
+            e.rrn_mask, e.bank_name = rrn_mask, bank_name
+            e.account_mask, e.account_last4 = acct_mask, last4
+            e.memo = memo or e.memo
+            updated += 1
+        else:
+            db.add(Employee(
+                emp_no=emp_no, name=name, dept=dept, title=title,
+                position=position, phone=phone, email=email, address=address,
+                hire_date=hire_date, leave_date=leave_date,
+                rrn_mask=rrn_mask, bank_name=bank_name,
+                account_mask=acct_mask, account_last4=last4,
+                memo=memo or ""
+            ))
+            created += 1
+    db.commit()
+    return {"ok": True, "created": created, "updated": updated}
+
+
+def _guess_text(raw: bytes) -> str:
+    for enc in ("utf-8-sig", "cp949", "euc-kr"):
+        try:
+            return raw.decode(enc)
+        except Exception:
+            pass
+    return raw.decode("utf-8", errors="ignore")
+
+def _html_table_to_rows(html_text: str) -> list[list[str]]:
+    import re, html
+    tables = re.findall(r"<table.*?>.*?</table>", html_text, flags=re.I|re.S)
+    if not tables: return []
+    def table_to_rows(t: str) -> list[list[str]]:
+        rows=[]
+        for tr in re.findall(r"<tr.*?>(.*?)</tr>", t, flags=re.I|re.S):
+            cells = re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", tr, flags=re.I|re.S)
+            row=[]
+            for c in cells:
+                txt = re.sub(r"<.*?>","",c,flags=re.S)
+                txt = html.unescape(txt).strip()
+                row.append(txt)
+            if any(x.strip() for x in row): rows.append(row)
+        return rows
+    cand = [table_to_rows(t) for t in tables]
+    cand.sort(key=lambda r: (len(r), max((len(x) for x in r), default=0)), reverse=True)
+    return cand[0] if cand else []
+
+def _xlsx_to_rows(raw: bytes) -> list[list[str]]:
+    try:
+        import openpyxl, io
+    except Exception:
+        raise HTTPException(415, "XLSX not supported. Install openpyxl or upload CSV.")
+    wb = openpyxl.load_workbook(io.BytesIO(raw), data_only=True, read_only=True)
+    ws = wb[wb.sheetnames[0]]
+    out=[]
+    for row in ws.iter_rows(values_only=True):
+        out.append(["" if v is None else str(v) for v in row])
+    return out
+
+def _xls_to_rows(raw: bytes) -> list[list[str]]:
+    try:
+        import xlrd  # 1.2.0 권장
+    except Exception:
+        raise HTTPException(415, "XLS not supported. Install xlrd==1.2.0")
+    book = xlrd.open_workbook(file_contents=raw)
+    sh = book.sheet_by_index(0)
+    out = []
+    for r in range(sh.nrows):
+        row = []
+        for c in range(sh.ncols):
+            v = sh.cell_value(r, c)
+            if isinstance(v, float) and v.is_integer():
+                v = int(v)
+            row.append("" if v is None else str(v))
+        out.append(row)
+    return out
+
+def _to_rows(file: UploadFile) -> list[list[str]]:
+    raw = file.file.read()
+    low = raw[:4096].lower()
+
+    # HTML table (xls disguise)
+    if b"<table" in low and b"</table>" in low:
+        txt = _guess_text(raw)
+        rows = _html_table_to_rows(txt)
+        if rows:
+            return rows
+
+    # XLSX (zip magic or .xlsx)
+    if (file.filename or "").lower().endswith(".xlsx") or raw[:2] == b"PK":
+        return _xlsx_to_rows(raw)
+
+    # **XLS (OLE magic or .xls) 추가**
+    if (file.filename or "").lower().endswith(".xls") or raw[:8] == b"\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1":
+        return _xls_to_rows(raw)
+
+    # CSV/TXT (기본)
+    txt = _guess_text(raw)
+    import csv, io as _io
+    return list(csv.reader(_io.StringIO(txt)))
+
+def _norm_header(h: str) -> str:
+    return (h or "").strip().lower()
+
+def _mask_rrn(s: str) -> str:
+    # 입력 예: 801125-1234567 / 8011251 / 19801125-1******* / 801125-1**
+    import re
+    if not s: return ""
+    s = re.sub(r"[^0-9\-*]", "", s)
+    m = re.search(r"(\d{6})[\-]?\s*([1-4])", s)
+    if not m: return ""
+    return f"{m.group(1)}-{m.group(2)}**"
+
+def _mask_account(s: str) -> tuple[str,str]:
+    # 반환: (account_mask, last4)
+    import re
+    if not s: return ("","")
+    digits = re.sub(r"[^\d]", "", s)
+    if not digits: return ("","")
+    last4 = digits[-4:] if len(digits)>=4 else digits
+    # ***-***-1234 형태
+    masked = f"{'*'*3}-{'*'*3}-{last4}"
+    return (masked, last4)
+
+@app.post("/api/employees/import", dependencies=[Depends(require_token_local)])
+def import_employees(file: UploadFile = File(...), db: Session = Depends(db_dep),
+                     _=Depends(require_roles([ROLES["SUPERADMIN"]]))):
+    # 1) 파일 → 행 리스트
+    try:
+        rows = _to_rows(file)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(400, f"read-failed: {e}")
+
+    if not rows:
+        raise HTTPException(400, "empty file")
+
+    # 2) 헤더 라인 자동 탐지 (엑셀 1행에 메타가 있고 2행이 실제 헤더인 경우 대응)
+    #    '사원번호', '성명', '주민등록번호' 같은 키워드가 포함된 첫 줄을 헤더로 승격
+    header_idx = 0
+    header_keywords = {"emp_no", "사번", "사원번호", "name", "성명", "주민", "주민등록번호"}
+    for i, r in enumerate(rows[:60]):
+        r_join = " ".join([c or "" for c in r])
+        if any(k in r_join for k in header_keywords):
+            header_idx = i
+            break
+    rows = rows[header_idx:]
+
+    # 3) 헤더 정규화
+    headers = [_norm_header(h) for h in (rows[0] if rows else [])]
+    idx = {h: i for i, h in enumerate(headers)}
+
+    def col(*names: str) -> int:
+        for n in names:
+            if _norm_header(n) in idx:
+                return idx[_norm_header(n)]
+        return -1
+
+    def get(r, i):
+        return (r[i].strip() if 0 <= i < len(r) else "")
+
+    # 4) 컬럼 매핑(원본 엑셀에 맞춰 후보 확장)
+    i_empno = col("emp_no", "사번", "사원번호")
+    i_name  = col("name", "이름", "성명")
+    i_dept  = col("dept", "부서", "부서명", "부서코드")
+    # title/position 분리: 직책코드 → title, 직위/직급코드 → position
+    i_title = col("title", "직책", "직책코드")
+    i_pos   = col("position", "직위", "직급", "직위/직급코드")
+    i_phone = col("phone", "연락처", "휴대폰", "모바일", "전화번호")
+    i_email = col("email", "이메일", "email")
+    i_addr  = col("address", "주소")
+    i_hire  = col("hire_date", "입사일", "입사일자")
+    i_leave = col("leave_date", "퇴사일", "퇴사일자")
+    i_rrn   = col("rrn", "rrn_mask", "주민", "주민등록번호")
+    i_bank  = col("bank_name", "은행", "은행명", "급여통장 은행코드")
+    i_acct  = col("account", "account_no", "계좌", "계좌번호")
+    i_memo  = col("memo", "메모", "비고", "적요")
+
+    import datetime as dt
+    def to_date(s: str):
+        s = (s or "").strip()
+        for fmt in ("%Y-%m-%d", "%Y.%m.%d", "%Y/%m/%d", "%y-%m-%d", "%y.%m.%d", "%y/%m/%d"):
+            try:
+                return dt.datetime.strptime(s, fmt).date()
+            except:
+                pass
+        # 20240831 같은 붙은 형태도 처리
+        if s.isdigit() and len(s) == 8:
+            try:
+                return dt.datetime.strptime(s, "%Y%m%d").date()
+            except:
+                pass
+        return None
+
+    created = updated = 0
+    for r in rows[1:]:
+        emp_no = get(r, i_empno)
+        name   = get(r, i_name)
+        if not emp_no or not name:
+            continue
+
+        dept     = get(r, i_dept)
+        title    = get(r, i_title)
+        position = get(r, i_pos)
+        phone    = get(r, i_phone)
+        email    = get(r, i_email)
+        address  = get(r, i_addr)
+
+        hire_date  = to_date(get(r, i_hire))
+        leave_date = to_date(get(r, i_leave))
+
+        rrn_mask  = _mask_rrn(get(r, i_rrn))
+        bank_name = get(r, i_bank)
+        acct_mask, last4 = _mask_account(get(r, i_acct))
+        memo = get(r, i_memo)
+
+        e = db.query(Employee).filter(Employee.emp_no == emp_no).first()
+        if e:
+            e.name, e.dept, e.title = name, dept, title
+            e.position, e.phone, e.email, e.address = position, phone, email, address
+            e.hire_date, e.leave_date = hire_date, leave_date
+            e.rrn_mask, e.bank_name = rrn_mask, bank_name
+            e.account_mask, e.account_last4 = acct_mask, last4
+            if memo:
+                e.memo = memo
+            updated += 1
+        else:
+            db.add(Employee(
+                emp_no=emp_no, name=name, dept=dept, title=title,
+                position=position, phone=phone, email=email, address=address,
+                hire_date=hire_date, leave_date=leave_date,
+                rrn_mask=rrn_mask, bank_name=bank_name,
+                account_mask=acct_mask, account_last4=last4,
+                memo=memo or ""
+            ))
+            created += 1
+
+    try:
+        db.commit()
+        return {"ok": True, "created": created, "updated": updated}
+    except Exception as e:
+        # 서버 콘솔에 전체 스택 출력 + 500 → 프런트에서 바로 원인 확인 가능
+        traceback.print_exc()
+        raise HTTPException(500, f"import-failed: {e}")
+
+# 상세 읽기 (권한: 토큰만)
+@app.get("/api/employees/{emp_id}", dependencies=[Depends(require_token_local)])
+def get_employee(emp_id: int, db: Session = Depends(db_dep)) -> EmployeeDetailOut:
+    e = db.get(Employee, emp_id)
+    if not e or getattr(e, "deleted_at", None):
+        raise HTTPException(404, "not found")
+    return EmployeeDetailOut.model_validate(e)
+
+# 상세 저장(부분 업데이트) - ADMIN/SUPERADMIN
+@app.put("/api/employees/{emp_id}", dependencies=[Depends(require_token_local)])
+def update_employee(
+    emp_id: int,
+    body: EmployeeUpdate,
+    db: Session = Depends(db_dep),
+    _=Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))
+):
+    e = db.get(Employee, emp_id)
+    if not e or getattr(e, "deleted_at", None):
+        raise HTTPException(404, "not found")
+
+    # 필드만 선택적으로 덮어쓰기
+    for k, v in body.model_dump(exclude_unset=True).items():
+        setattr(e, k, v if v is not None else getattr(e, k))
+
+    db.commit(); db.refresh(e)
+    return {"ok": True, "id": e.id}
+
+# -------------------------------
+# Closing / Upload
+# -------------------------------
+
+def _is_day_closed(db: Session, property_code: str, business_date: str) -> bool:
+    row = db.query(ClosingDay).filter(
+        ClosingDay.property_code == property_code,
+        ClosingDay.business_date == business_date,
+        ClosingDay.status == "CLOSED",
+    ).first()
+    return bool(row)
+
+
+def _day_progress(db: Session, property_code: str, business_date: str) -> tuple[int,int]:
+    done = 0
+    total = len(REQUIRED_DATASETS)
+    for ds in REQUIRED_DATASETS:
+        sess = db.query(UploadSession).filter_by(
+            dataset=ds, property_code=property_code, business_date=business_date
+        ).first()
+        if not sess:
+            continue
+        versions = db.query(UploadedFile).filter_by(session_id=sess.id).count()
+        if versions > 0:
+            done += 1
+    return done, total
+
+@app.get("/api/templates/{dataset}.csv", dependencies=[Depends(require_token_local)])
+def get_template(dataset: str):
+    key = _resolve_dataset(dataset)
+    return PlainTextResponse(content=DATASETS[key] + "\n", media_type="text/csv; charset=utf-8")
+
+@app.post("/api/upload/{dataset}", dependencies=[Depends(require_token_local)])
+def upload_dataset(
+    dataset: str,
+    business_date: str = Form(...),
+    property_code: str = Form("MOP"),
+    part_key: str = Form(""),
+    file: Optional[UploadFile] = File(None),     # <-- 파일 옵션
+    no_tx: bool = Form(False),                   # <-- 무거래 플래그
+    no_tx_reason: str = Form(""),
+    db: Session = Depends(db_dep),
+    _user = Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))
+):
+    key = _resolve_dataset(dataset)
+    if _is_day_closed(db, property_code, business_date):
+        raise HTTPException(409, "day-closed")
+
+    dbg_dir = "/volume1/web/hotel-system/backend/_uploads/_debug"
+    os.makedirs(dbg_dir, exist_ok=True)
+
+    # 1) CSV 텍스트 준비
+    if no_tx:
+        # 무거래: 헤더만
+        csv_text = DATASETS[key] + "\n"
+        if no_tx_reason.strip():
+            with open(os.path.join(dbg_dir, f"{key}_{property_code}_{business_date}_NO_TX.txt"),
+                      "w", encoding="utf-8") as f:
+                f.write(no_tx_reason.strip())
+    else:
+        if not file:
+            raise HTTPException(400, "file-required")
+
+        # 원본 → CSV 텍스트
+        csv_text_raw, _ext = _read_upload_to_csv_text(file)
+
+        # debug/raw 저장
+        with open(os.path.join(dbg_dir, f"{key}_{property_code}_{business_date}_raw.csv"),
+                  "w", encoding="utf-8", newline="") as f:
+            f.write(csv_text_raw if isinstance(csv_text_raw, str) else str(csv_text_raw))
+
+        # 2) 표준 스키마 정규화
+        try:
+            csv_text = _normalize_csv_for_dataset(
+                key, csv_text_raw, business_date, part_key_hint=(part_key or "")
+            )
+        except HTTPException:
+            with open(os.path.join(dbg_dir, f"{key}_{property_code}_{business_date}_norm.ERROR.txt"),
+                      "w", encoding="utf-8") as f:
+                f.write("normalization failed")
+            raise
+        except Exception as e:
+            with open(os.path.join(dbg_dir, f"{key}_{property_code}_{business_date}_norm.ERROR.txt"),
+                      "w", encoding="utf-8") as f:
+                f.write(str(e))
+            raise HTTPException(400, f"normalize-failed: {e}")
+
+        # debug/norm 저장
+        with open(os.path.join(dbg_dir, f"{key}_{property_code}_{business_date}_norm.csv"),
+                  "w", encoding="utf-8-sig", newline="") as f:
+            f.write(csv_text)
+
+        # 0행 방지 (무거래가 아닐 때만)
+        lines = [ln for ln in csv_text.splitlines() if ln.strip()]
+        if len(lines) <= 1:
+            snippet = "\n".join(lines[:3])
+            raise HTTPException(422, f"{key}: parsed 0 rows after normalization. 상위 미리보기 -> {snippet}")
+
+    # 3) 세션/버전 저장 (기존 로직)
+    sess = db.query(UploadSession).filter(
+        UploadSession.dataset==key,
+        UploadSession.property_code==property_code,
+        UploadSession.business_date==business_date
+    ).first()
+    if not sess:
+        sess = UploadSession(dataset=key, property_code=property_code,
+                             business_date=business_date, status="UPLOADED")
+        db.add(sess); db.flush()
+
+    ver = db.query(UploadedFile).filter(UploadedFile.session_id==sess.id).count() + 1
+    stored_dir = "/volume1/web/hotel-system/backend/_uploads"
+    os.makedirs(stored_dir, exist_ok=True)
+    stored_path = os.path.join(stored_dir, f"{key}_{property_code}_{business_date}_{ver}.csv")
+
+    content_bytes = csv_text.encode("utf-8-sig")
+    with open(stored_path, "wb") as f:
+        f.write(content_bytes)
+
+    db.add(UploadedFile(
+        session_id=sess.id,
+        version_no=ver,
+        filename=(file.filename if file else f"{key}.csv"),
+        size=len(content_bytes),
+        mime="text/csv",
+        stored_path=stored_path,
+        part_key=(part_key or "").strip()
+    ))
+    db.commit()
+    return {"ok": True, "session_id": sess.id, "version_no": ver}
+
+@app.get("/api/closing/status", dependencies=[Depends(require_token_local)])
+def closing_status(date: str, property_code: str = "MOP", db: Session = Depends(db_dep)):
+    out = []
+    for ds in REQUIRED_DATASETS:
+        req = _required_parts_for(db, ds)
+        sess = db.query(UploadSession).filter(
+            UploadSession.dataset == ds,
+            UploadSession.property_code == property_code,
+            UploadSession.business_date == date,
+        ).first()
+        if not sess:
+            out.append({
+                "dataset": ds, "exists": False, "versions": 0,
+                "required_parts": req, "present_parts": [], "missing_parts": req
+            })
+            continue
+        versions = db.query(UploadedFile).filter(UploadedFile.session_id == sess.id).count()
+        present = _present_parts_for(db, sess.id)
+        missing = [p for p in req if p not in present]
+        out.append({
+            "dataset": ds, "exists": versions > 0, "versions": versions,
+            "required_parts": req, "present_parts": present, "missing_parts": missing
+        })
+    return {"date": date, "property_code": property_code, "items": out}
+
+@app.get("/api/closing/day", dependencies=[Depends(require_token_local)])
+def closing_day_get(date: str, property_code: str = "MOP", db: Session = Depends(db_dep)):
+    status = "CLOSED" if _is_day_closed(db, property_code, date) else "OPEN"
+    done, total = _day_progress(db, property_code, date)
+    return {"date": date, "status": status, "done": done, "total": total, "complete": (done == total)}
+
+@app.put("/api/closing/day", dependencies=[Depends(require_token_local)])
+def closing_day_set(
+    body: Optional[DayStatusBody] = Body(None),
+    date: Optional[str] = Query(None),
+    property_code: str = Query("MOP"),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(db_dep),
+    _=Depends(require_roles([ROLES["SUPERADMIN"]]))
+):
+    if body:
+        _date = body.date
+        _pc   = body.property_code or "MOP"
+        _st   = (body.status or "").upper()
+    else:
+        _date = date
+        _pc   = property_code or "MOP"
+        _st   = (status or "").upper()
+
+    if not _date or _st not in ("OPEN","CLOSED"):
+        raise HTTPException(422, "date/status required")
+
+    row = db.query(ClosingDay).filter_by(property_code=_pc, business_date=_date).first()
+    if row: row.status = _st
+    else:   db.add(ClosingDay(property_code=_pc, business_date=_date, status=_st))
+    db.commit()
+    return {"ok": True, "status": _st}
+
+@app.get("/api/closing/calendar", dependencies=[Depends(require_token_local)])
+def closing_calendar(month: str = "", property_code: str = "MOP", db: Session = Depends(db_dep)):
+    today = datetime.utcnow()
+    if not month: month = today.strftime("%Y-%m")
+    y, m = map(int, month.split("-"))
+    first = dt_date(y, m, 1)
+    next_first = dt_date(y+1, 1, 1) if m == 12 else dt_date(y, m+1, 1)
+    last = next_first - timedelta(days=1)
+
+    sessions = db.query(UploadSession)\
+        .filter(UploadSession.property_code==property_code)\
+        .filter(UploadSession.business_date >= first.strftime("%Y-%m-%d"))\
+        .filter(UploadSession.business_date <= last.strftime("%Y-%m-%d"))\
+        .all()
+
+    closings = db.query(ClosingDay).filter(
+        ClosingDay.property_code == property_code,
+        ClosingDay.business_date >= first.strftime("%Y-%m-%d"),
+        ClosingDay.business_date <= last.strftime("%Y-%m-%d"),
+    ).all()
+    status_map = { c.business_date: (c.status or "OPEN").upper() for c in closings }
+
+    day_map: dict[str, dict] = {}
+    for s in sessions:
+        b = s.business_date
+        info = day_map.setdefault(b, {"datasets": set(), "counts": {}})
+        info["datasets"].add(s.dataset)
+        cnt = db.query(UploadedFile).filter(UploadedFile.session_id==s.id).count()
+        info["counts"][s.dataset] = cnt
+
+    days = []
+    d = first
+    while d <= last:
+        key = d.strftime("%Y-%m-%d")
+        present = day_map.get(key, {"datasets": set(), "counts": {}})
+        uploaded = sorted(list(present["datasets"]))
+        counts = present["counts"]
+        done = len(set(uploaded) & set(REQUIRED_DATASETS))
+        total = len(REQUIRED_DATASETS)
+        days.append({
+            "date": key,
+            "uploaded": uploaded,
+            "counts": counts,
+            "done": done,
+            "total": total,
+            "complete": (done == total),
+            "status": status_map.get(key, "OPEN"),
+        })
+        d += timedelta(days=1)
+
+    return {
+        "from": first.strftime("%Y-%m-%d"),
+        "to": last.strftime("%Y-%m-%d"),
+        "required": REQUIRED_DATASETS,
+        "property_code": property_code,
+        "days": days,
+    }
+
+@app.get("/api/upload/versions", dependencies=[Depends(require_token_local)])
+def upload_versions(dataset: str, business_date: str, property_code: str = "MOP", db: Session = Depends(db_dep)):
+    key = _resolve_dataset(dataset)
+    sess = db.query(UploadSession).filter_by(
+        dataset=key, business_date=business_date, property_code=property_code
+    ).first()
+    if not sess:
+        return {"session_id": None, "items": []}
+    files = db.query(UploadedFile).filter_by(session_id=sess.id)\
+        .order_by(UploadedFile.version_no.asc()).all()
+    items = [{
+        "version_no": f.version_no,
+        "filename": f.filename,
+        "size": f.size,
+        "uploaded_at": (f.created_at.isoformat(timespec="seconds") if f.created_at else ""),
+        "part_key": (f.part_key or "")
+    } for f in files]
+    return {"session_id": sess.id, "items": items}
+
+@app.get("/api/upload/download", dependencies=[Depends(require_token_local)])
+def upload_download(dataset: str, business_date: str, version_no: int, property_code: str = "MOP", db: Session = Depends(db_dep)):
+    key = _resolve_dataset(dataset)
+    sess = db.query(UploadSession).filter_by(
+        dataset=key, business_date=business_date, property_code=property_code
+    ).first()
+    if not sess: raise HTTPException(404, "session-not-found")
+    f = db.query(UploadedFile).filter_by(session_id=sess.id, version_no=version_no).first()
+    if not f or not os.path.exists(f.stored_path): raise HTTPException(404, "file-not-found")
+    filename = f.filename or f"{key}.csv"
+    return FileResponse(path=f.stored_path, media_type="text/csv", filename=filename)
+
+@app.post("/api/upload/restore", dependencies=[Depends(require_token_local)])
+def upload_restore(body: RestoreBody, db: Session = Depends(db_dep), _=Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))):
+    if _is_day_closed(db, body.property_code, body.business_date):
+        raise HTTPException(409, "day-closed")
+
+    key = _resolve_dataset(body.dataset)
+    sess = db.query(UploadSession).filter_by(
+        dataset=key, business_date=body.business_date, property_code=body.property_code
+    ).first()
+    if not sess: raise HTTPException(404, "session-not-found")
+    src = db.query(UploadedFile).filter_by(session_id=sess.id, version_no=body.version_no).first()
+    if not src or not os.path.exists(src.stored_path): raise HTTPException(404, "file-not-found")
+
+    new_ver = db.query(UploadedFile).filter_by(session_id=sess.id).count() + 1
+    stored_dir = "/volume1/web/hotel-system/backend/_uploads"
+    os.makedirs(stored_dir, exist_ok=True)
+    new_path = os.path.join(stored_dir, f"{key}_{body.property_code}_{body.business_date}_{new_ver}.csv")
+
+    shutil.copyfile(src.stored_path, new_path)
+    db.add(UploadedFile(
+        session_id=sess.id, version_no=new_ver, filename=src.filename,
+        size=src.size, mime=src.mime, stored_path=new_path,
+        part_key=(src.part_key or "")
+    ))
+    db.commit()
+    return {"ok": True, "version_no": new_ver}
+
+# -------------------------------
+# Upload helpers (latest paths)
+# -------------------------------
+
+def _latest_paths(db: Session, dataset: str, property_code: str, business_date: str) -> list[str]:
+    sess = db.query(UploadSession).filter_by(dataset=dataset, property_code=property_code, business_date=business_date).first()
+    if not sess: return []
+    files = db.query(UploadedFile).filter_by(session_id=sess.id).order_by(UploadedFile.version_no.desc()).all()
+
+    def _has_data(path: str) -> bool:
+        try:
+            with open(path, "r", encoding="utf-8-sig", newline="") as fh:
+                rdr = csv.reader(fh)
+                for i, row in enumerate(rdr):
+                    if i == 0:
+                        continue  # 헤더
+                    if any(str(c).strip() for c in row):
+                        return True
+            return False
+        except Exception:
+            return False
+
+    out, seen = [], set()
+    for f in files:
+        pk = (f.part_key or "")
+        if pk in seen:
+            continue
+        if f.stored_path and os.path.exists(f.stored_path) and _has_data(f.stored_path):
+            out.append(f.stored_path)
+            seen.add(pk)
+    return out
+
+# -------------------------------
+# Keywords
+# -------------------------------
+@app.get("/api/keywords", dependencies=[Depends(require_token_local)])
+def list_keywords(
+    q: str = "", group_name: str = "", active: Optional[bool] = None,
+    page: int = 1, size: int = 20, db: Session = Depends(db_dep),
+    _=Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))
+):
+    page = max(1, page); size = max(1, min(100, size))
+    stmt = select(Keyword)
+    if q:
+        like = f"%{q}%"
+        stmt = stmt.where(or_(Keyword.k.ilike(like), Keyword.v.ilike(like)))
+    if group_name:
+        stmt = stmt.where(Keyword.group_name == group_name)
+    if active is not None:
+        stmt = stmt.where(Keyword.is_active == bool(active))
+    total = db.execute(stmt).scalars().all()
+    rows = db.execute(
+        stmt.order_by(Keyword.group_name.asc(), Keyword.weight.desc(), Keyword.k.asc())
+            .offset((page-1)*size).limit(size)
+    ).scalars().all()
+    items = [{
+        "id": r.id, "group_name": r.group_name, "k": r.k, "v": r.v,
+        "weight": r.weight, "is_active": r.is_active, "created_at": r.created_at
+    } for r in rows]
+    return {"total": len(total), "page": page, "size": size, "items": items}
+
+@app.post("/api/keywords", dependencies=[Depends(require_token_local)])
+def create_keyword(body: KeywordIn, db: Session = Depends(db_dep),
+    _=Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))):
+    has = db.query(Keyword).filter(Keyword.group_name == body.group_name, Keyword.k == body.k).first()
+    if has: raise HTTPException(400, "exists")
+    r = Keyword(group_name=body.group_name, k=body.k, v=body.v,
+                weight=int(body.weight or 0), is_active=bool(body.is_active))
+    db.add(r); db.commit(); db.refresh(r)
+    return {"ok": True, "id": r.id}
+
+@app.put("/api/keywords/{kid}", dependencies=[Depends(require_token_local)])
+def update_keyword(kid: int, body: KeywordIn, db: Session = Depends(db_dep),
+    _=Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))):
+    r = db.get(Keyword, kid)
+    if not r: raise HTTPException(404, "not-found")
+    conflict = db.query(Keyword).filter(
+        Keyword.group_name == body.group_name, Keyword.k == body.k, Keyword.id != kid
+    ).first()
+    if conflict: raise HTTPException(400, "exists")
+    r.group_name, r.k, r.v = body.group_name, body.k, body.v
+    r.weight, r.is_active = int(body.weight or 0), bool(body.is_active)
+    db.commit()
+    return {"ok": True}
+
+@app.delete("/api/keywords/{kid}", dependencies=[Depends(require_token_local)])
+def delete_keyword(kid: int, db: Session = Depends(db_dep),
+    _=Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))):
+    r = db.get(Keyword, kid)
+    if not r: raise HTTPException(404, "not-found")
+    db.delete(r); db.commit()
+    return {"ok": True}
+
+# OTA 채널 별칭/수수료 로더
+
+def _load_ota_alias_and_fee(db: Session):
+    alias_rows = db.query(Keyword).filter(
+        Keyword.group_name == "sales.channel.alias",
+        Keyword.is_active.is_(True),
+    ).all()
+    alias_map: dict[str, str] = {}
+    for r in alias_rows:
+        canonical = (r.v or "").strip().upper()
+        for piece in (r.k or "").split("|"):
+            piece = piece.strip().lower()
+            if piece and canonical:
+                alias_map[piece] = canonical
+
+    fee_rows = db.query(Keyword).filter(
+        Keyword.group_name == "sales.channel.fee",
+        Keyword.is_active.is_(True),
+    ).all()
+    fee_map: dict[str, float] = {}
+    for r in fee_rows:
+        key = (r.k or "").strip().upper()
+        try:
+            fee_map[key] = float((r.v or "0").strip())
+        except:
+            fee_map[key] = 0.0
+    return alias_map, fee_map
+
+# -------------------------------
+# Reports
+# -------------------------------
+
+def _daterange_list(frm: str, to: str) -> list[str]:
+    from datetime import date as _date, timedelta as _td
+    y1,m1,d1 = map(int, frm.split("-"))
+    y2,m2,d2 = map(int, to.split("-"))
+    a = _date(y1,m1,d1); b = _date(y2,m2,d2)
+    out = []
+    while a <= b:
+        out.append(a.strftime("%Y-%m-%d"))
+        a += _td(days=1)
+    return out
+
+@app.get("/api/reports/ota-sales", dependencies=[Depends(require_token_local)])
+def ota_sales_report(
+    from_: str = Query(..., alias="from"),
+    to_: str   = Query(..., alias="to"),
+    property_code: str = "MOP",
+    db: Session = Depends(db_dep),
+    _=Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))
+):
+    alias_map, fee_map = _load_ota_alias_and_fee(db)
+
+    def parse_amount(x: str) -> float:
+        try: return float((x or "").replace(",", "").strip() or 0)
+        except: return 0.0
+
+    rng = _daterange_list(from_, to_)
+    chan_sum: dict[str, float] = {}
+    chan_cnt: dict[str, int] = {}
+    unknown_sum = 0.0
+    unknown_cnt = 0
+
+    for day in rng:
+        for p in _latest_paths(db, "sales_front", property_code, day):
+            with open(p, "r", encoding="utf-8-sig", newline="") as fh:
+                rdr = csv.DictReader(fh)
+                for row in rdr:
+                    note = (row.get("note") or "").lower()
+                    amt  = parse_amount(row.get("amount") or "0")
+                    found = None
+                    for pat, canonical in alias_map.items():
+                        if pat and pat in note:
+                            found = canonical; break
+                    if found:
+                        chan_sum[found] = chan_sum.get(found, 0.0) + amt
+                        chan_cnt[found] = chan_cnt.get(found, 0) + 1
+                    else:
+                        unknown_sum += amt
+                        unknown_cnt += 1
+
+    rows = []
+    total_gross = 0.0
+    total_net = 0.0
+    for ch, gross in chan_sum.items():
+        fee = fee_map.get(ch, 0.0)
+        net = gross * (1.0 - fee/100.0)
+        rows.append({
+            "channel": ch,
+            "gross": int(gross),
+            "fee_pct": fee,
+            "net": int(net),
+            "count": chan_cnt.get(ch, 0)
+        })
+        total_gross += gross
+        total_net += net
+
+    rows.sort(key=lambda x: (-x["gross"], x["channel"]))
+
+    return {
+        "from": from_,
+        "to": to_,
+        "property_code": property_code,
+        "rows": rows,
+        "unknown": {"gross": int(unknown_sum), "count": unknown_cnt},
+        "total": {"gross": int(total_gross + unknown_sum), "net": int(total_net)},
+    }
+
+# --- Add near the top-level (module constants) ---
+# 총 객실 수(호텔별 가능). 기본값 170.
+ROOMS_TOTAL_BY_PROP = {
+    "MOP": 170,
+}
+
+# --- Helpers: place with other helpers (near _latest_paths / reports helpers) ---
+IN_HOUSE_CODES = {"O", "OCC", "IN", "STAY"}      # 재실(현재 투숙 중)
+STAYED_OUT_CODES = {"OUT", "CO", "C/O"}            # 금일 체크아웃(숙박 완료)
+
+
+def _rooms_breakdown(paths: list[str], *, total_rooms: int) -> tuple[dict, str]:
+    """
+    rooms_status CSV를 받아서 재실/숙박/점유율을 계산.
+    - 재실: status_code ∈ IN_HOUSE_CODES
+    - 숙박: status_code ∈ STAYED_OUT_CODES (금일 체크아웃)
+    - 팔린 객실(=roomnights): 재실 + 숙박
+    반환: (extra_dict, human_value)
+    """
+    in_house = stayed = dirty = 0
+    if not paths:
+        value = f"0/{total_rooms} (0%) • 재실 0 • 숙박 0 • Dirty 0 • 잔여 {total_rooms}"
+        return ({
+            "total": total_rooms, "sold": 0, "in_house": 0, "stayed": 0,
+            "dirty": 0, "available": total_rooms, "occ_pct": 0
+        }, value)
+
+    p = paths[0]
+    with open(p, "r", encoding="utf-8-sig", newline="") as fh:
+        rdr = csv.DictReader(fh)
+        for r in rdr:
+            sc = (r.get("status_code") or "").strip().upper()
+            if sc in IN_HOUSE_CODES:
+                in_house += 1
+            elif sc in STAYED_OUT_CODES:
+                stayed += 1
+            if (r.get("is_dirty") or "").strip().lower() in {"1", "y", "yes", "true", "t"}:
+                dirty += 1
+
+    sold = in_house + stayed
+    available = max(0, int(total_rooms) - int(sold))
+    occ_pct = int(round((sold / total_rooms) * 100)) if total_rooms else 0
+    value = f"{sold}/{total_rooms} ({occ_pct}%) • 재실 {in_house} • 숙박 {stayed} • Dirty {dirty} • 잔여 {available}"
+
+    extra = {
+        "total": int(total_rooms),
+        "sold": int(sold),
+        "in_house": int(in_house),
+        "stayed": int(stayed),
+        "dirty": int(dirty),
+        "available": int(available),
+        "occ_pct": int(occ_pct),
+    }
+    return extra, value
+
+# --- Replace the whole dashboard_kpi endpoint with this version ---
+@app.get("/api/reports/dashboard-kpi", dependencies=[Depends(require_token_local)])
+def dashboard_kpi(date: str, property_code: str = "MOP", db: Session = Depends(db_dep),
+                  _=Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))):
+    def sum_amounts(paths: list[str]) -> int:
+        total = 0.0
+        for path in paths:
+            if not path or not os.path.exists(path):
+                continue
+            with open(path, "r", encoding="utf-8-sig", newline="") as fh:
+                rdr = csv.DictReader(fh)
+                for r in rdr:
+                    # front/fnb/expenses/pay_settlement 모두 동일 파서 사용
+                    total += _norm_amount(r.get("amount") or "0")
+        return int(total)
+
+    # Rooms breakdown (팔린=재실+숙박), 총 객실수는 상수/설정에서 로드
+    total_rooms = int(ROOMS_TOTAL_BY_PROP.get(property_code, 170))
+    rooms_extra, rooms_value = _rooms_breakdown(
+        _latest_paths(db, "rooms_status", property_code, date), total_rooms=total_rooms
+    )
+
+    # Revenues / Costs / Cash
+    front_total = sum_amounts(_latest_paths(db, "sales_front", property_code, date))
+    fnb_total   = sum_amounts(_latest_paths(db, "fnb_sales",   property_code, date))
+    exp_total   = sum_amounts(_latest_paths(db, "expenses",    property_code, date))
+    pay_total   = sum_amounts(_latest_paths(db, "pay_settlement", property_code, date))
+
+    sales_total = int(front_total + fnb_total)
+    cash_net    = int(pay_total - exp_total)
+
+    return {
+        "date": date,
+        "cards": [
+            {"key": "rooms", "title": "Rooms", "value": rooms_value, "extra": rooms_extra},
+            {"key": "front", "title": "Front Sales", "value": front_total},
+            {"key": "fnb",   "title": "F&B Sales",   "value": fnb_total},
+            {"key": "rev",   "title": "Total Revenue", "value": sales_total,
+             "extra": {"front": front_total, "fnb": fnb_total}},
+            {"key": "exp",   "title": "Expenses",    "value": exp_total},
+            {"key": "pay",   "title": "Settlement",  "value": pay_total},
+            {"key": "cash",  "title": "Cash Net",    "value": cash_net,
+             "extra": {"settlement": pay_total, "expenses": exp_total}},
+        ],
+    }
+
+# -------------------------------
+# OTA (stub)
+# -------------------------------
+@app.get("/api/ota/orders", dependencies=[Depends(require_token_local)])
+def ota_list(
+    q: str = "", channel: str = "", status: str = "",
+    start: str = "", end: str = "", page: int = 1, size: int = 20,
+    db: Session = Depends(db_dep),
+    _=Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))
+):
+    page = max(1, page); size = max(1, min(100, size))
+    stmt = select(OTAOrder)
+    if q:
+        like = f"%{q}%"
+        stmt = stmt.where(or_(OTAOrder.order_code.ilike(like), OTAOrder.guest_name.ilike(like)))
+    if channel: stmt = stmt.where(OTAOrder.channel == channel)
+    if status:  stmt = stmt.where(OTAOrder.status == status)
+    if start:   stmt = stmt.where(OTAOrder.check_in >= start)
+    if end:     stmt = stmt.where(OTAOrder.check_in <= end)
+
+    total = db.execute(stmt).scalars().all()
+    rows = db.execute(
+        stmt.order_by(desc(OTAOrder.created_at)).offset((page-1)*size).limit(size)
+    ).scalars().all()
+
+    items = [{
+        "id": r.id, "channel": r.channel, "order_code": r.order_code, "guest_name": r.guest_name,
+        "check_in": r.check_in, "check_out": r.check_out, "status": r.status,
+        "amount": r.amount, "currency": r.currency, "created_at": r.created_at.isoformat()
+    } for r in rows]
+    return {"total": len(total), "page": page, "size": size, "items": items}
+
+@app.post("/api/ota/sync", dependencies=[Depends(require_token_local)])
+def ota_sync(_=Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))):
+    return {"ok": True, "queued": True}
+
+@app.post("/api/ota/_seed", dependencies=[Depends(require_token_local)])
+def ota_seed(db: Session = Depends(db_dep)):
+    if settings.APP_ENV.lower() != "dev":
+        raise HTTPException(403, "dev-only")
+    import random
+    chans = ["Booking.com","Agoda","Expedia","Naver","Airbnb"]
+    stats = ["CONFIRMED","CANCELLED","PENDING"]
+    today = datetime.utcnow().date()
+    n = 10
+    for i in range(n):
+        ch = random.choice(chans)
+        ci = (today + timedelta(days=random.randint(-5, 10))).strftime("%Y-%m-%d")
+        co = (datetime.strptime(ci, "%Y-%m-%d").date() + timedelta(days=random.randint(1, 4))).strftime("%Y-%m-%d")
+        code = f"{ch[:2].upper()}-{random.randint(100000,999999)}"
+        amount = random.randint(80000, 450000)
+        st = random.choice(stats)
+        db.add(OTAOrder(
+            channel=ch, order_code=code, guest_name=f"Guest {random.randint(1,99)}",
+            check_in=ci, check_out=co, status=st, amount=amount, currency="KRW"
+        ))
+    db.commit()
+    return {"ok": True, "inserted": n}
+
+# -------------------------------
+# Debug
+# -------------------------------
+@app.get("/api/_debug/token")
+def dbg_token():
+    v = settings.INTERNAL_API_TOKEN or ""
+    return {"token_prefix": v[:4], "len": len(v)}
+
+@app.get("/api/_debug/echo")
+def dbg_echo(x_internal_token: Optional[str] = Header(None), x_internal_token_alt: Optional[str] = Header(None, alias='x-internal-token')):
+    return {"recv_header": x_internal_token or x_internal_token_alt}
+

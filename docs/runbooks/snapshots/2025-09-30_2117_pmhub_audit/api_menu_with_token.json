@@ -1,0 +1,59 @@
+{
+  "items": [
+    {
+      "label": "Dashboard",
+      "to": "/dashboard",
+      "roles": [
+        "ADMIN",
+        "SUPERADMIN"
+      ]
+    },
+    {
+      "label": "Closing",
+      "to": "/closing",
+      "roles": [
+        "ADMIN",
+        "SUPERADMIN"
+      ]
+    },
+    {
+      "label": "Closing Board",
+      "to": "/closing/board",
+      "roles": [
+        "ADMIN",
+        "SUPERADMIN"
+      ]
+    },
+    {
+      "label": "Employees",
+      "to": "/employees",
+      "roles": [
+        "ADMIN",
+        "SUPERADMIN"
+      ]
+    },
+    {
+      "label": "Users",
+      "to": "/admin/users",
+      "roles": [
+        "SUPERADMIN"
+      ]
+    },
+    {
+      "label": "Keywords",
+      "to": "/keywords",
+      "roles": [
+        "ADMIN",
+        "SUPERADMIN"
+      ]
+    },
+    {
+      "label": "OTA",
+      "to": "/ota",
+      "roles": [
+        "ADMIN",
+        "SUPERADMIN"
+      ]
+    }
+  ]
+}

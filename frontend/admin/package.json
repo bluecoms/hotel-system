@@ -1,0 +1,39 @@
+{
+  "name": "hotel-admin",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 5173",
+    "build": "vite build",
+    "preview": "vite preview --port 5173",
+
+    "typecheck": "vue-tsc --noEmit",
+    "typecheck:watch": "vue-tsc --noEmit --watch",
+    "dev:all": "npm-run-all -p dev typecheck:watch"
+  },
+  "dependencies": {
+    "@mdi/font": "^7.4.47",
+    "pinia": "^2.2.6",
+    "vue": "^3.5.10",
+    "vue-router": "^4.4.5",
+    "vuetify": "^3.10.2"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.44.1",
+    "@typescript-eslint/parser": "^8.44.1",
+    "@vitejs/plugin-vue": "^5.1.2",
+    "eslint": "^9.36.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-vue": "^10.5.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.8",
+    "vite-plugin-vuetify": "^2.1.2",
+    "vue-tsc": "^2.0.29",
+    "npm-run-all": "^4.1.5"
+  }
+}

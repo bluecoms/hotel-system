@@ -1,0 +1,5 @@
+src/services/http.ts:28:  if (t) h.set('X-Internal-Token', t)
+src/views/Dashboard.vue:140:    headers: { 'X-Internal-Token': localStorage.getItem('__token') || '' }
+src/views/Dashboard.vue:168:    headers: { 'X-Internal-Token': localStorage.getItem('__token') || '' }
+src/views/Employees.vue:232:    h['X-Internal-Token'] = import.meta.env.VITE_INTERNAL_TOKEN as string
+src/ui/components/NoTxnModal.vue:71:    h['X-Internal-Token'] = import.meta.env.VITE_INTERNAL_TOKEN as string
