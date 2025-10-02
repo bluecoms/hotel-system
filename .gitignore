@@ -1,5 +1,27 @@
-# repo inventory outputs
-docs/runbooks/snapshots/inventory_*.csv
-docs/runbooks/snapshots/inventory_*.json
-docs/runbooks/snapshots/tree_*.txt
-docs/runbooks/snapshots/regulation_draft_*.json
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Databases
+*.db
+*.db-shm
+*.db-wal
+
+# Node dependencies / build cache
+frontend/admin/node_modules/
+frontend/admin/node_modules/.vite/
+frontend/admin/node_modules/.bin/
+
+# Temp / outputs
+backend/out.csv
+_pmhub_audit/
+
+# IDE
+.vscode/
+.idea/
+
+# Snapshots (keep placeholder)
+docs/runbooks/snapshots/*
+!docs/runbooks/snapshots/.gitkeep
