@@ -1,17 +1,30 @@
 from fastapi import FastAPI, Depends, Header, HTTPException, UploadFile, File, Form, Query, Body
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse, FileResponse
+from fastapi.responses import PlainTextResponse, FileResponse, JSONResponse
+from fastapi.exceptions import RequestValidationError
 from typing import Optional, List
 from datetime import datetime, date as dt_date, timedelta
 import os, csv, io, shutil, re, traceback
+
+from starlette.requests import Request
 
 from sqlalchemy import select, or_, desc, text
 from sqlalchemy.orm import Session
 
 from app.core.settings import settings
 from app.core.me_router import router as me_router
-from app.operations.closing.router import router as closing_router
-from app.db.session import db_dep, engine
+from app.core.i18n import t
+from app.core.locale import set_lang
+
+from app.routers.ota import router as ota_router
+from app.routers.reports import router as reports_router
+from app.routers.closing import router as closing_router
+from app.routers.users import router as users_router
+from app.routers.menu import router as menu_router
+from app.routers.upload import router as upload_router
+from app.routers.audit import router as audit_router
+
+from app.db.session import get_db, engine
 from app.db.base import Base
 
 from app.models.user import User
@@ -60,7 +73,7 @@ def _merge_db_roles(user_dict: dict, db: Session) -> dict:
 def current_user(
     x_internal_token: Optional[str] = Header(None, alias="X-Internal-Token"),
     x_debug_role: Optional[str] = Header(None, alias="X-Debug-Role"),
-    db: Session = Depends(db_dep),
+    db: Session = Depends(get_db),
 ):
     if settings.APP_ENV.lower() == "dev":
         role = (x_debug_role or ROLES["SUPERADMIN"]).upper()
@@ -103,12 +116,20 @@ def _canon_method(name: str) -> str:
 app = FastAPI(title="Hotel Admin API", openapi_url="/api/openapi.json", docs_url="/api/docs")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], allow_credentials=True,
-    allow_methods=["*"], allow_headers=["*"]
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*", "X-Internal-Token", "X-Debug-Role", "Accept-Language"],
 )
 
-app.include_router(me_router)
+app.include_router(ota_router)
+app.include_router(reports_router)
 app.include_router(closing_router)
+app.include_router(users_router)
+app.include_router(menu_router)
+app.include_router(upload_router)
+app.include_router(audit_router)
+app.include_router(me_router)
 
 @app.on_event("startup")
 def on_startup():
@@ -367,8 +388,7 @@ EMPLOYEES_COLDEFS = [
     "updated_at TIMESTAMP",
     # SoftDelete mixin
     "deleted_at TIMESTAMP",
-    "deleted_by VARCHAR(120) DEFAULT ''",
-]
+    "deleted_by VARCHAR(120) DEFAULT ''"]
 
 def _ensure_employees_schema(conn) -> list[str]:
     """
@@ -416,6 +436,22 @@ def dbg_fix_employees():
         cols = sorted(list(_table_cols(conn, "employees")))
     return {"added": added, "columns": cols}
 
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    lang = getattr(request.state, "lang", "en")
+    msg = t("error.validation", lang)
+    try:
+        errs = exc.errors() or []
+        # 필드명/제약 힌트 기반의 초간단 규칙
+        loc_str = " ".join(str(e.get("loc", "")) for e in errs).lower()
+        if "rate" in loc_str:
+            msg = t("error.rate_range", lang)
+        # 커스텀 검증에서 date range 관련 키워드를 넣었다면 아래가 걸림
+        if "date" in loc_str and "range" in str(errs).lower():
+            msg = t("error.date_invert", lang)
+    except Exception:
+        pass
+    return JSONResponse(status_code=422, content={"detail": msg})
 
 # -------------------------------
 # 표준 스키마 정규화
@@ -556,15 +592,17 @@ DATASETS = {
     "rooms_status": "room_no,status_code,is_dirty,hk_note",
     "sales_front":  "date,folio_no,amount,currency,note",
     "fnb_sales":    "date,dept,amount,currency,note",
-    "fnb_items": "date,dept,item_code,item_name,qty,amount,currency,note",
+    "fnb_items":    "date,dept,item_code,item_name,qty,amount,currency,note",
     "expenses":     "date,category,amount,currency,note",
     "pay_settlement":"date,method,amount,currency,note",
+    "fnb_tenders":  "date,dept,method,amount,currency,note",  # ← 추가
 }
+
 ALIASES = {
     "fnb_payments": "fnb_tenders",
     "fnb_menu":     "fnb_items",
 }
-REQUIRED_DATASETS = ["rooms_status","sales_front","fnb_sales","fnb_item","expenses","pay_settlement"]
+REQUIRED_DATASETS = ["rooms_status","sales_front","fnb_sales","fnb_items","expenses","pay_settlement"]
 
 def _resolve_dataset(ds: str) -> str:
     ds = ds.strip()
@@ -727,99 +765,11 @@ def ping(): return {"ok": True, "env": settings.APP_ENV}
 @app.get("/api/me")
 def me(user = Depends(current_user)): return user
 
-@app.get("/api/menu")
-def menu():
-    ADMINS = ["ADMIN", "SUPERADMIN"]
-    return {"items":[
-        {"label":"Dashboard",     "to":"/dashboard",      "roles": ADMINS},
-        {"label":"Closing",       "to":"/closing",        "roles": ADMINS},
-        {"label":"Closing Board", "to":"/closing/board",  "roles": ADMINS},
-        {"label":"Employees",     "to":"/employees",      "roles": ADMINS},
-        {"label":"Users",         "to":"/admin/users",    "roles": ["SUPERADMIN"]},
-        {"label":"Keywords",      "to":"/keywords",       "roles": ADMINS},
-        {"label":"OTA",           "to":"/ota",            "roles": ADMINS},
-    ]}
-
-# -------------------------------
-# Users
-# -------------------------------
-@app.post("/api/users", dependencies=[Depends(require_token_local)])
-def create_user(p: UserCreate, db: Session = Depends(db_dep), _=Depends(require_roles([ROLES["SUPERADMIN"]]))):
-    has = db.execute(select(User).where(User.email == p.email)).scalar_one_or_none()
-    if has: raise HTTPException(400, "email-exists")
-    u = User(email=p.email, name=p.name, is_active=p.is_active)
-    db.add(u); db.commit(); db.refresh(u)
-    return {"ok": True, "id": u.id}
-
-@app.put("/api/users/{user_id}/approve", dependencies=[Depends(require_token_local)])
-def approve_user(user_id: int, body: ApproveBody, db: Session = Depends(db_dep), _=Depends(require_roles([ROLES["SUPERADMIN"]]))):
-    u = db.get(User, user_id)
-    if not u: raise HTTPException(404, "user not found")
-    u.is_active = bool(body.is_active); db.commit()
-    return {"ok": True, "user_id": user_id, "is_active": u.is_active}
-
-@app.get("/api/users", dependencies=[Depends(require_token_local)])
-def list_users(q: str = "", page: int = 1, size: int = 20, db: Session = Depends(db_dep)):
-    page = max(1, page); size = max(1, min(100, size))
-    stmt = select(User)
-    if q:
-        like = f"%{q}%"
-        stmt = stmt.where(or_(User.email.ilike(like), User.name.ilike(like)))
-    total_rows = db.execute(stmt).scalars().all()
-    rows = db.execute(stmt.offset((page-1)*size).limit(size)).scalars().all()
-    items=[]
-    for u in rows:
-        m = db.query(UserEmployeeMap).filter(UserEmployeeMap.user_id==u.id).first()
-        items.append({"id":u.id,"email":u.email,"name":u.name,"is_active":u.is_active,"employee_id":(m.employee_id if m else None)})
-    return {"total": len(total_rows), "page": page, "size": size, "items": items}
-
-@app.put("/api/users/{user_id}/employee/{emp_id}", dependencies=[Depends(require_token_local)])
-def map_user_employee(user_id:int, emp_id:int, db: Session = Depends(db_dep)):
-    u = db.get(User, user_id); e = db.get(Employee, emp_id)
-    if not u or not e: raise HTTPException(404, "user or employee not found")
-    m = db.query(UserEmployeeMap).filter(UserEmployeeMap.user_id==user_id).first()
-    if m: m.employee_id = emp_id
-    else: db.add(UserEmployeeMap(user_id=user_id, employee_id=emp_id))
-    db.commit()
-    return {"ok": True}
-
-@app.delete("/api/users/{user_id}", dependencies=[Depends(require_token_local)])
-def soft_delete_user(user_id: int, db: Session = Depends(db_dep), _=Depends(require_roles([ROLES["SUPERADMIN"]]))):
-    u = db.get(User, user_id)
-    if not u: raise HTTPException(404, "user not found")
-    u.is_active = False
-    db.commit()
-    return {"ok": True, "id": user_id, "is_active": u.is_active}
-
-# NEW: 사원에서 앱계정 생성 + 매핑
-@app.post("/api/users/from-employee", dependencies=[Depends(require_token_local)])
-def create_user_from_employee(
-    p: CreateFromEmpIn,
-    db: Session = Depends(db_dep),
-    _=Depends(require_roles([ROLES["SUPERADMIN"]]))
-):
-    e = db.query(Employee).filter(
-        Employee.emp_no == p.emp_no,
-        Employee.deleted_at.is_(None)
-    ).first()
-    if not e:
-        raise HTTPException(404, "employee-not-found")
-
-    has = db.query(User).filter(User.email == p.email).first()
-    if has:
-        raise HTTPException(400, "email-exists")
-
-    u = User(email=p.email, name=(p.name or e.name), is_active=bool(p.is_active))
-    db.add(u); db.flush()
-    db.add(UserEmployeeMap(user_id=u.id, employee_id=e.id))
-    db.commit(); db.refresh(u)
-    return {"ok": True, "user_id": u.id, "employee_id": e.id}
-
 # -------------------------------
 # Employees
 # -------------------------------
 @app.get("/api/employees", dependencies=[Depends(require_token_local)])
-def list_employees(q: str = "", page: int = 1, size: int = 20, db: Session = Depends(db_dep)):
+def list_employees(q: str = "", page: int = 1, size: int = 20, db: Session = Depends(get_db)):
     page = max(1, page); size = max(1, min(100, size))
     stmt = select(Employee).where(Employee.deleted_at.is_(None))
     if q:
@@ -832,13 +782,13 @@ def list_employees(q: str = "", page: int = 1, size: int = 20, db: Session = Dep
     return {"total": len(total), "page": page, "size": size, "items": items}
 
 @app.post("/api/employees", dependencies=[Depends(require_token_local)])
-def create_employee(body: EmployeeIn, db: Session = Depends(db_dep), _=Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))):
+def create_employee(body: EmployeeIn, db: Session = Depends(get_db), _=Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))):
     e = Employee(**body.model_dump())
     db.add(e); db.commit(); db.refresh(e)
     return {"ok":True,"id":e.id}
 
 @app.delete("/api/employees/{emp_id}", dependencies=[Depends(require_token_local)])
-def soft_delete_employee(emp_id: int, db: Session = Depends(db_dep), user=Depends(require_roles([ROLES["SUPERADMIN"]]))):
+def soft_delete_employee(emp_id: int, db: Session = Depends(get_db), user=Depends(require_roles([ROLES["SUPERADMIN"]]))):
     e = db.get(Employee, emp_id)
     if not e: raise HTTPException(404, "not found")
     if e.deleted_at:
@@ -848,7 +798,7 @@ def soft_delete_employee(emp_id: int, db: Session = Depends(db_dep), user=Depend
     return {"ok": True}
 
 @app.post("/api/employees/import-csv", dependencies=[Depends(require_token_local)])
-def import_employees_csv(file: UploadFile = File(...), db: Session = Depends(db_dep),
+def import_employees_csv(file: UploadFile = File(...), db: Session = Depends(get_db),
                          _=Depends(require_roles([ROLES["SUPERADMIN"]]))):
     """
     [호환용] 과거 'CSV 전용' 엔드포인트 이름을 유지.
@@ -1028,7 +978,7 @@ def _mask_account(s: str) -> tuple[str,str]:
     return (masked, last4)
 
 @app.post("/api/employees/import", dependencies=[Depends(require_token_local)])
-def import_employees(file: UploadFile = File(...), db: Session = Depends(db_dep),
+def import_employees(file: UploadFile = File(...), db: Session = Depends(get_db),
                      _=Depends(require_roles([ROLES["SUPERADMIN"]]))):
     # 1) 파일 → 행 리스트
     try:
@@ -1151,7 +1101,7 @@ def import_employees(file: UploadFile = File(...), db: Session = Depends(db_dep)
 
 # 상세 읽기 (권한: 토큰만)
 @app.get("/api/employees/{emp_id}", dependencies=[Depends(require_token_local)])
-def get_employee(emp_id: int, db: Session = Depends(db_dep)) -> EmployeeDetailOut:
+def get_employee(emp_id: int, db: Session = Depends(get_db)) -> EmployeeDetailOut:
     e = db.get(Employee, emp_id)
     if not e or getattr(e, "deleted_at", None):
         raise HTTPException(404, "not found")
@@ -1162,7 +1112,7 @@ def get_employee(emp_id: int, db: Session = Depends(db_dep)) -> EmployeeDetailOu
 def update_employee(
     emp_id: int,
     body: EmployeeUpdate,
-    db: Session = Depends(db_dep),
+    db: Session = Depends(get_db),
     _=Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))
 ):
     e = db.get(Employee, emp_id)
@@ -1217,7 +1167,7 @@ def upload_dataset(
     file: Optional[UploadFile] = File(None),     # <-- 파일 옵션
     no_tx: bool = Form(False),                   # <-- 무거래 플래그
     no_tx_reason: str = Form(""),
-    db: Session = Depends(db_dep),
+    db: Session = Depends(get_db),
     _user = Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))
 ):
     key = _resolve_dataset(dataset)
@@ -1307,7 +1257,7 @@ def upload_dataset(
     return {"ok": True, "session_id": sess.id, "version_no": ver}
 
 @app.get("/api/closing/status", dependencies=[Depends(require_token_local)])
-def closing_status(date: str, property_code: str = "MOP", db: Session = Depends(db_dep)):
+def closing_status(date: str, property_code: str = "MOP", db: Session = Depends(get_db)):
     out = []
     for ds in REQUIRED_DATASETS:
         req = _required_parts_for(db, ds)
@@ -1332,7 +1282,7 @@ def closing_status(date: str, property_code: str = "MOP", db: Session = Depends(
     return {"date": date, "property_code": property_code, "items": out}
 
 @app.get("/api/closing/day", dependencies=[Depends(require_token_local)])
-def closing_day_get(date: str, property_code: str = "MOP", db: Session = Depends(db_dep)):
+def closing_day_get(date: str, property_code: str = "MOP", db: Session = Depends(get_db)):
     status = "CLOSED" if _is_day_closed(db, property_code, date) else "OPEN"
     done, total = _day_progress(db, property_code, date)
     return {"date": date, "status": status, "done": done, "total": total, "complete": (done == total)}
@@ -1343,7 +1293,7 @@ def closing_day_set(
     date: Optional[str] = Query(None),
     property_code: str = Query("MOP"),
     status: Optional[str] = Query(None),
-    db: Session = Depends(db_dep),
+    db: Session = Depends(get_db),
     _=Depends(require_roles([ROLES["SUPERADMIN"]]))
 ):
     if body:
@@ -1365,7 +1315,7 @@ def closing_day_set(
     return {"ok": True, "status": _st}
 
 @app.get("/api/closing/calendar", dependencies=[Depends(require_token_local)])
-def closing_calendar(month: str = "", property_code: str = "MOP", db: Session = Depends(db_dep)):
+def closing_calendar(month: str = "", property_code: str = "MOP", db: Session = Depends(get_db)):
     today = datetime.utcnow()
     if not month: month = today.strftime("%Y-%m")
     y, m = map(int, month.split("-"))
@@ -1423,7 +1373,7 @@ def closing_calendar(month: str = "", property_code: str = "MOP", db: Session = 
     }
 
 @app.get("/api/upload/versions", dependencies=[Depends(require_token_local)])
-def upload_versions(dataset: str, business_date: str, property_code: str = "MOP", db: Session = Depends(db_dep)):
+def upload_versions(dataset: str, business_date: str, property_code: str = "MOP", db: Session = Depends(get_db)):
     key = _resolve_dataset(dataset)
     sess = db.query(UploadSession).filter_by(
         dataset=key, business_date=business_date, property_code=property_code
@@ -1442,7 +1392,7 @@ def upload_versions(dataset: str, business_date: str, property_code: str = "MOP"
     return {"session_id": sess.id, "items": items}
 
 @app.get("/api/upload/download", dependencies=[Depends(require_token_local)])
-def upload_download(dataset: str, business_date: str, version_no: int, property_code: str = "MOP", db: Session = Depends(db_dep)):
+def upload_download(dataset: str, business_date: str, version_no: int, property_code: str = "MOP", db: Session = Depends(get_db)):
     key = _resolve_dataset(dataset)
     sess = db.query(UploadSession).filter_by(
         dataset=key, business_date=business_date, property_code=property_code
@@ -1454,7 +1404,7 @@ def upload_download(dataset: str, business_date: str, version_no: int, property_
     return FileResponse(path=f.stored_path, media_type="text/csv", filename=filename)
 
 @app.post("/api/upload/restore", dependencies=[Depends(require_token_local)])
-def upload_restore(body: RestoreBody, db: Session = Depends(db_dep), _=Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))):
+def upload_restore(body: RestoreBody, db: Session = Depends(get_db), _=Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))):
     if _is_day_closed(db, body.property_code, body.business_date):
         raise HTTPException(409, "day-closed")
 
@@ -1518,7 +1468,7 @@ def _latest_paths(db: Session, dataset: str, property_code: str, business_date: 
 @app.get("/api/keywords", dependencies=[Depends(require_token_local)])
 def list_keywords(
     q: str = "", group_name: str = "", active: Optional[bool] = None,
-    page: int = 1, size: int = 20, db: Session = Depends(db_dep),
+    page: int = 1, size: int = 20, db: Session = Depends(get_db),
     _=Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))
 ):
     page = max(1, page); size = max(1, min(100, size))
@@ -1542,7 +1492,7 @@ def list_keywords(
     return {"total": len(total), "page": page, "size": size, "items": items}
 
 @app.post("/api/keywords", dependencies=[Depends(require_token_local)])
-def create_keyword(body: KeywordIn, db: Session = Depends(db_dep),
+def create_keyword(body: KeywordIn, db: Session = Depends(get_db),
     _=Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))):
     has = db.query(Keyword).filter(Keyword.group_name == body.group_name, Keyword.k == body.k).first()
     if has: raise HTTPException(400, "exists")
@@ -1552,7 +1502,7 @@ def create_keyword(body: KeywordIn, db: Session = Depends(db_dep),
     return {"ok": True, "id": r.id}
 
 @app.put("/api/keywords/{kid}", dependencies=[Depends(require_token_local)])
-def update_keyword(kid: int, body: KeywordIn, db: Session = Depends(db_dep),
+def update_keyword(kid: int, body: KeywordIn, db: Session = Depends(get_db),
     _=Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))):
     r = db.get(Keyword, kid)
     if not r: raise HTTPException(404, "not-found")
@@ -1566,7 +1516,7 @@ def update_keyword(kid: int, body: KeywordIn, db: Session = Depends(db_dep),
     return {"ok": True}
 
 @app.delete("/api/keywords/{kid}", dependencies=[Depends(require_token_local)])
-def delete_keyword(kid: int, db: Session = Depends(db_dep),
+def delete_keyword(kid: int, db: Session = Depends(get_db),
     _=Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))):
     r = db.get(Keyword, kid)
     if not r: raise HTTPException(404, "not-found")
@@ -1621,7 +1571,7 @@ def ota_sales_report(
     from_: str = Query(..., alias="from"),
     to_: str   = Query(..., alias="to"),
     property_code: str = "MOP",
-    db: Session = Depends(db_dep),
+    db: Session = Depends(get_db),
     _=Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))
 ):
     alias_map, fee_map = _load_ota_alias_and_fee(db)
@@ -1738,7 +1688,7 @@ def _rooms_breakdown(paths: list[str], *, total_rooms: int) -> tuple[dict, str]:
 
 # --- Replace the whole dashboard_kpi endpoint with this version ---
 @app.get("/api/reports/dashboard-kpi", dependencies=[Depends(require_token_local)])
-def dashboard_kpi(date: str, property_code: str = "MOP", db: Session = Depends(db_dep),
+def dashboard_kpi(date: str, property_code: str = "MOP", db: Session = Depends(get_db),
                   _=Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))):
     def sum_amounts(paths: list[str]) -> int:
         total = 0.0
@@ -1778,8 +1728,7 @@ def dashboard_kpi(date: str, property_code: str = "MOP", db: Session = Depends(d
             {"key": "exp",   "title": "Expenses",    "value": exp_total},
             {"key": "pay",   "title": "Settlement",  "value": pay_total},
             {"key": "cash",  "title": "Cash Net",    "value": cash_net,
-             "extra": {"settlement": pay_total, "expenses": exp_total}},
-        ],
+             "extra": {"settlement": pay_total, "expenses": exp_total}}],
     }
 
 # -------------------------------
@@ -1789,7 +1738,7 @@ def dashboard_kpi(date: str, property_code: str = "MOP", db: Session = Depends(d
 def ota_list(
     q: str = "", channel: str = "", status: str = "",
     start: str = "", end: str = "", page: int = 1, size: int = 20,
-    db: Session = Depends(db_dep),
+    db: Session = Depends(get_db),
     _=Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))
 ):
     page = max(1, page); size = max(1, min(100, size))
@@ -1819,7 +1768,7 @@ def ota_sync(_=Depends(require_roles([ROLES["ADMIN"], ROLES["SUPERADMIN"]]))):
     return {"ok": True, "queued": True}
 
 @app.post("/api/ota/_seed", dependencies=[Depends(require_token_local)])
-def ota_seed(db: Session = Depends(db_dep)):
+def ota_seed(db: Session = Depends(get_db)):
     if settings.APP_ENV.lower() != "dev":
         raise HTTPException(403, "dev-only")
     import random
@@ -1852,4 +1801,3 @@ def dbg_token():
 @app.get("/api/_debug/echo")
 def dbg_echo(x_internal_token: Optional[str] = Header(None), x_internal_token_alt: Optional[str] = Header(None, alias='x-internal-token')):
     return {"recv_header": x_internal_token or x_internal_token_alt}
-

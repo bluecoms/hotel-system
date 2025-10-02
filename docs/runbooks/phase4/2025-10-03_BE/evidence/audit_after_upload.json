@@ -1,0 +1,58 @@
+[
+    {
+        "id": 7,
+        "ts": "2025-10-02 13:30:45",
+        "actor": "system/upload",
+        "action": "SALES_FRONT_UPLOAD",
+        "target": "rows=2",
+        "meta": {
+            "lang": "ko",
+            "dry_run": false
+        }
+    },
+    {
+        "id": 6,
+        "ts": "2025-10-02 09:00:38",
+        "actor": "system/upload",
+        "action": "SALES_FRONT_UPLOAD",
+        "target": "rows=2",
+        "meta": {
+            "dry_run": false
+        }
+    },
+    {
+        "id": 4,
+        "ts": "2025-10-02 08:25:55",
+        "actor": "system/upload",
+        "action": "SALES_FRONT_UPLOAD",
+        "target": "rows=2",
+        "meta": {
+            "dry_run": false
+        }
+    },
+    {
+        "id": 5,
+        "ts": "2025-10-02 08:25:55",
+        "actor": "system/upload",
+        "action": "SALES_FRONT_UPLOAD",
+        "target": "rows=2",
+        "meta": {
+            "dry_run": false
+        }
+    },
+    {
+        "id": 3,
+        "ts": "2025-10-02 05:39:48.469943",
+        "actor": "dev-admin-token",
+        "action": "OTA_COMMISSION_CREATE",
+        "target": "channel=BKG",
+        "meta": {
+            "commission_id": 5,
+            "channel": "BKG",
+            "valid_from": "2026-01-01",
+            "valid_to": "2026-01-31",
+            "rate_pct": 10.0,
+            "note": null
+        }
+    }
+]

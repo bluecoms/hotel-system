@@ -20,16 +20,40 @@
 
     <v-navigation-drawer v-model="drawer" width="260">
       <v-list density="comfortable" nav>
-        <!-- 권한 필터된 메뉴 -->
-        <v-list-item
-          v-for="m in menu.visibleItems"
-          :key="m.to"
-          :title="m.label"
-          :to="m.to"
-          color="primary"
-          :active="isActive(m.to)"
-          link
-        />
+        <template v-for="m in menu.visibleItems" :key="m.to">
+          <!-- children 없는 경우 -->
+          <v-list-item
+            v-if="!('children' in m)"
+            :title="m.label"
+            :to="m.to"
+            color="primary"
+            :active="isActive(m.to)"
+            link
+          />
+
+          <!-- children 있는 경우 (예: OTA) -->
+          <v-list-group v-else :value="isActive(m.to)">
+            <template #activator="{ props }">
+              <v-list-item
+                v-bind="props"
+                :title="m.label"
+                :to="m.to"
+                color="primary"
+                :active="isActive(m.to)"
+                link
+              />
+            </template>
+            <v-list-item
+              v-for="c in (m as any).children"
+              :key="c.to"
+              :title="c.label"
+              :to="c.to"
+              color="primary"
+              :active="isActive(c.to)"
+              link
+            />
+          </v-list-group>
+        </template>
       </v-list>
       <v-divider class="my-2" />
       <div class="px-4 py-2 text-caption">v0.1.0</div>
@@ -41,8 +65,8 @@
       </v-container>
     </v-main>
 
-  <ToastHost />
-  <ConfirmHost />
+    <ToastHost />
+    <ConfirmHost />
   </v-app>
 </template>
 

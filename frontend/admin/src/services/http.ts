@@ -1,21 +1,32 @@
-// /volume1/web/hotel-system/frontend/admin/src/services/http.ts
+const LEGACY_KEY = 'internalToken'                     // 레거시 키
+const KEY = 'ADMIN_TOKEN'                              // 현행 키
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').trim() || '/api'
 
 let ADMIN_TOKEN = (import.meta.env.VITE_ADMIN_TOKEN || '').trim()
-let DEBUG_ROLE: string | null = null
+let DEBUG_ROLE: string | null = localStorage.getItem('debugRole') || null
 
 export const getToken = () =>
-  ADMIN_TOKEN || localStorage.getItem('ADMIN_TOKEN') || ''
+  ADMIN_TOKEN ||
+  localStorage.getItem(KEY) ||
+  localStorage.getItem(LEGACY_KEY) || ''
 
 export const setToken = (v: string | null) => {
   ADMIN_TOKEN = v || ''
-  if (v) localStorage.setItem('ADMIN_TOKEN', v)
-  else localStorage.removeItem('ADMIN_TOKEN')
+  if (v) {
+    localStorage.setItem(KEY, v)
+    localStorage.setItem(LEGACY_KEY, v)            // 이행 단계 동기화(선택)
+  } else {
+    localStorage.removeItem(KEY)
+    localStorage.removeItem(LEGACY_KEY)
+  }
 }
 
-export function setDebugRole(r: string | null) { DEBUG_ROLE = r }
+export function setDebugRole(r: string | null) {
+  DEBUG_ROLE = r
+  if (r) localStorage.setItem('debugRole', r)
+  else localStorage.removeItem('debugRole')
+}
 
-/** 절대/상대 경로 모두 허용 */
 function buildUrl(p: string) {
   if (/^https?:\/\//i.test(p)) return p
   if (p.startsWith('/')) p = p.slice(1)
@@ -26,20 +37,26 @@ function makeHeaders(init?: HeadersInit): Headers {
   const h = new Headers(init || {})
   const t = getToken()
   if (t) h.set('X-Internal-Token', t)
-  if (DEBUG_ROLE) h.set('X-Debug-Role', DEBUG_ROLE)
+
+  // DEV ONLY: X-Debug-Role
+  const currentDebug =
+    (typeof DEBUG_ROLE === 'string' ? DEBUG_ROLE : null) ??
+    (localStorage.getItem('debugRole') ?? null)
+  if (currentDebug) h.set('X-Debug-Role', currentDebug)
+
   if (!h.has('Accept')) h.set('Accept', 'application/json')
+  // 고정 언어(서버 로깅/감사로그용 메타): ko-KR
+  if (!h.has('Accept-Language')) h.set('Accept-Language', 'ko-KR')
   return h
 }
 
-/** FastAPI 오류(detail)가 배열/문자열 등 다양한 형태일 때 메시지를 뽑아줌 */
 function extractErrorMessage(detail: any): string | undefined {
   if (!detail) return undefined
   if (typeof detail === 'string') return detail
   if (Array.isArray(detail)) {
-    // [{loc:..., msg: "..."}] 형태
     const first = detail[0]
     if (first?.msg) return String(first.msg)
-    return JSON.stringify(detail)
+    try { return JSON.stringify(detail) } catch { return String(detail) }
   }
   if (typeof detail === 'object') {
     if (typeof detail.detail === 'string') return detail.detail
@@ -48,12 +65,7 @@ function extractErrorMessage(detail: any): string | undefined {
   try { return JSON.stringify(detail) } catch { return String(detail) }
 }
 
-async function request<T>(
-  method: string,
-  path: string,
-  body?: any,
-  init?: RequestInit
-): Promise<T> {
+async function request<T>(method: string, path: string, body?: any, init?: RequestInit): Promise<T> {
   const url = buildUrl(path)
   const headers = makeHeaders(init?.headers)
   const opts: RequestInit = { method, headers, ...init }
@@ -69,7 +81,7 @@ async function request<T>(
 
   if (!res.ok) {
     let detail: any = undefined
-    try { detail = await res.json() } catch { /* non-json error */ }
+    try { detail = await res.json() } catch {}
     const message = extractErrorMessage(detail) || res.statusText || 'HTTP error'
     const err: any = new Error(message)
     err.status = res.status
@@ -77,21 +89,15 @@ async function request<T>(
     throw err
   }
 
-  // 204 No Content
-  if (res.status === 204) {
-    return undefined as unknown as T
-  }
+  if (res.status === 204) return undefined as unknown as T
 
   const ct = res.headers.get('content-type') || ''
-
   if (ct.includes('application/json')) {
     return await res.json() as T
   }
-  // 텍스트 응답은 text로 반환 (필요 시 raw/blob 헬퍼 사용 권장)
   return await (res.text() as any as Promise<T>)
 }
 
-/** 간단 쿼리 문자열 빌더 (obj -> foo=1&bar=baz) */
 function qs(params?: Record<string, any>) {
   if (!params) return ''
   const s = new URLSearchParams()
@@ -103,7 +109,6 @@ function qs(params?: Record<string, any>) {
   return q ? `?${q}` : ''
 }
 
-/** Blob 다운로드가 필요한 경우(예: CSV) */
 async function getBlob(path: string, init?: RequestInit): Promise<Blob> {
   const url = buildUrl(path)
   const headers = makeHeaders(init?.headers)
@@ -119,21 +124,19 @@ async function getBlob(path: string, init?: RequestInit): Promise<Blob> {
 }
 
 const http = {
-  get:    <T>(p: string, init?: RequestInit)               => request<T>('GET',    p, undefined, init),
-  post:   <T>(p: string, b?: any, init?: RequestInit)      => request<T>('POST',   p, b, init),
-  put:    <T>(p: string, b?: any, init?: RequestInit)      => request<T>('PUT',    p, b, init),
-  patch:  <T>(p: string, b?: any, init?: RequestInit)      => request<T>('PATCH',  p, b, init),
-  delete: <T>(p: string, init?: RequestInit)               => request<T>('DELETE', p, undefined, init),
+  get:    <T>(p: string, init?: RequestInit)          => request<T>('GET',    p, undefined, init),
+  post:   <T>(p: string, b?: any, init?: RequestInit) => request<T>('POST',   p, b, init),
+  put:    <T>(p: string, b?: any, init?: RequestInit) => request<T>('PUT',    p, b, init),
+  patch:  <T>(p: string, b?: any, init?: RequestInit) => request<T>('PATCH',  p, b, init),
+  delete: <T>(p: string, init?: RequestInit)          => request<T>('DELETE', p, undefined, init),
 
-  // 헬퍼
+  // helpers
   url: (p: string) => buildUrl(p),
   headers: () => makeHeaders(),
   qs,
-
-  // 파일용
   getBlob,
 
-  // 토큰/디버그 롤
+  // token/debug
   setToken, getToken, setDebugRole,
 }
 

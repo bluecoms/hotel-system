@@ -1,0 +1,21 @@
+{
+    "total": 5,
+    "items": [
+        {
+            "id": 2,
+            "channel": "BKG",
+            "valid_from": "2025-11-01",
+            "valid_to": "2025-11-30",
+            "rate": 10.0,
+            "note": ""
+        },
+        {
+            "id": 4,
+            "channel": "BKG",
+            "valid_from": "2025-12-01",
+            "valid_to": "2025-12-30",
+            "rate": 10.0,
+            "note": null
+        }
+    ]
+}

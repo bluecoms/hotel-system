@@ -1,9 +1,8 @@
 {
     "user": {
-        "email": "admin@example.com",
-        "name": "Admin",
+        "email": "dev@local",
         "roles": [
-            "SUPERADMIN"
+            "ADMIN"
         ]
     }
 }

@@ -1,0 +1,18 @@
+#  [PM-Hub 공지] Phase 2 스펙 정의 완료
+
+## BE-Core
+- OTA: 채널/커미션 스키마 + API (/api/ota/...)
+- Reports: /api/reports/sales-tags
+- 메뉴: OTA/Reports 항목 roles=ADMIN+
+
+## FE-Core
+- OTA: OTAList.vue, Commission.vue 스켈레톤
+- Reports: SalesTags.vue (차트/테이블)
+- 메뉴: /api/menu 연동, 미개발은 WIP
+
+## QA
+- OTA CRUD + 커미션 조회 시나리오
+- Reports sales-tags 정상/누락/데이터 케이스
+- 사이드바/메뉴 렌더링 및 WIP 라벨 검증
+
+ DoR 충족, 이제 스펙 리뷰 후 구현 단계 진입 (Phase 2 Execution).
