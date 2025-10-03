@@ -1,0 +1,18 @@
+{
+    "items": [
+        {
+            "title": "OTA",
+            "to": "/admin/ota/list",
+            "roles": [
+                "ADMIN"
+            ]
+        },
+        {
+            "title": "Reports",
+            "to": "/admin/reports/sales-tags",
+            "roles": [
+                "ADMIN"
+            ]
+        }
+    ]
+}

@@ -1,0 +1,9 @@
+HTTP/1.1 200 OK
+Server: nginx
+Date: Fri, 03 Oct 2025 15:29:34 GMT
+Content-Type: text/csv; charset=utf-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+Keep-Alive: timeout=20
+content-disposition: attachment; filename="sales-tags_20251001-20251003.csv"
+
