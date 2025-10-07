@@ -1,15 +1,25 @@
-/* src/styles/global.css */
 @import "./tokens.css";
+@import "./theme.css";
 
-*{box-sizing:border-box}
-html,body,#app{height:100%}
-html,body{
-  margin:0;
-  background:var(--bg);
-  color:var(--text);
-  font-family:var(--font-base);
-  -webkit-font-smoothing:antialiased;
-  -moz-osx-font-smoothing:grayscale;
+.font-pd {
+  font-family: Pretendard, "Noto Sans KR", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #app {
+  height: 100%;
+}
+
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Inputs */
@@ -23,7 +33,23 @@ input[type="date"], select {
 }
 
 /* Utilities */
-.panel{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm)}
-.row{display:flex; gap:var(--gap); align-items:center}
-.space{flex:1}
-.muted{color:var(--muted)}
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.row {
+  display: flex;
+  gap: var(--gap);
+  align-items: center;
+}
+
+.space {
+  flex: 1;
+}
+
+.muted {
+  color: var(--muted);
+}
