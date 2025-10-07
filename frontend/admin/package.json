@@ -9,9 +9,11 @@
     "preview": "vite preview --port 5173",
     "typecheck": "vue-tsc --noEmit",
     "typecheck:watch": "vue-tsc --noEmit --watch",
-    "dev:all": "npm-run-all -p dev typecheck:watch"
+    "dev:all": "npm-run-all -p dev typecheck:watch",
+    "style:guard": "bash scripts/style-guard.sh"
   },
   "dependencies": {
+    "@fontsource/pretendard": "^5.2.5",
     "@mdi/font": "^7.4.47",
     "pinia": "^2.2.6",
     "vue": "^3.5.10",
