@@ -1,0 +1,46 @@
+/* src/styles/_index.scss */
+/* -----------------------------------------------------------
+    Hotel Admin System — Global + Brand Unified Style
+   ----------------------------------------------------------- */
+
+@import './tokens.css';
+@import './theme.css';
+@import './styles.css';
+@import './global.css';
+
+/* 추가 브랜드 전역 토큰 */
+:root {
+  --app-font: 'Pretendard', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --app-radius: 12px;
+  --app-primary: #1e40af; /* brand deep blue */
+  --app-accent: #2563eb;
+}
+
+/* Vuetify 및 App 전역 커스터마이징 */
+.v-application {
+  font-family: var(--app-font);
+  color-scheme: light dark;
+}
+
+.v-btn {
+  border-radius: var(--app-radius);
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.v-card {
+  border-radius: var(--app-radius);
+}
+
+.v-alert {
+  border-radius: var(--app-radius);
+}
+
+/* Login / Empty / State screens */
+.login-bg {
+  background: linear-gradient(135deg, var(--app-primary), var(--app-accent));
+}
+
+.text-brand {
+  color: var(--app-accent);
+}

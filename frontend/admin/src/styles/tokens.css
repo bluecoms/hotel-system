@@ -1,5 +1,4 @@
 /* src/styles/tokens.css */
-
 :root {
   /* Fonts */
   --font-en: system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
@@ -9,9 +8,9 @@
 
   /* Brand (Teal + Gold) */
   --brand-primary: #46A5A8;   /* Teal */
-  --brand-secondary: #71757C;  /* Charcoal */
-  --brand-accent:   #C99B69;   /* Gold */
-  --brand-accent-2: #B8844E;   /* Deep Gold */
+  --brand-secondary: #71757C; /* Charcoal */
+  --brand-accent:   #C99B69;  /* Gold */
+  --brand-accent-2: #B8844E;  /* Deep Gold */
 
   /* Neutral */
   --bg:     #F5F6F8;
@@ -30,4 +29,10 @@
   /* Controls */
   --control-h: 40px;
   --gap: 12px;
+
+  /* Semantic */
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-error:   #CE3E3E;
+  --color-info:    #46A5A8;
 }
