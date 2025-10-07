@@ -27,11 +27,6 @@ html, body, #app {
 }
 
 /* Buttons */
-.v-btn {
-  border-radius: 10px !important;
-  font-weight: 700;
-  color: var(--brand-accent);
-}
 
 /* Accent program (Gold) */
 a, .link-accent {
@@ -43,9 +38,6 @@ a:hover, .link-accent:hover {
 }
 
 /* Tabs with premium indicator */
-.v-tabs .v-tab--selected {
-  color: var(--brand-accent) !important;
-}
 .v-tabs .v-tab--selected::after {
   content: '';
   display: block;
