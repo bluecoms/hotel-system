@@ -1,30 +1,29 @@
 // ============================================================================
 // File      : src/router/menu.ts
-// Version   : 2025.10-28 · v3.3 (SSOT Router 동기화 · Master 통합판)
+// Version   : 2025.10-31 · v3.5 (SSOT Router 동기화 · DeptAccess Key 정합성)
 // Purpose   : Hotel Admin — Sidebar Menu (DeptAccess 기반 / SSOT 완전판)
 // ----------------------------------------------------------------------------
 // 목적:
-//   • router/index.ts v3.3 구조에 맞춰 메뉴 정의 동기화
-//   • /admin/users/master 단일 진입점으로 기준정보 통합
-//   • Rank / SalaryGrade 등 개별 라우트 제거
-//   • DeptAccess routeName 과 정확히 일치시켜 접근제어 완전 동기화
+//   • router/index.ts 의 meta.routeName 과 100% 일치하는 메뉴 정의
+//   • /admin/users/master 단일 진입점으로 기준정보 통합 (Rank/SalaryGrade 제거)
+//   • DeptAccess 키(routeName) 오탈자/접두어 불일치로 인한 Forbidden 루프 예방
 // ----------------------------------------------------------------------------
 // 정책:
-//   • SUPERADMIN: 모든 메뉴 접근 가능 (FULL)
-//   • ADMIN     : 마감/리포트/계정 접근 가능
-//   • HRADMIN   : HR(인사관리) 메뉴 접근 가능
+//   • SUPERADMIN: 전 메뉴 접근 가능 (FULL)
+//   • ADMIN     : 대시보드/마감/리포트/계정 등 접근 가능
+//   • HRADMIN   : HR(인사관리) 전용 메뉴 접근 가능
 // ----------------------------------------------------------------------------
-// 주석 규칙(SSOT)
-//   - 각 카테고리 섹션별로 기능 범위 구분
-//   - routeName 은 router/index.ts 의 meta.routeName 과 일치해야 함
+// SSOT 규칙:
+//   • routeName 은 반드시 router/index.ts 의 meta.routeName 과 동일
+//   • 라벨/아이콘은 UI 목적, 접근 판단은 DeptAccess + roles 로만 수행
 // ============================================================================
 
 export type NavItem = {
   label: string
   to?: string
   icon?: string
-  roles?: string[]           // 접근 허용 역할
-  routeName?: string         // DeptAccess 권한키
+  roles?: string[]           // 접근 허용 역할 (UI 표시 필터용)
+  routeName?: string         // ✅ DeptAccess 권한 키 (router meta.routeName 과 일치)
   children?: NavItem[]       // 하위 메뉴
 }
 
@@ -37,7 +36,7 @@ const menu: NavItem[] = [
     to: '/',
     icon: 'mdi-view-dashboard-outline',
     roles: ['ADMIN', 'SUPERADMIN'],
-    routeName: 'dashboard-kpi',
+    routeName: 'dashboard-kpi', // router: meta.routeName='dashboard-kpi'
   },
 
   // ─────────────────────────────
@@ -52,20 +51,20 @@ const menu: NavItem[] = [
         label: '마감 캘린더',
         to: '/closing',
         icon: 'mdi-calendar-month-outline',
-        routeName: 'closing-calendar',
+        routeName: 'closing-calendar', // router와 일치
       },
       {
         label: '일별 보드',
         to: '/closing/board',
         icon: 'mdi-clipboard-text-clock-outline',
-        routeName: 'closing-day',
+        routeName: 'closing-day', // router와 일치
       },
       {
         label: '병합 이력',
         to: '/closing/merge',
         icon: 'mdi-database-sync',
         roles: ['SUPERADMIN'],
-        routeName: 'closing-merge',
+        routeName: 'closing-merge', // router와 일치
       },
     ],
   },
@@ -123,31 +122,31 @@ const menu: NavItem[] = [
         label: 'HR 대시보드',
         to: '/admin/hr/dashboard',
         icon: 'mdi-view-dashboard-variant-outline',
-        routeName: 'admin-hr-dashboard',
+        routeName: 'hr-dashboard', // ✅ admin-hr-dashboard → hr-dashboard 로 교정
       },
       {
         label: '직원 목록',
         to: '/admin/hr/employees',
         icon: 'mdi-account-tie',
-        routeName: 'admin-hr-employees',
+        routeName: 'hr-employees', // ✅ admin-hr-employees → hr-employees
       },
       {
         label: '계약 관리',
         to: '/admin/hr/contracts',
         icon: 'mdi-file-sign',
-        routeName: 'admin-hr-contracts',
+        routeName: 'hr-contracts', // ✅ admin-hr-contracts → hr-contracts
       },
       {
         label: '근태 기록',
         to: '/admin/hr/records',
         icon: 'mdi-file-document-multiple-outline',
-        routeName: 'admin-hr-records',
+        routeName: 'hr-records', // ✅ admin-hr-records → hr-records
       },
       {
         label: '계정 매핑',
         to: '/admin/hr/account-link',
         icon: 'mdi-account-arrow-right',
-        routeName: 'admin-hr-account-link',
+        routeName: 'hr-account-link', // ✅ admin-hr-account-link → hr-account-link
       },
     ],
   },
@@ -164,20 +163,20 @@ const menu: NavItem[] = [
         label: '사용자 목록',
         to: '/admin/users',
         icon: 'mdi-account-multiple-outline',
-        routeName: 'admin-users',
+        routeName: 'users', // ✅ admin-users → users
       },
       {
-        // ✅ 통합 기준정보 관리 (MasterData)
+        // 통합 기준정보 관리 (MasterData)
         label: '기준정보 관리',
         to: '/admin/users/master',
         icon: 'mdi-database-cog-outline',
-        routeName: 'admin-users-master',
+        routeName: 'users-master', // ✅ router: meta.routeName='users-master'
       },
       {
         label: '비밀번호 초기화',
         to: '/admin/users/password-reset',
         icon: 'mdi-lock-reset',
-        routeName: 'admin-users-password-reset',
+        routeName: 'users-password-reset', // router와 일치
       },
     ],
   },
@@ -190,7 +189,7 @@ const menu: NavItem[] = [
     to: '/admin/role-access',
     icon: 'mdi-shield-account-outline',
     roles: ['SUPERADMIN'],
-    routeName: 'role-access',
+    routeName: 'role-access', // router와 일치
   },
 
   // ─────────────────────────────
@@ -205,7 +204,7 @@ const menu: NavItem[] = [
         label: '내 정보',
         to: '/account/info',
         icon: 'mdi-account-circle',
-        routeName: 'account-info',
+        routeName: 'account-info', // router와 일치
       },
     ],
   },
@@ -214,7 +213,8 @@ const menu: NavItem[] = [
 // ============================================================================
 // Export (SSOT 단일 메뉴 객체)
 // ----------------------------------------------------------------------------
-//  • App.vue → Sidebar 컴포넌트로 전달
-//  • 필터링: useMenuStore → normalizeNav() → filterNav() → routeExists()
+// • App.vue → Sidebar 로 전달
+// • 필터링: useMenuStore → normalizeNav() → filterNav() → routeExists()
+// • DeptAccess 판단은 meta.routeName(=이 파일의 routeName)으로 이뤄짐
 // ============================================================================
 export default menu

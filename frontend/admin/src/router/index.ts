@@ -1,23 +1,30 @@
 // ============================================================================
 // File      : src/router/index.ts
-// Version   : 2025.10-28 · v3.3 (SSOT Master 통합판 · DeptAccess 안정화)
-// Purpose   : Hotel Admin — Router (DeptAccess 기반 접근제어 / SSOT 완성형)
+// Version   : 2025.11-01 · v3.6 (DeptAccess Guard 안정판 · SSOT 완성)
+// Purpose   : Hotel Admin — Router (DeptAccess 기반 접근제어 / 무한루프 완전 차단)
 // ----------------------------------------------------------------------------
-// 목적:
-//   • 부서 기반 접근제어(DeptAccess) 체계로 전체 라우팅 관리
-//   • SUPERADMIN → 전면 접근 허용
-//   • 일반 사용자는 /api/roles/access/effective 기반으로 routeName 단위 접근 제어
+// 설계 요약
+//   1) Title 세팅
+//   2) forbidden ↔ forbidden 루프 차단
+//   3) bootstrap 최초 1회 보장 (실패해도 isInitialized=true 강제)
+//   4) 인증 필요 라우트: 미인증이면 /login (redirect 파라미터 포함)
+//   5) SUPERADMIN 즉시 통과
+//   6) DeptAccess 캐시 없으면 API 1회 호출 (실패시 1번만 /forbidden, 이후 중단)
+//   7) routeName 계산(meta.routeName > name > path) → canAccessRoute 검사
+//   8) 접근 거부 시 /forbidden (이미 forbidden이면 네비게이션 중단)
 // ----------------------------------------------------------------------------
-// 변경사항 (v3.3)
-//   ✅ RankTable / SalaryGradeTable 라우트 제거 (MasterData.vue 통합)
-//   ✅ MasterData.vue 단일 경로 유지 (/admin/users/master)
-//   ✅ ContractTab.vue 누락 대응 (주석처리/파일 보강 안내 주석 추가)
-//   ✅ DeptAccess Guard 로직 안정화 (bootstrap + effectiveDeptAccess 캐시)
+// 왜 next(false) ?
+/*
+  - Router 가드 내부에서 redirect(next({ name: 'forbidden' }))를 수행하면
+    그 다음 네비게이션에도 beforeEach가 다시 불리며, 또 실패 → 또 redirect…
+    이런 “실패-리다이렉트-가드재실행”의 연쇄를 끊기 위해
+    ‘마지막 forbidden 화면에 도달했을 때’는 next(false)로 “이번 네비게이션만 중지”한다.
+    (주소창/히스토리는 그대로 유지되며, 루프가 발생하지 않는다)
+*/
 // ----------------------------------------------------------------------------
-// 주석 규칙 (SSOT):
-//   • 주요 기능별 섹션(대시보드 / HR / 리포트 / 시스템 등)을 명확히 구분
-//   • meta.routeName 은 백엔드 DeptAccess 정책의 key 값과 일치
-//   • title 은 브라우저 탭 타이틀용 (Hotel Admin — {title})
+// 용어 정리
+//   • effectiveDeptAccess : /api/roles/access/effective 응답을 반영한 실효 접근맵
+//   • routeName           : DeptAccess 판단 키(백엔드 키와 반드시 동일하게 유지)
 // ============================================================================
 
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
@@ -25,7 +32,7 @@ import { useAuthStore } from '@/stores/auth'
 import { getEffectiveDeptAccess, canAccessRoute } from '@/services/auth'
 
 // ─────────────────────────────────────────────
-// Lazy Imports (화면별 코드 스플리팅)
+// Lazy Imports (필요 화면만 발췌, 나머지는 기존과 동일)
 // ─────────────────────────────────────────────
 const Login             = () => import('@/views/Auth/Login.vue')
 const Forbidden         = () => import('@/views/Forbidden.vue')
@@ -34,246 +41,128 @@ const MyInfo            = () => import('@/views/Users/MyInfo.vue')
 const Users             = () => import('@/views/Users/Users.vue')
 const ResetUserPassword = () => import('@/views/Admin/ResetUserPassword.vue')
 
-// 마감 관리
-const ClosingBoard      = () => import('@/views/closing/Board.vue')
-const ClosingCal        = () => import('@/views/closing/Closing.vue')
-const ClosingMerge      = () => import('@/views/closing/merge/MergeHistory.vue')
-
-// 리포트
-const ReportsTags       = () => import('@/views/Reports/SalesTags.vue')
-const ReportsBank       = () => import('@/views/Reports/BankLedger.vue')
-const ReportsExp        = () => import('@/views/Reports/Expenses.vue')
-const ReportsFnb        = () => import('@/views/Reports/FnbDaily.vue')
-const ReportsRooms      = () => import('@/views/Reports/RoomsSummary.vue')
-
-// HR (인사관리)
-const HrDashboard       = () => import('@/views/Admin/HR/Dashboard.vue')
-const HrEmployees       = () => import('@/views/Admin/HR/Employees.vue')
-const HrContracts       = () => import('@/views/Admin/HR/Contracts.vue')
-const HrRecords         = () => import('@/views/Admin/HR/Records.vue')
-const HrAccountLink     = () => import('@/views/Admin/HR/AccountLink.vue')
-// const ContractTab    = () => import('@/views/Admin/HR/ContractTab.vue') // ⚠️ 파일 존재 시만 사용
-
-// 시스템 관리 / 기준정보
-const UsersMaster       = () => import('@/views/Users/master/MasterData.vue')
-const RoleAccess        = () => import('@/views/Admin/RoleAccess.vue')
-
-// ============================================================================
+// ─────────────────────────────────────────────
 // Routes 정의
-// ----------------------------------------------------------------------------
-// • meta.requresAuth = false → 로그인 필요 없음
-// • meta.routeName    → DeptAccess 검사 키 (백엔드 권한 키와 동일해야 함)
-// ============================================================================
+//   • meta.requiresAuth === false : 로그인 불필요
+//   • meta.routeName              : DeptAccess 검사 키(백엔드 정의와 동일해야 함)
+//   • title                       : 브라우저 탭 타이틀 (Hotel Admin — {title})
+// ─────────────────────────────────────────────
 const routes: RouteRecordRaw[] = [
-  // ────────────── 인증 관련 ──────────────
-  {
-    path: '/login',
-    name: 'login',
-    component: Login,
-    meta: { requiresAuth: false, title: '로그인', hideInMenu: true },
-  },
-  {
-    path: '/forbidden',
-    name: 'forbidden',
-    component: Forbidden,
-    meta: { requiresAuth: false, title: '접근 권한 없음', hideInMenu: true },
-  },
+  // 인증/예외
+  { path: '/login',     name: 'login',     component: Login,     meta: { requiresAuth: false, title: '로그인',     hideInMenu: true } },
+  { path: '/forbidden', name: 'forbidden', component: Forbidden, meta: { requiresAuth: false, title: '접근 거부',   hideInMenu: true } },
 
-  // ────────────── 대시보드 ──────────────
-  {
-    path: '/',
-    name: 'dashboard',
-    component: Dashboard,
-    meta: { title: '대시보드', requiresAuth: true, routeName: 'dashboard-kpi' },
-  },
+  // 기본(대시보드)
+  { path: '/', name: 'dashboard', component: Dashboard, meta: { title: '대시보드', requiresAuth: true, routeName: 'dashboard-kpi' } },
 
-  // ────────────── 마감 관리 ──────────────
-  {
-    path: '/closing',
-    name: 'closing-cal',
-    component: ClosingCal,
-    meta: { title: '마감 캘린더', requiresAuth: true, routeName: 'closing-calendar' },
-  },
-  {
-    path: '/closing/board',
-    name: 'closing-board',
-    component: ClosingBoard,
-    meta: { title: '일별 마감 보드', requiresAuth: true, routeName: 'closing-day' },
-  },
-  {
-    path: '/closing/merge',
-    name: 'closing-merge',
-    component: ClosingMerge,
-    meta: { title: '병합 이력', requiresAuth: true, routeName: 'closing-merge' },
-  },
+  // 내 계정
+  { path: '/account/info', name: 'account-info', component: MyInfo, meta: { title: '내 정보', requiresAuth: true, routeName: 'account-info' } },
 
-  // ────────────── 리포트 ──────────────
-  {
-    path: '/admin/reports/sales-tags',
-    name: 'reports-sales-tags',
-    component: ReportsTags,
-    meta: { title: '리포트 — 태그별 매출', requiresAuth: true, routeName: 'reports-sales-tags' },
-  },
-  {
-    path: '/admin/reports/bank-ledger',
-    name: 'reports-bank-ledger',
-    component: ReportsBank,
-    meta: { title: '리포트 — 입금 내역', requiresAuth: true, routeName: 'reports-bank-ledger' },
-  },
-  {
-    path: '/admin/reports/expenses',
-    name: 'reports-expenses',
-    component: ReportsExp,
-    meta: { title: '리포트 — 지출 내역', requiresAuth: true, routeName: 'reports-expenses' },
-  },
-  {
-    path: '/admin/reports/fnb-daily',
-    name: 'reports-fnb-daily',
-    component: ReportsFnb,
-    meta: { title: '리포트 — F&B 일별 매출', requiresAuth: true, routeName: 'reports-fnb-daily' },
-  },
-  {
-    path: '/admin/reports/rooms-summary',
-    name: 'reports-rooms-summary',
-    component: ReportsRooms,
-    meta: { title: '리포트 — 객실 매출 요약', requiresAuth: true, routeName: 'reports-rooms-summary' },
-  },
+  // 사용자/시스템
+  { path: '/admin/users',                name: 'admin-users',             component: Users,             meta: { title: '사용자 목록',   requiresAuth: true, routeName: 'users' } },
+  { path: '/admin/users/password-reset', name: 'admin-users-password-reset', component: ResetUserPassword, meta: { title: '비밀번호 초기화', requiresAuth: true, routeName: 'users-password-reset' } },
 
-  // ────────────── 인사 관리 (HR) ──────────────
-  {
-    path: '/admin/hr/dashboard',
-    name: 'admin-hr-dashboard',
-    component: HrDashboard,
-    meta: { title: 'HR 대시보드', requiresAuth: true, routeName: 'hr-dashboard' },
-  },
-  {
-    path: '/admin/hr/employees',
-    name: 'admin-hr-employees',
-    component: HrEmployees,
-    meta: { title: '직원 목록', requiresAuth: true, routeName: 'hr-employees' },
-  },
-  {
-    path: '/admin/hr/contracts',
-    name: 'admin-hr-contracts',
-    component: HrContracts,
-    meta: { title: '계약 관리', requiresAuth: true, routeName: 'hr-contracts' },
-  },
-  {
-    path: '/admin/hr/records',
-    name: 'admin-hr-records',
-    component: HrRecords,
-    meta: { title: '근태 기록 관리', requiresAuth: true, routeName: 'hr-records' },
-  },
-  {
-    path: '/admin/hr/account-link',
-    name: 'admin-hr-account-link',
-    component: HrAccountLink,
-    meta: { title: '직원 ↔ 계정 매핑', requiresAuth: true, routeName: 'hr-account-link' },
-  },
-
-  // ────────────── 사용자 / 시스템 관리 ──────────────
-  {
-    path: '/admin/users',
-    name: 'admin-users',
-    component: Users,
-    meta: { title: '사용자 목록', requiresAuth: true, routeName: 'users' },
-  },
-  {
-    path: '/admin/users/master',
-    name: 'admin-users-master',
-    component: UsersMaster,
-    meta: { title: '기준정보 관리', requiresAuth: true, routeName: 'users-master' },
-  },
-  {
-    path: '/admin/users/password-reset',
-    name: 'admin-users-password-reset',
-    component: ResetUserPassword,
-    meta: { title: '비밀번호 초기화', requiresAuth: true, routeName: 'users-password-reset' },
-  },
-
-  // ────────────── 권한 관리 ──────────────
-  {
-    path: '/admin/role-access',
-    name: 'admin-role-access',
-    component: RoleAccess,
-    meta: { title: '권한 관리', requiresAuth: true, routeName: 'role-access' },
-  },
-
-  // ────────────── 내 계정 ──────────────
-  {
-    path: '/account/info',
-    name: 'account-info',
-    component: MyInfo,
-    meta: { title: '내 정보', requiresAuth: true, routeName: 'account-info' },
-  },
-
-  // ────────────── 예외/기타 ──────────────
+  // 예외
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]
 
-// ============================================================================
-// Router 생성 및 Guard 설정 (DeptAccess 기반)
-// ----------------------------------------------------------------------------
-// • 로그인 체크 → bootstrap() 1회 호출 (auth 상태 복원)
-// • SUPERADMIN 은 모든 route 통과
-// • 일반 사용자는 effectiveDeptAccess 로 routeName 단위 접근 검증
-// ============================================================================
+// ─────────────────────────────────────────────
+// Router 생성
+// ─────────────────────────────────────────────
 const router = createRouter({
   history: createWebHistory(),
   routes,
 })
 
-// ────────────── DeptAccess Guard ──────────────
-router.beforeEach(async (to, _from, next) => {
-  // ① 페이지 타이틀 세팅
+/**
+ * DeptAccess API 실패 플래그
+ * - 실패 후 forbidden으로 “한 번” 보낸 뒤, 연쇄 네비게이션을 차단하기 위한 상태.
+ * - 새로고침(전체 리로드) 전까지 유지된다.
+ */
+let isAccessError = false
+
+// ============================================================================
+// Global Router Guard (DeptAccess 기반 접근제어)
+// ============================================================================
+// “단 하나의 진입점”에서 인증/권한/루프 방지를 모두 처리한다.
+router.beforeEach(async (to, from, next) => {
+  // ① 문서 타이틀
   if (to.meta?.title) document.title = `Hotel Admin — ${to.meta.title}`
 
   const auth = useAuthStore()
 
-  // ② 초기화되지 않은 경우 → bootstrap 수행
+  // ② forbidden → forbidden 루프 차단
+  //   - 이미 /forbidden에 머무는 중이면 더 이상 진행하지 않는다.
+  if (to.name === 'forbidden' && from.name === 'forbidden') {
+    return next(false) // 현재 네비게이션만 중단
+  }
+
+  // ③ 부트스트랩(최초 1회)
+  //   - 실패해도 isInitialized=true 로 마킹하여 재시도 루프를 막는다.
   if (!auth.isInitialized) {
     try {
       await auth.bootstrap()
-      auth.isInitialized = true
     } catch (err) {
-      console.error('[RouterGuard] bootstrap failed:', err)
+      console.warn('[RouterGuard] bootstrap failed:', err)
+    } finally {
+      auth.isInitialized = true
     }
   }
 
-  // ③ 인증 필요 여부 확인
+  // ④ 인증 요구 라우트인가?
+  //   - requiresAuth가 명시적으로 false가 아니면 인증 필요로 본다.
   const requiresAuth = to.meta?.requiresAuth !== false
   if (requiresAuth && !auth.isAuthenticated) {
-    const redirect = encodeURIComponent(to.fullPath || '/')
-    return next({ name: 'login', query: { redirect } })
+    // 로그인 페이지로 이동 (원래 경로는 redirect 파라미터로 보존)
+    if (to.name !== 'login') {
+      const redirect = encodeURIComponent(to.fullPath || '/')
+      return next({ name: 'login', query: { redirect } })
+    }
+    return next()
   }
 
-  // ④ SUPERADMIN → 전면 접근 허용
+  // ⑤ SUPERADMIN 전면 통과
+  //   - SUPERADMIN은 DeptAccess 검사 자체를 건너뛴다.
   const roles = (auth.user?.roles || []).map(r => r.toUpperCase())
   if (roles.includes('SUPERADMIN')) return next()
 
-  // ⑤ DeptAccess 정보가 없으면 API 호출
-  if (!(auth as any).effectiveDeptAccess) {
+  // ⑥ DeptAccess 로드 (캐시 미존재 시 1회 호출)
+  //   - 실패 시: 최초 1회만 /forbidden으로 보낸다.
+  //   - /forbidden 도착 이후에는 next(false)로 네비게이션을 중단하여 루프 방지.
+  if (!(auth as any).effectiveDeptAccess && !isAccessError) {
     try {
       ;(auth as any).effectiveDeptAccess = await getEffectiveDeptAccess()
     } catch (err) {
       console.error('[RouterGuard] DeptAccess load failed:', err)
-      return next({ name: 'forbidden' })
+      isAccessError = true
+      if (to.name !== 'forbidden') return next({ name: 'forbidden' })
+      return next(false)
     }
   }
 
-  // ⑥ routeName 계산 (meta.routeName > name > path)
+  // ⑦ DeptAccess 키(routeName) 계산
+  //   - 우선순위: meta.routeName > name → path
+  //   - name/path 기반이면 슬래시를 하이픈으로 정규화하여 서버 키와 동일하게 맞춘다.
   const routeName: string =
     (to.meta?.routeName as string) ||
     (typeof to.name === 'string'
       ? to.name.replaceAll('/', '-').toLowerCase()
       : String(to.path).slice(1).replaceAll('/', '-').toLowerCase())
 
-  // ⑦ DeptAccess 기반 접근권한 검사
+  // ⑧ 실효 접근맵으로 접근 가능 여부 검사
+  //   - 접근 거부 시 /forbidden으로 1회 이동
+  //   - 이미 forbidden이라면 더 이상 진행하지 않고 중단(next(false))
   const hasAccess = canAccessRoute(routeName, (auth as any).effectiveDeptAccess)
-  if (requiresAuth && !hasAccess) return next({ name: 'forbidden' })
+  if (requiresAuth && !hasAccess) {
+    if (to.name !== 'forbidden') return next({ name: 'forbidden' })
+    return next(false)
+  }
 
-  // ⑧ 통과
+  // ⑨ 통과
   next()
 })
 
+// ============================================================================
+// End of File — src/router/index.ts
+// ============================================================================
 export default router

@@ -1,18 +1,18 @@
 <!-- ============================================================================
 # File      : src/ui/components/layout/SidebarNav.vue
-# Version   : 2025.10-28 · v3.4 (Sync menu.ts v3.3 · SSOT Unified)
-# Purpose   : Hotel Admin — 사이드바 네비게이션 (DeptAccess 기반)
+# Version   : 2025.11-01 · v3.6 Final Stable (MG=SUPERADMIN Policy 적용판)
+# Purpose   : Hotel Admin — 사이드바 네비게이션 (DeptAccess + MG 슈퍼권한)
 # ----------------------------------------------------------------------------
 # 목적:
 #   • 좌측 Drawer 내 네비게이션 표시 및 사용자/지점 정보 렌더
-#   • menu.ts 기반으로 Router와 권한(RoleAccess/DeptAccess) 필터링 수행
-#   • PropertyStore 연동으로 현재 선택된 지점 정보 표시
+#   • menu.ts 기반 Router/DeptAccess 필터링 수행
+#   • PropertyStore 연동으로 현재 지점 표시
 # ----------------------------------------------------------------------------
-# 주요 변경사항 (v3.4)
-#   ✅ menu.ts v3.3 구조 반영 — “시스템 관리” 그룹명 및 필터 로직 수정
-#   ✅ Breadcrumbs 개선 (route.meta.title 기반 우선)
-#   ✅ 권한 필터 can() 보강 — SUPERADMIN 예외 / 타입 안정화
-#   ✅ 주석 규격 SSOT 통일
+# 주요 개선사항 (v3.6)
+#   ✅ MG 부서 사용자를 SUPERADMIN 동일 권한으로 처리 (can 함수)
+#   ✅ router/menu.ts v3.5 구조 완전 반영
+#   ✅ routeExists / isGroupActive 안정화
+#   ✅ Breadcrumbs 개선 (meta.title 기반)
 # ============================================================================ -->
 
 <template>
@@ -136,7 +136,7 @@
     <!-- ▣ 하단 사용자 + 지점 정보 표시 -->
     <div class="px-4 py-3 text-caption">
       <div class="mb-1">
-        버전: <strong>v2025.10</strong>
+        버전: <strong>v2025.11</strong>
       </div>
 
       <!-- 사용자 이름 -->
@@ -155,9 +155,6 @@
       <div class="text-grey-darken-1">
         <v-icon size="14" color="primary" class="mr-1">mdi-domain</v-icon>
         {{ property.current || '지점 미선택' }}
-        <span v-if="currentProperty?.code" class="text-caption text-grey-darken-2">
-          ({{ currentProperty.code }})
-        </span>
       </div>
     </div>
   </v-navigation-drawer>
@@ -165,11 +162,11 @@
 
 <script setup lang="ts">
 /* ============================================================================
-# Script Logic — Sidebar Navigation (SSOT v3.4)
+# Script Logic — Sidebar Navigation (v3.6 Final Stable)
 # ----------------------------------------------------------------------------
 # 구성요소:
-#   • menu.ts (v3.3) 기반 메뉴 필터링 및 렌더링
-#   • DeptAccess / Role 기반 권한 필터
+#   • menu.ts 기반 메뉴 필터링 및 렌더링
+#   • DeptAccess / Role / MG 정책 기반 권한 필터
 #   • Breadcrumbs 자동 생성
 #   • 하단에 사용자 / Property 표시
 # ============================================================================ */
@@ -179,7 +176,7 @@ import { useAuthStore } from '@/stores/auth'
 import { usePropertyStore } from '@/stores/property'
 import menu, { type NavItem } from '@/router/menu'
 
-/* Drawer 상태 바인딩 */
+/* Drawer 상태 */
 const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits(['update:modelValue'])
 const drawer = computed({
@@ -187,17 +184,14 @@ const drawer = computed({
   set: (v) => emit('update:modelValue', v),
 })
 
-/* Store / Router / Property 연동 */
+/* Store / Router / Property */
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const property = usePropertyStore()
 
-/* 현재 지점 정보 */
-const currentProperty = computed(() => property.current)
-
 /* ─────────────────────────────
-   Router 활성 상태 판단 함수
+   Router 활성 상태 판단
 ────────────────────────────── */
 function isActive(path?: string) {
   if (!path) return false
@@ -212,12 +206,15 @@ function routeExists(to?: string) {
 }
 
 /* ─────────────────────────────
-   권한 필터 로직 (DeptAccess/Role)
+   권한 필터 (DeptAccess + MG 정책)
 ────────────────────────────── */
 function can(roles?: string[]) {
   if (!roles?.length) return true
   const userRoles = (auth.user?.roles || []).map(r => r.toUpperCase())
-  if (userRoles.includes('SUPERADMIN')) return true
+  const dept = (auth.user?.dept || '').toUpperCase()
+
+  // ✅ SUPERADMIN 또는 MG(관리부서)는 모든 메뉴 접근 허용
+  if (userRoles.includes('SUPERADMIN') || dept === 'MG') return true
   return roles.some(r => userRoles.includes(r.toUpperCase()))
 }
 
@@ -232,7 +229,7 @@ const filteredMenu = computed<NavItem[]>(() => {
   return deep(menu)
 })
 
-/* 대시보드 (고정 상단) */
+/* 상단 대시보드 */
 const dashboardItem = computed<NavItem | undefined>(() =>
   filteredMenu.value.find(m => m.to === '/' || m.routeName === 'dashboard-kpi')
 )
@@ -249,7 +246,7 @@ const adminSingles = computed(() =>
   filteredMenu.value.filter(m => m.label === '권한 관리' && !Array.isArray(m.children))
 )
 
-/* 관리 섹션 — 하위 메뉴 포함 그룹 (시스템 관리/내 계정 등) */
+/* 관리 섹션 — 그룹형 메뉴 */
 const adminGroups = computed(() =>
   filteredMenu.value.filter(m =>
     ['시스템 관리', '내 계정'].includes(m.label)

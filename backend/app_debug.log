@@ -14426,3 +14426,1486 @@ sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint fail
 2025-10-22 20:30:44,077 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
 2025-10-22 20:30:44,078 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
 2025-10-22 20:30:44,165 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 20:55:58,131 - INFO - app.routers:126 - [routers] include OK: auth                     /api
+2025-10-22 20:55:58,132 - INFO - app.routers:126 - [routers] include OK: health                   
+2025-10-22 20:55:58,135 - INFO - app.routers:126 - [routers] include OK: menu                     /api
+2025-10-22 20:55:58,177 - INFO - app.routers:126 - [routers] include OK: users                    /api/users
+2025-10-22 20:55:58,208 - INFO - app.routers:126 - [routers] include OK: employees                /api/employees
+2025-10-22 20:55:58,223 - INFO - app.routers:126 - [routers] include OK: user_roles               /api/user-roles
+2025-10-22 20:55:58,247 - INFO - app.routers:126 - [routers] include OK: roles                    /api/roles
+2025-10-22 20:55:58,266 - INFO - app.routers:126 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 20:55:58,289 - INFO - app.routers:126 - [routers] include OK: contracts                /api/contracts
+2025-10-22 20:55:58,299 - INFO - app.routers:126 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 20:55:58,305 - INFO - app.routers:126 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 20:55:58,318 - INFO - app.routers:126 - [routers] include OK: upload                   /api/upload
+2025-10-22 20:55:58,337 - INFO - app.routers:126 - [routers] include OK: closing                  /api
+2025-10-22 20:55:58,357 - INFO - app.routers:126 - [routers] include OK: ota                      /api/ota
+2025-10-22 20:55:58,379 - INFO - app.routers:126 - [routers] include OK: reports                  /api/reports
+2025-10-22 20:55:58,386 - INFO - app.routers:126 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 20:55:58,396 - INFO - app.routers:126 - [routers] include OK: reports_bank             /api
+2025-10-22 20:55:58,422 - INFO - app.routers:126 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 20:55:58,436 - INFO - app.routers:126 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 20:55:58,449 - INFO - app.routers:126 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 20:55:58,471 - INFO - app.routers:126 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 20:55:58,476 - INFO - app.routers:126 - [routers] include OK: master_property          /api/properties
+2025-10-22 20:55:58,495 - INFO - app.routers:126 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 20:55:58,509 - INFO - app.routers:126 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 20:55:58,513 - INFO - app.routers:126 - [routers] include OK: audit                    /api/audit
+2025-10-22 20:55:58,539 - INFO - app.routers:126 - [routers] include OK: bank                     /api
+2025-10-22 20:55:58,556 - INFO - app.routers:126 - [routers] include OK: merge                    /api/merge
+2025-10-22 20:55:58,557 - INFO - app.routers:126 - [routers] include OK: debug                    /api/_debug
+2025-10-22 20:55:58,566 - INFO - app.routers:126 - [routers] include OK: board                    /api
+2025-10-22 20:55:58,719 - INFO - app.routers:126 - [routers] include OK: master                   /api/master
+2025-10-22 20:55:58,735 - INFO - app.routers:126 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 20:55:58,746 - INFO - app.routers:126 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 20:55:58,752 - INFO - app.routers:126 - [routers] include OK: properties               /api/properties
+2025-10-22 20:55:58,754 - INFO - app.routers:126 - [routers] include OK: templates                /api/templates
+2025-10-22 20:55:58,754 - INFO - app.routers:130 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-22 20:55:58,756 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/user-roles, /api/users
+2025-10-22 20:55:58,756 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 20:55:58,758 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 20:55:58,840 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 21:14:43,846 - INFO - app.routers:126 - [routers] include OK: auth                     /api
+2025-10-22 21:14:43,846 - INFO - app.routers:126 - [routers] include OK: health                   
+2025-10-22 21:14:43,850 - INFO - app.routers:126 - [routers] include OK: menu                     /api
+2025-10-22 21:14:43,892 - INFO - app.routers:126 - [routers] include OK: users                    /api/users
+2025-10-22 21:14:43,923 - INFO - app.routers:126 - [routers] include OK: employees                /api/employees
+2025-10-22 21:14:43,947 - INFO - app.routers:126 - [routers] include OK: roles                    /api/roles
+2025-10-22 21:14:43,966 - INFO - app.routers:126 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 21:14:43,989 - INFO - app.routers:126 - [routers] include OK: contracts                /api/contracts
+2025-10-22 21:14:43,999 - INFO - app.routers:126 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 21:14:44,005 - INFO - app.routers:126 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 21:14:44,017 - INFO - app.routers:126 - [routers] include OK: upload                   /api/upload
+2025-10-22 21:14:44,037 - INFO - app.routers:126 - [routers] include OK: closing                  /api
+2025-10-22 21:14:44,056 - INFO - app.routers:126 - [routers] include OK: ota                      /api/ota
+2025-10-22 21:14:44,079 - INFO - app.routers:126 - [routers] include OK: reports                  /api/reports
+2025-10-22 21:14:44,085 - INFO - app.routers:126 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 21:14:44,095 - INFO - app.routers:126 - [routers] include OK: reports_bank             /api
+2025-10-22 21:14:44,121 - INFO - app.routers:126 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 21:14:44,135 - INFO - app.routers:126 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 21:14:44,148 - INFO - app.routers:126 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 21:14:44,170 - INFO - app.routers:126 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 21:14:44,175 - INFO - app.routers:126 - [routers] include OK: master_property          /api/properties
+2025-10-22 21:14:44,194 - INFO - app.routers:126 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 21:14:44,208 - INFO - app.routers:126 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 21:14:44,212 - INFO - app.routers:126 - [routers] include OK: audit                    /api/audit
+2025-10-22 21:14:44,237 - INFO - app.routers:126 - [routers] include OK: bank                     /api
+2025-10-22 21:14:44,251 - INFO - app.routers:126 - [routers] include OK: merge                    /api/merge
+2025-10-22 21:14:44,253 - INFO - app.routers:126 - [routers] include OK: debug                    /api/_debug
+2025-10-22 21:14:44,262 - INFO - app.routers:126 - [routers] include OK: board                    /api
+2025-10-22 21:14:44,410 - INFO - app.routers:126 - [routers] include OK: master                   /api/master
+2025-10-22 21:14:44,425 - INFO - app.routers:126 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 21:14:44,437 - INFO - app.routers:126 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 21:14:44,442 - INFO - app.routers:126 - [routers] include OK: properties               /api/properties
+2025-10-22 21:14:44,456 - INFO - app.routers:126 - [routers] include OK: roles_access             /api/user-roles
+2025-10-22 21:14:44,459 - INFO - app.routers:126 - [routers] include OK: templates                /api/templates
+2025-10-22 21:14:44,459 - INFO - app.routers:130 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-22 21:14:44,461 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/user-roles, /api/users
+2025-10-22 21:14:44,461 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 21:14:44,463 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 21:14:44,544 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 21:14:49,372 - INFO - app.routers:126 - [routers] include OK: auth                     /api
+2025-10-22 21:14:49,373 - INFO - app.routers:126 - [routers] include OK: health                   
+2025-10-22 21:14:49,376 - INFO - app.routers:126 - [routers] include OK: menu                     /api
+2025-10-22 21:14:49,419 - INFO - app.routers:126 - [routers] include OK: users                    /api/users
+2025-10-22 21:14:49,451 - INFO - app.routers:126 - [routers] include OK: employees                /api/employees
+2025-10-22 21:14:49,474 - INFO - app.routers:126 - [routers] include OK: roles                    /api/roles
+2025-10-22 21:14:49,493 - INFO - app.routers:126 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 21:14:49,517 - INFO - app.routers:126 - [routers] include OK: contracts                /api/contracts
+2025-10-22 21:14:49,527 - INFO - app.routers:126 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 21:14:49,533 - INFO - app.routers:126 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 21:14:49,545 - INFO - app.routers:126 - [routers] include OK: upload                   /api/upload
+2025-10-22 21:14:49,564 - INFO - app.routers:126 - [routers] include OK: closing                  /api
+2025-10-22 21:14:49,584 - INFO - app.routers:126 - [routers] include OK: ota                      /api/ota
+2025-10-22 21:14:49,607 - INFO - app.routers:126 - [routers] include OK: reports                  /api/reports
+2025-10-22 21:14:49,614 - INFO - app.routers:126 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 21:14:49,624 - INFO - app.routers:126 - [routers] include OK: reports_bank             /api
+2025-10-22 21:14:49,649 - INFO - app.routers:126 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 21:14:49,663 - INFO - app.routers:126 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 21:14:49,676 - INFO - app.routers:126 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 21:14:49,699 - INFO - app.routers:126 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 21:14:49,703 - INFO - app.routers:126 - [routers] include OK: master_property          /api/properties
+2025-10-22 21:14:49,722 - INFO - app.routers:126 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 21:14:49,735 - INFO - app.routers:126 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 21:14:49,739 - INFO - app.routers:126 - [routers] include OK: audit                    /api/audit
+2025-10-22 21:14:49,765 - INFO - app.routers:126 - [routers] include OK: bank                     /api
+2025-10-22 21:14:49,781 - INFO - app.routers:126 - [routers] include OK: merge                    /api/merge
+2025-10-22 21:14:49,783 - INFO - app.routers:126 - [routers] include OK: debug                    /api/_debug
+2025-10-22 21:14:49,792 - INFO - app.routers:126 - [routers] include OK: board                    /api
+2025-10-22 21:14:49,948 - INFO - app.routers:126 - [routers] include OK: master                   /api/master
+2025-10-22 21:14:49,963 - INFO - app.routers:126 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 21:14:49,974 - INFO - app.routers:126 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 21:14:49,980 - INFO - app.routers:126 - [routers] include OK: properties               /api/properties
+2025-10-22 21:14:49,994 - INFO - app.routers:126 - [routers] include OK: roles_access             /api/user-roles
+2025-10-22 21:14:49,996 - INFO - app.routers:126 - [routers] include OK: templates                /api/templates
+2025-10-22 21:14:49,997 - INFO - app.routers:130 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-22 21:14:49,999 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/user-roles, /api/users
+2025-10-22 21:14:49,999 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 21:14:50,001 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 21:14:50,084 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 21:14:55,223 - INFO - app.routers:126 - [routers] include OK: auth                     /api
+2025-10-22 21:14:55,223 - INFO - app.routers:126 - [routers] include OK: health                   
+2025-10-22 21:14:55,227 - INFO - app.routers:126 - [routers] include OK: menu                     /api
+2025-10-22 21:14:55,269 - INFO - app.routers:126 - [routers] include OK: users                    /api/users
+2025-10-22 21:14:55,301 - INFO - app.routers:126 - [routers] include OK: employees                /api/employees
+2025-10-22 21:14:55,324 - INFO - app.routers:126 - [routers] include OK: roles                    /api/roles
+2025-10-22 21:14:55,343 - INFO - app.routers:126 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 21:14:55,367 - INFO - app.routers:126 - [routers] include OK: contracts                /api/contracts
+2025-10-22 21:14:55,377 - INFO - app.routers:126 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 21:14:55,383 - INFO - app.routers:126 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 21:14:55,395 - INFO - app.routers:126 - [routers] include OK: upload                   /api/upload
+2025-10-22 21:14:55,414 - INFO - app.routers:126 - [routers] include OK: closing                  /api
+2025-10-22 21:14:55,434 - INFO - app.routers:126 - [routers] include OK: ota                      /api/ota
+2025-10-22 21:14:55,457 - INFO - app.routers:126 - [routers] include OK: reports                  /api/reports
+2025-10-22 21:14:55,464 - INFO - app.routers:126 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 21:14:55,474 - INFO - app.routers:126 - [routers] include OK: reports_bank             /api
+2025-10-22 21:14:55,500 - INFO - app.routers:126 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 21:14:55,514 - INFO - app.routers:126 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 21:14:55,526 - INFO - app.routers:126 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 21:14:55,549 - INFO - app.routers:126 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 21:14:55,554 - INFO - app.routers:126 - [routers] include OK: master_property          /api/properties
+2025-10-22 21:14:55,573 - INFO - app.routers:126 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 21:14:55,586 - INFO - app.routers:126 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 21:14:55,590 - INFO - app.routers:126 - [routers] include OK: audit                    /api/audit
+2025-10-22 21:14:55,615 - INFO - app.routers:126 - [routers] include OK: bank                     /api
+2025-10-22 21:14:55,631 - INFO - app.routers:126 - [routers] include OK: merge                    /api/merge
+2025-10-22 21:14:55,633 - INFO - app.routers:126 - [routers] include OK: debug                    /api/_debug
+2025-10-22 21:14:55,642 - INFO - app.routers:126 - [routers] include OK: board                    /api
+2025-10-22 21:14:55,794 - INFO - app.routers:126 - [routers] include OK: master                   /api/master
+2025-10-22 21:14:55,810 - INFO - app.routers:126 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 21:14:55,821 - INFO - app.routers:126 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 21:14:55,826 - INFO - app.routers:126 - [routers] include OK: properties               /api/properties
+2025-10-22 21:14:55,840 - INFO - app.routers:126 - [routers] include OK: roles_access             /api/user-roles
+2025-10-22 21:14:55,842 - INFO - app.routers:126 - [routers] include OK: templates                /api/templates
+2025-10-22 21:14:55,843 - INFO - app.routers:130 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-22 21:14:55,845 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/user-roles, /api/users
+2025-10-22 21:14:55,845 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 21:14:55,847 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 21:14:55,926 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 21:15:09,108 - INFO - app.routers:126 - [routers] include OK: auth                     /api
+2025-10-22 21:15:09,109 - INFO - app.routers:126 - [routers] include OK: health                   
+2025-10-22 21:15:09,112 - INFO - app.routers:126 - [routers] include OK: menu                     /api
+2025-10-22 21:15:09,155 - INFO - app.routers:126 - [routers] include OK: users                    /api/users
+2025-10-22 21:15:09,186 - INFO - app.routers:126 - [routers] include OK: employees                /api/employees
+2025-10-22 21:15:09,210 - INFO - app.routers:126 - [routers] include OK: roles                    /api/roles
+2025-10-22 21:15:09,228 - INFO - app.routers:126 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 21:15:09,252 - INFO - app.routers:126 - [routers] include OK: contracts                /api/contracts
+2025-10-22 21:15:09,263 - INFO - app.routers:126 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 21:15:09,268 - INFO - app.routers:126 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 21:15:09,280 - INFO - app.routers:126 - [routers] include OK: upload                   /api/upload
+2025-10-22 21:15:09,299 - INFO - app.routers:126 - [routers] include OK: closing                  /api
+2025-10-22 21:15:09,319 - INFO - app.routers:126 - [routers] include OK: ota                      /api/ota
+2025-10-22 21:15:09,342 - INFO - app.routers:126 - [routers] include OK: reports                  /api/reports
+2025-10-22 21:15:09,349 - INFO - app.routers:126 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 21:15:09,359 - INFO - app.routers:126 - [routers] include OK: reports_bank             /api
+2025-10-22 21:15:09,384 - INFO - app.routers:126 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 21:15:09,398 - INFO - app.routers:126 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 21:15:09,411 - INFO - app.routers:126 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 21:15:09,434 - INFO - app.routers:126 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 21:15:09,439 - INFO - app.routers:126 - [routers] include OK: master_property          /api/properties
+2025-10-22 21:15:09,457 - INFO - app.routers:126 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 21:15:09,471 - INFO - app.routers:126 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 21:15:09,475 - INFO - app.routers:126 - [routers] include OK: audit                    /api/audit
+2025-10-22 21:15:09,501 - INFO - app.routers:126 - [routers] include OK: bank                     /api
+2025-10-22 21:15:09,515 - INFO - app.routers:126 - [routers] include OK: merge                    /api/merge
+2025-10-22 21:15:09,517 - INFO - app.routers:126 - [routers] include OK: debug                    /api/_debug
+2025-10-22 21:15:09,526 - INFO - app.routers:126 - [routers] include OK: board                    /api
+2025-10-22 21:15:09,675 - INFO - app.routers:126 - [routers] include OK: master                   /api/master
+2025-10-22 21:15:09,690 - INFO - app.routers:126 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 21:15:09,701 - INFO - app.routers:126 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 21:15:09,707 - INFO - app.routers:126 - [routers] include OK: properties               /api/properties
+2025-10-22 21:15:09,721 - INFO - app.routers:126 - [routers] include OK: roles_access             /api/user-roles
+2025-10-22 21:15:09,723 - INFO - app.routers:126 - [routers] include OK: templates                /api/templates
+2025-10-22 21:15:09,724 - INFO - app.routers:130 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-22 21:15:09,726 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/user-roles, /api/users
+2025-10-22 21:15:09,726 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 21:15:09,728 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 21:15:09,885 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 21:15:37,483 - INFO - app.routers:126 - [routers] include OK: auth                     /api
+2025-10-22 21:15:37,484 - INFO - app.routers:126 - [routers] include OK: health                   
+2025-10-22 21:15:37,487 - INFO - app.routers:126 - [routers] include OK: menu                     /api
+2025-10-22 21:15:37,530 - INFO - app.routers:126 - [routers] include OK: users                    /api/users
+2025-10-22 21:15:37,561 - INFO - app.routers:126 - [routers] include OK: employees                /api/employees
+2025-10-22 21:15:37,584 - INFO - app.routers:126 - [routers] include OK: roles                    /api/roles
+2025-10-22 21:15:37,603 - INFO - app.routers:126 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 21:15:37,627 - INFO - app.routers:126 - [routers] include OK: contracts                /api/contracts
+2025-10-22 21:15:37,637 - INFO - app.routers:126 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 21:15:37,642 - INFO - app.routers:126 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 21:15:37,654 - INFO - app.routers:126 - [routers] include OK: upload                   /api/upload
+2025-10-22 21:15:37,673 - INFO - app.routers:126 - [routers] include OK: closing                  /api
+2025-10-22 21:15:37,693 - INFO - app.routers:126 - [routers] include OK: ota                      /api/ota
+2025-10-22 21:15:37,716 - INFO - app.routers:126 - [routers] include OK: reports                  /api/reports
+2025-10-22 21:15:37,723 - INFO - app.routers:126 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 21:15:37,733 - INFO - app.routers:126 - [routers] include OK: reports_bank             /api
+2025-10-22 21:15:37,758 - INFO - app.routers:126 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 21:15:37,771 - INFO - app.routers:126 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 21:15:37,784 - INFO - app.routers:126 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 21:15:37,807 - INFO - app.routers:126 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 21:15:37,812 - INFO - app.routers:126 - [routers] include OK: master_property          /api/properties
+2025-10-22 21:15:37,835 - INFO - app.routers:126 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 21:15:37,849 - INFO - app.routers:126 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 21:15:37,853 - INFO - app.routers:126 - [routers] include OK: audit                    /api/audit
+2025-10-22 21:15:37,879 - INFO - app.routers:126 - [routers] include OK: bank                     /api
+2025-10-22 21:15:37,894 - INFO - app.routers:126 - [routers] include OK: merge                    /api/merge
+2025-10-22 21:15:37,896 - INFO - app.routers:126 - [routers] include OK: debug                    /api/_debug
+2025-10-22 21:15:37,904 - INFO - app.routers:126 - [routers] include OK: board                    /api
+2025-10-22 21:15:38,055 - INFO - app.routers:126 - [routers] include OK: master                   /api/master
+2025-10-22 21:15:38,070 - INFO - app.routers:126 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 21:15:38,081 - INFO - app.routers:126 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 21:15:38,087 - INFO - app.routers:126 - [routers] include OK: properties               /api/properties
+2025-10-22 21:15:38,101 - INFO - app.routers:126 - [routers] include OK: roles_access             /api/user-roles
+2025-10-22 21:15:38,103 - INFO - app.routers:126 - [routers] include OK: templates                /api/templates
+2025-10-22 21:15:38,103 - INFO - app.routers:130 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-22 21:15:38,105 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/user-roles, /api/users
+2025-10-22 21:15:38,106 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 21:15:38,107 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 21:15:38,349 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 21:15:52,228 - INFO - app.routers:126 - [routers] include OK: auth                     /api
+2025-10-22 21:15:52,229 - INFO - app.routers:126 - [routers] include OK: health                   
+2025-10-22 21:15:52,232 - INFO - app.routers:126 - [routers] include OK: menu                     /api
+2025-10-22 21:15:52,274 - INFO - app.routers:126 - [routers] include OK: users                    /api/users
+2025-10-22 21:15:52,306 - INFO - app.routers:126 - [routers] include OK: employees                /api/employees
+2025-10-22 21:15:52,314 - INFO - app.routers:126 - [routers] include OK: user_roles               /api/roles/access
+2025-10-22 21:15:52,337 - INFO - app.routers:126 - [routers] include OK: roles                    /api/roles
+2025-10-22 21:15:52,356 - INFO - app.routers:126 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 21:15:52,379 - INFO - app.routers:126 - [routers] include OK: contracts                /api/contracts
+2025-10-22 21:15:52,390 - INFO - app.routers:126 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 21:15:52,396 - INFO - app.routers:126 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 21:15:52,408 - INFO - app.routers:126 - [routers] include OK: upload                   /api/upload
+2025-10-22 21:15:52,427 - INFO - app.routers:126 - [routers] include OK: closing                  /api
+2025-10-22 21:15:52,447 - INFO - app.routers:126 - [routers] include OK: ota                      /api/ota
+2025-10-22 21:15:52,470 - INFO - app.routers:126 - [routers] include OK: reports                  /api/reports
+2025-10-22 21:15:52,477 - INFO - app.routers:126 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 21:15:52,487 - INFO - app.routers:126 - [routers] include OK: reports_bank             /api
+2025-10-22 21:15:52,513 - INFO - app.routers:126 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 21:15:52,526 - INFO - app.routers:126 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 21:15:52,539 - INFO - app.routers:126 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 21:15:52,562 - INFO - app.routers:126 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 21:15:52,568 - INFO - app.routers:126 - [routers] include OK: master_property          /api/properties
+2025-10-22 21:15:52,586 - INFO - app.routers:126 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 21:15:52,600 - INFO - app.routers:126 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 21:15:52,604 - INFO - app.routers:126 - [routers] include OK: audit                    /api/audit
+2025-10-22 21:15:52,629 - INFO - app.routers:126 - [routers] include OK: bank                     /api
+2025-10-22 21:15:52,643 - INFO - app.routers:126 - [routers] include OK: merge                    /api/merge
+2025-10-22 21:15:52,645 - INFO - app.routers:126 - [routers] include OK: debug                    /api/_debug
+2025-10-22 21:15:52,654 - INFO - app.routers:126 - [routers] include OK: board                    /api
+2025-10-22 21:15:52,803 - INFO - app.routers:126 - [routers] include OK: master                   /api/master
+2025-10-22 21:15:52,820 - INFO - app.routers:126 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 21:15:52,831 - INFO - app.routers:126 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 21:15:52,836 - INFO - app.routers:126 - [routers] include OK: properties               /api/properties
+2025-10-22 21:15:52,850 - INFO - app.routers:126 - [routers] include OK: roles_access             /api/user-roles
+2025-10-22 21:15:52,852 - INFO - app.routers:126 - [routers] include OK: templates                /api/templates
+2025-10-22 21:15:52,853 - INFO - app.routers:130 - [routers] Routers Loaded — OK=35, FAIL=0, TOTAL=35
+2025-10-22 21:15:52,855 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/user-roles, /api/users
+2025-10-22 21:15:52,855 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 21:15:52,857 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 21:15:52,942 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 21:17:59,393 - INFO - app.routers:126 - [routers] include OK: auth                     /api
+2025-10-22 21:17:59,394 - INFO - app.routers:126 - [routers] include OK: health                   
+2025-10-22 21:17:59,397 - INFO - app.routers:126 - [routers] include OK: menu                     /api
+2025-10-22 21:17:59,439 - INFO - app.routers:126 - [routers] include OK: users                    /api/users
+2025-10-22 21:17:59,471 - INFO - app.routers:126 - [routers] include OK: employees                /api/employees
+2025-10-22 21:17:59,494 - INFO - app.routers:126 - [routers] include OK: roles                    /api/roles
+2025-10-22 21:17:59,513 - INFO - app.routers:126 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 21:17:59,536 - INFO - app.routers:126 - [routers] include OK: contracts                /api/contracts
+2025-10-22 21:17:59,546 - INFO - app.routers:126 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 21:17:59,552 - INFO - app.routers:126 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 21:17:59,564 - INFO - app.routers:126 - [routers] include OK: upload                   /api/upload
+2025-10-22 21:17:59,583 - INFO - app.routers:126 - [routers] include OK: closing                  /api
+2025-10-22 21:17:59,604 - INFO - app.routers:126 - [routers] include OK: ota                      /api/ota
+2025-10-22 21:17:59,626 - INFO - app.routers:126 - [routers] include OK: reports                  /api/reports
+2025-10-22 21:17:59,633 - INFO - app.routers:126 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 21:17:59,643 - INFO - app.routers:126 - [routers] include OK: reports_bank             /api
+2025-10-22 21:17:59,669 - INFO - app.routers:126 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 21:17:59,682 - INFO - app.routers:126 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 21:17:59,695 - INFO - app.routers:126 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 21:17:59,717 - INFO - app.routers:126 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 21:17:59,722 - INFO - app.routers:126 - [routers] include OK: master_property          /api/properties
+2025-10-22 21:17:59,741 - INFO - app.routers:126 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 21:17:59,755 - INFO - app.routers:126 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 21:17:59,759 - INFO - app.routers:126 - [routers] include OK: audit                    /api/audit
+2025-10-22 21:17:59,786 - INFO - app.routers:126 - [routers] include OK: bank                     /api
+2025-10-22 21:17:59,801 - INFO - app.routers:126 - [routers] include OK: merge                    /api/merge
+2025-10-22 21:17:59,802 - INFO - app.routers:126 - [routers] include OK: debug                    /api/_debug
+2025-10-22 21:17:59,811 - INFO - app.routers:126 - [routers] include OK: board                    /api
+2025-10-22 21:17:59,960 - INFO - app.routers:126 - [routers] include OK: master                   /api/master
+2025-10-22 21:17:59,975 - INFO - app.routers:126 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 21:17:59,987 - INFO - app.routers:126 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 21:17:59,993 - INFO - app.routers:126 - [routers] include OK: properties               /api/properties
+2025-10-22 21:18:00,007 - INFO - app.routers:126 - [routers] include OK: roles_access             /api/user-roles
+2025-10-22 21:18:00,009 - INFO - app.routers:126 - [routers] include OK: templates                /api/templates
+2025-10-22 21:18:00,009 - INFO - app.routers:130 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-22 21:18:00,011 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/user-roles, /api/users
+2025-10-22 21:18:00,012 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 21:18:00,013 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 21:18:00,094 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 21:18:08,412 - INFO - app.routers:126 - [routers] include OK: auth                     /api
+2025-10-22 21:18:08,412 - INFO - app.routers:126 - [routers] include OK: health                   
+2025-10-22 21:18:08,416 - INFO - app.routers:126 - [routers] include OK: menu                     /api
+2025-10-22 21:18:08,459 - INFO - app.routers:126 - [routers] include OK: users                    /api/users
+2025-10-22 21:18:08,490 - INFO - app.routers:126 - [routers] include OK: employees                /api/employees
+2025-10-22 21:18:08,515 - INFO - app.routers:126 - [routers] include OK: roles                    /api/roles
+2025-10-22 21:18:08,534 - INFO - app.routers:126 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 21:18:08,557 - INFO - app.routers:126 - [routers] include OK: contracts                /api/contracts
+2025-10-22 21:18:08,567 - INFO - app.routers:126 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 21:18:08,572 - INFO - app.routers:126 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 21:18:08,584 - INFO - app.routers:126 - [routers] include OK: upload                   /api/upload
+2025-10-22 21:18:08,605 - INFO - app.routers:126 - [routers] include OK: closing                  /api
+2025-10-22 21:18:08,625 - INFO - app.routers:126 - [routers] include OK: ota                      /api/ota
+2025-10-22 21:18:08,647 - INFO - app.routers:126 - [routers] include OK: reports                  /api/reports
+2025-10-22 21:18:08,654 - INFO - app.routers:126 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 21:18:08,664 - INFO - app.routers:126 - [routers] include OK: reports_bank             /api
+2025-10-22 21:18:08,690 - INFO - app.routers:126 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 21:18:08,704 - INFO - app.routers:126 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 21:18:08,717 - INFO - app.routers:126 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 21:18:08,739 - INFO - app.routers:126 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 21:18:08,744 - INFO - app.routers:126 - [routers] include OK: master_property          /api/properties
+2025-10-22 21:18:08,763 - INFO - app.routers:126 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 21:18:08,777 - INFO - app.routers:126 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 21:18:08,781 - INFO - app.routers:126 - [routers] include OK: audit                    /api/audit
+2025-10-22 21:18:08,806 - INFO - app.routers:126 - [routers] include OK: bank                     /api
+2025-10-22 21:18:08,821 - INFO - app.routers:126 - [routers] include OK: merge                    /api/merge
+2025-10-22 21:18:08,823 - INFO - app.routers:126 - [routers] include OK: debug                    /api/_debug
+2025-10-22 21:18:08,832 - INFO - app.routers:126 - [routers] include OK: board                    /api
+2025-10-22 21:18:08,984 - INFO - app.routers:126 - [routers] include OK: master                   /api/master
+2025-10-22 21:18:09,000 - INFO - app.routers:126 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 21:18:09,011 - INFO - app.routers:126 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 21:18:09,016 - INFO - app.routers:126 - [routers] include OK: properties               /api/properties
+2025-10-22 21:18:09,018 - INFO - app.routers:126 - [routers] include OK: templates                /api/templates
+2025-10-22 21:18:09,019 - INFO - app.routers:130 - [routers] Routers Loaded — OK=33, FAIL=0, TOTAL=33
+2025-10-22 21:18:09,020 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-22 21:18:09,021 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 21:18:09,023 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 21:18:09,106 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 21:30:57,192 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-22 21:30:57,192 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-22 21:30:57,196 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-22 21:30:57,226 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-22 21:30:57,236 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-22 21:30:57,244 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-22 21:30:57,263 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 21:30:57,285 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-22 21:30:57,295 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 21:30:57,301 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 21:30:57,312 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-22 21:30:57,331 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-22 21:30:57,351 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-22 21:30:57,374 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-22 21:30:57,380 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 21:30:57,390 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-22 21:30:57,414 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 21:30:57,427 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 21:30:57,440 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 21:30:57,462 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 21:30:57,467 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-22 21:30:57,485 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 21:30:57,498 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 21:30:57,502 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-22 21:30:57,527 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-22 21:30:57,541 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-22 21:30:57,543 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-22 21:30:57,552 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-22 21:30:57,696 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-22 21:30:57,711 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 21:30:57,722 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 21:30:57,727 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-22 21:30:57,730 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-22 21:30:57,730 - INFO - app.routers:137 - [routers] Routers Loaded — OK=33, FAIL=0, TOTAL=33
+2025-10-22 21:30:57,732 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-22 21:30:57,732 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 21:30:57,734 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 21:30:57,805 - WARNING - app.core.dev_bootstrap:123 - [startup:migrate] roles 시드 실패: When initializing mapper Mapper[User(users)], expression 'User.id==UserRole.user_id' failed to locate a name ("name 'UserRole' is not defined"). If this is a class name, consider adding this relationship() to the <class 'app.models.user.User'> class after both dependent classes have been defined.
+2025-10-22 21:30:57,805 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 21:32:20,168 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-22 21:32:20,169 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-22 21:32:20,172 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-22 21:32:20,203 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-22 21:32:20,213 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-22 21:32:20,221 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-22 21:32:20,241 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 21:32:20,264 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-22 21:32:20,274 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 21:32:20,280 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 21:32:20,292 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-22 21:32:20,311 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-22 21:32:20,331 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-22 21:32:20,354 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-22 21:32:20,360 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 21:32:20,371 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-22 21:32:20,396 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 21:32:20,410 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 21:32:20,423 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 21:32:20,445 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 21:32:20,450 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-22 21:32:20,468 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 21:32:20,481 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 21:32:20,486 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-22 21:32:20,512 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-22 21:32:20,527 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-22 21:32:20,529 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-22 21:32:20,537 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-22 21:32:20,685 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-22 21:32:20,701 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 21:32:20,711 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 21:32:20,717 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-22 21:32:20,719 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-22 21:32:20,719 - INFO - app.routers:137 - [routers] Routers Loaded — OK=33, FAIL=0, TOTAL=33
+2025-10-22 21:32:20,722 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-22 21:32:20,722 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 21:32:20,724 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 21:32:20,804 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 21:33:03,559 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-22 21:33:03,559 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-22 21:33:03,562 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-22 21:33:03,593 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-22 21:33:03,603 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-22 21:33:03,611 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-22 21:33:03,630 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 21:33:03,654 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-22 21:33:03,664 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 21:33:03,669 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 21:33:03,681 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-22 21:33:03,701 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-22 21:33:03,720 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-22 21:33:03,744 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-22 21:33:03,750 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 21:33:03,760 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-22 21:33:03,785 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 21:33:03,798 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 21:33:03,812 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 21:33:03,834 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 21:33:03,839 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-22 21:33:03,857 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 21:33:03,870 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 21:33:03,875 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-22 21:33:03,901 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-22 21:33:03,915 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-22 21:33:03,917 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-22 21:33:03,926 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-22 21:33:04,072 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-22 21:33:04,087 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 21:33:04,098 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 21:33:04,104 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-22 21:33:04,106 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-22 21:33:04,106 - INFO - app.routers:137 - [routers] Routers Loaded — OK=33, FAIL=0, TOTAL=33
+2025-10-22 21:33:04,108 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-22 21:33:04,108 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 21:33:04,110 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 21:33:04,191 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 21:35:28,250 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-22 21:35:28,251 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-22 21:35:28,254 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-22 21:35:28,284 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-22 21:35:28,316 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-22 21:35:28,326 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-22 21:35:28,333 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-22 21:35:28,352 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 21:35:28,375 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-22 21:35:28,385 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 21:35:28,391 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 21:35:28,402 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-22 21:35:28,421 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-22 21:35:28,441 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-22 21:35:28,463 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-22 21:35:28,469 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 21:35:28,480 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-22 21:35:28,505 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 21:35:28,518 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 21:35:28,531 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 21:35:28,552 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 21:35:28,558 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-22 21:35:28,576 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 21:35:28,589 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 21:35:28,593 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-22 21:35:28,618 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-22 21:35:28,632 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-22 21:35:28,634 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-22 21:35:28,642 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-22 21:35:28,788 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-22 21:35:28,803 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 21:35:28,814 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 21:35:28,820 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-22 21:35:28,822 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-22 21:35:28,822 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-22 21:35:28,824 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-22 21:35:28,824 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 21:35:28,826 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 21:35:28,903 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 21:35:37,695 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-22 21:35:37,696 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-22 21:35:37,699 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-22 21:35:37,729 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-22 21:35:37,761 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-22 21:35:37,771 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-22 21:35:37,779 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-22 21:35:37,797 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 21:35:37,820 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-22 21:35:37,831 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 21:35:37,836 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 21:35:37,848 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-22 21:35:37,867 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-22 21:35:37,886 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-22 21:35:37,908 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-22 21:35:37,915 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 21:35:37,925 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-22 21:35:37,950 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 21:35:37,963 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 21:35:37,976 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 21:35:37,998 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 21:35:38,003 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-22 21:35:38,021 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 21:35:38,034 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 21:35:38,038 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-22 21:35:38,062 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-22 21:35:38,076 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-22 21:35:38,078 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-22 21:35:38,087 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-22 21:35:38,233 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-22 21:35:38,249 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 21:35:38,260 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 21:35:38,265 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-22 21:35:38,267 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-22 21:35:38,268 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-22 21:35:38,269 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-22 21:35:38,270 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 21:35:38,271 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 21:35:38,350 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 21:40:11,533 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-22 21:40:11,533 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-22 21:40:11,537 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-22 21:40:11,567 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-22 21:40:11,599 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-22 21:40:11,608 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-22 21:40:11,616 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-22 21:40:11,635 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 21:40:11,657 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-22 21:40:11,668 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 21:40:11,673 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 21:40:11,685 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-22 21:40:11,704 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-22 21:40:11,724 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-22 21:40:11,746 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-22 21:40:11,754 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 21:40:11,764 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-22 21:40:11,790 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 21:40:11,803 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 21:40:11,816 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 21:40:11,837 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 21:40:11,843 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-22 21:40:11,861 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 21:40:11,875 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 21:40:11,879 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-22 21:40:11,904 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-22 21:40:11,918 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-22 21:40:11,920 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-22 21:40:11,929 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-22 21:40:12,074 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-22 21:40:12,090 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 21:40:12,101 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 21:40:12,106 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-22 21:40:12,109 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-22 21:40:12,109 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-22 21:40:12,111 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-22 21:40:12,111 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 21:40:12,112 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 21:40:12,192 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 21:41:08,132 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-22 21:41:08,132 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-22 21:41:08,136 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-22 21:41:08,166 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-22 21:41:08,198 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-22 21:41:08,207 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-22 21:41:08,215 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-22 21:41:08,234 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 21:41:08,257 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-22 21:41:08,268 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 21:41:08,273 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 21:41:08,285 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-22 21:41:08,304 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-22 21:41:08,324 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-22 21:41:08,346 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-22 21:41:08,353 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 21:41:08,363 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-22 21:41:08,388 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 21:41:08,401 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 21:41:08,414 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 21:41:08,436 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 21:41:08,441 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-22 21:41:08,459 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 21:41:08,472 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 21:41:08,477 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-22 21:41:08,501 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-22 21:41:08,515 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-22 21:41:08,517 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-22 21:41:08,526 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-22 21:41:08,672 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-22 21:41:08,688 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 21:41:08,699 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 21:41:08,704 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-22 21:41:08,706 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-22 21:41:08,707 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-22 21:41:08,708 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-22 21:41:08,709 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 21:41:08,710 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 21:41:08,788 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 21:41:20,285 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-22 21:41:20,286 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-22 21:41:20,289 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-22 21:41:20,320 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-22 21:41:20,351 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-22 21:41:20,360 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-22 21:41:20,368 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-22 21:41:20,387 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 21:41:20,409 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-22 21:41:20,420 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 21:41:20,426 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 21:41:20,438 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-22 21:41:20,456 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-22 21:41:20,476 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-22 21:41:20,498 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-22 21:41:20,505 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 21:41:20,515 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-22 21:41:20,539 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 21:41:20,553 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 21:41:20,565 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 21:41:20,587 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 21:41:20,593 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-22 21:41:20,611 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 21:41:20,624 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 21:41:20,628 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-22 21:41:20,652 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-22 21:41:20,667 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-22 21:41:20,669 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-22 21:41:20,678 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-22 21:41:20,822 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-22 21:41:20,839 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 21:41:20,849 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 21:41:20,855 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-22 21:41:20,857 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-22 21:41:20,857 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-22 21:41:20,859 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-22 21:41:20,859 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 21:41:20,861 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 21:41:20,938 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 21:41:27,922 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-22 21:41:27,923 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-22 21:41:27,926 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-22 21:41:27,957 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-22 21:41:27,989 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-22 21:41:27,998 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-22 21:41:28,006 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-22 21:41:28,025 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 21:41:28,047 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-22 21:41:28,058 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 21:41:28,063 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 21:41:28,075 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-22 21:41:28,094 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-22 21:41:28,114 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-22 21:41:28,137 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-22 21:41:28,144 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 21:41:28,154 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-22 21:41:28,179 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 21:41:28,192 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 21:41:28,205 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 21:41:28,228 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 21:41:28,234 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-22 21:41:28,252 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 21:41:28,265 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 21:41:28,269 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-22 21:41:28,294 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-22 21:41:28,309 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-22 21:41:28,311 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-22 21:41:28,320 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-22 21:41:28,466 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-22 21:41:28,482 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 21:41:28,493 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 21:41:28,498 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-22 21:41:28,500 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-22 21:41:28,501 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-22 21:41:28,503 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-22 21:41:28,503 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 21:41:28,505 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 21:41:28,582 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 21:44:05,657 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-22 21:44:05,657 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-22 21:44:05,661 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-22 21:44:05,691 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-22 21:44:05,722 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-22 21:44:05,732 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-22 21:44:05,740 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-22 21:44:05,758 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 21:44:05,780 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-22 21:44:05,791 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 21:44:05,797 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 21:44:05,808 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-22 21:44:05,827 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-22 21:44:05,847 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-22 21:44:05,869 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-22 21:44:05,876 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 21:44:05,886 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-22 21:44:05,910 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 21:44:05,924 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 21:44:05,936 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 21:44:05,957 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 21:44:05,963 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-22 21:44:05,981 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 21:44:05,994 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 21:44:05,998 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-22 21:44:06,023 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-22 21:44:06,037 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-22 21:44:06,039 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-22 21:44:06,048 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-22 21:44:06,192 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-22 21:44:06,208 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 21:44:06,219 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 21:44:06,224 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-22 21:44:06,226 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-22 21:44:06,227 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-22 21:44:06,229 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-22 21:44:06,229 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 21:44:06,230 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 21:44:06,307 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 21:45:49,277 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-22 21:45:49,278 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-22 21:45:49,281 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-22 21:45:49,316 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-22 21:45:49,353 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-22 21:45:49,364 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-22 21:45:49,374 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-22 21:45:49,398 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 21:45:49,425 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-22 21:45:49,436 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 21:45:49,446 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 21:45:49,469 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-22 21:45:49,496 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-22 21:45:49,517 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-22 21:45:49,543 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-22 21:45:49,556 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 21:45:49,573 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-22 21:45:49,614 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 21:45:49,639 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 21:45:49,664 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 21:45:49,709 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 21:45:49,719 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-22 21:45:49,756 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 21:45:49,777 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 21:45:49,782 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-22 21:45:49,828 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-22 21:45:49,845 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-22 21:45:49,848 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-22 21:45:49,859 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-22 21:45:50,072 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-22 21:45:50,103 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 21:45:50,125 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 21:45:50,135 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-22 21:45:50,138 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-22 21:45:50,139 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-22 21:45:50,141 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-22 21:45:50,141 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 21:45:50,143 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 21:45:50,261 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 22:03:37,861 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-22 22:03:37,862 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-22 22:03:37,865 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-22 22:03:37,896 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-22 22:03:37,928 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-22 22:03:37,937 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-22 22:03:37,945 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-22 22:03:37,963 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 22:03:37,987 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-22 22:03:37,997 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 22:03:38,002 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 22:03:38,014 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-22 22:03:38,033 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-22 22:03:38,052 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-22 22:03:38,074 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-22 22:03:38,082 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 22:03:38,092 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-22 22:03:38,117 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 22:03:38,130 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 22:03:38,143 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 22:03:38,165 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 22:03:38,170 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-22 22:03:38,188 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 22:03:38,201 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 22:03:38,206 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-22 22:03:38,231 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-22 22:03:38,245 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-22 22:03:38,247 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-22 22:03:38,256 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-22 22:03:38,400 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-22 22:03:38,416 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 22:03:38,427 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 22:03:38,432 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-22 22:03:38,434 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-22 22:03:38,435 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-22 22:03:38,436 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-22 22:03:38,437 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 22:03:38,438 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 22:03:38,516 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 22:08:04,966 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-22 22:08:04,967 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-22 22:08:04,971 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-22 22:08:05,010 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-22 22:08:05,045 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-22 22:08:05,056 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-22 22:08:05,065 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-22 22:08:05,088 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 22:08:05,114 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-22 22:08:05,126 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 22:08:05,132 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 22:08:05,146 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-22 22:08:05,169 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-22 22:08:05,192 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-22 22:08:05,218 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-22 22:08:05,230 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 22:08:05,243 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-22 22:08:05,272 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 22:08:05,288 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 22:08:05,303 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 22:08:05,329 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 22:08:05,335 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-22 22:08:05,355 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 22:08:05,369 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 22:08:05,374 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-22 22:08:05,401 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-22 22:08:05,417 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-22 22:08:05,420 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-22 22:08:05,430 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-22 22:08:05,613 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-22 22:08:05,635 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 22:08:05,657 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 22:08:05,668 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-22 22:08:05,673 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-22 22:08:05,673 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-22 22:08:05,677 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-22 22:08:05,678 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 22:08:05,680 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 22:08:05,821 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 23:37:35,148 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-22 23:37:35,148 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-22 23:37:35,151 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-22 23:37:35,182 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-22 23:37:35,214 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-22 23:37:35,223 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-22 23:37:35,231 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-22 23:37:35,249 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 23:37:35,273 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-22 23:37:35,283 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 23:37:35,288 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 23:37:35,300 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-22 23:37:35,319 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-22 23:37:35,338 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-22 23:37:35,360 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-22 23:37:35,367 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 23:37:35,377 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-22 23:37:35,402 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 23:37:35,415 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 23:37:35,428 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 23:37:35,450 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 23:37:35,455 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-22 23:37:35,473 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 23:37:35,486 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 23:37:35,491 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-22 23:37:35,515 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-22 23:37:35,529 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-22 23:37:35,531 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-22 23:37:35,540 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-22 23:37:35,685 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-22 23:37:35,701 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 23:37:35,712 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 23:37:35,717 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-22 23:37:35,719 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-22 23:37:35,720 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-22 23:37:35,722 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-22 23:37:35,722 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 23:37:35,723 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 23:37:35,800 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 23:40:26,440 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-22 23:40:26,441 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-22 23:40:26,444 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-22 23:40:26,475 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-22 23:40:26,508 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-22 23:40:26,517 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-22 23:40:26,525 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-22 23:40:26,544 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 23:40:26,567 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-22 23:40:26,578 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 23:40:26,583 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 23:40:26,595 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-22 23:40:26,614 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-22 23:40:26,634 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-22 23:40:26,656 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-22 23:40:26,663 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 23:40:26,673 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-22 23:40:26,698 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 23:40:26,711 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 23:40:26,723 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 23:40:26,745 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 23:40:26,751 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-22 23:40:26,769 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 23:40:26,782 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 23:40:26,786 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-22 23:40:26,811 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-22 23:40:26,825 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-22 23:40:26,827 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-22 23:40:26,836 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-22 23:40:26,981 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-22 23:40:26,997 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 23:40:27,008 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 23:40:27,013 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-22 23:40:27,016 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-22 23:40:27,016 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-22 23:40:27,018 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-22 23:40:27,018 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 23:40:27,020 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 23:40:27,096 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 23:41:54,784 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-22 23:41:54,785 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-22 23:41:54,788 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-22 23:41:54,819 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-22 23:41:54,851 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-22 23:41:54,860 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-22 23:41:54,868 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-22 23:41:54,886 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 23:41:54,909 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-22 23:41:54,920 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 23:41:54,925 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 23:41:54,937 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-22 23:41:54,956 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-22 23:41:54,976 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-22 23:41:54,998 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-22 23:41:55,005 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 23:41:55,015 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-22 23:41:55,039 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 23:41:55,052 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 23:41:55,065 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 23:41:55,087 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 23:41:55,092 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-22 23:41:55,110 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 23:41:55,123 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 23:41:55,128 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-22 23:41:55,152 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-22 23:41:55,167 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-22 23:41:55,169 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-22 23:41:55,178 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-22 23:41:55,323 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-22 23:41:55,339 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 23:41:55,350 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 23:41:55,355 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-22 23:41:55,358 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-22 23:41:55,358 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-22 23:41:55,360 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-22 23:41:55,360 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 23:41:55,361 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 23:41:55,438 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 23:47:25,682 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-22 23:47:25,683 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-22 23:47:25,686 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-22 23:47:25,717 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-22 23:47:25,748 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-22 23:47:25,757 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-22 23:47:25,765 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-22 23:47:25,784 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 23:47:25,806 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-22 23:47:25,817 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 23:47:25,822 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 23:47:25,834 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-22 23:47:25,853 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-22 23:47:25,872 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-22 23:47:25,894 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-22 23:47:25,901 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 23:47:25,911 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-22 23:47:25,935 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 23:47:25,948 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 23:47:25,961 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 23:47:25,983 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 23:47:25,988 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-22 23:47:26,006 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 23:47:26,019 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 23:47:26,023 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-22 23:47:26,048 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-22 23:47:26,062 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-22 23:47:26,064 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-22 23:47:26,073 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-22 23:47:26,217 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-22 23:47:26,233 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 23:47:26,244 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 23:47:26,249 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-22 23:47:26,251 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-22 23:47:26,251 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-22 23:47:26,253 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-22 23:47:26,253 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 23:47:26,255 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 23:47:26,331 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 23:50:15,857 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-22 23:50:15,858 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-22 23:50:15,861 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-22 23:50:15,893 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-22 23:50:15,924 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-22 23:50:15,933 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-22 23:50:15,941 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-22 23:50:15,960 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 23:50:15,982 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-22 23:50:15,993 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 23:50:15,999 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 23:50:16,011 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-22 23:50:16,030 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-22 23:50:16,050 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-22 23:50:16,072 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-22 23:50:16,082 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 23:50:16,100 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-22 23:50:16,135 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 23:50:16,149 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 23:50:16,162 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 23:50:16,184 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 23:50:16,190 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-22 23:50:16,208 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 23:50:16,221 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 23:50:16,226 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-22 23:50:16,250 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-22 23:50:16,264 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-22 23:50:16,266 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-22 23:50:16,276 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-22 23:50:16,421 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-22 23:50:16,437 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 23:50:16,448 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 23:50:16,453 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-22 23:50:16,456 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-22 23:50:16,456 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-22 23:50:16,458 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-22 23:50:16,458 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 23:50:16,460 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 23:50:16,539 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-22 23:56:20,357 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-22 23:56:20,358 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-22 23:56:20,361 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-22 23:56:20,392 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-22 23:56:20,423 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-22 23:56:20,432 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-22 23:56:20,440 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-22 23:56:20,459 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-22 23:56:20,481 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-22 23:56:20,492 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-22 23:56:20,498 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-22 23:56:20,509 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-22 23:56:20,528 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-22 23:56:20,547 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-22 23:56:20,568 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-22 23:56:20,575 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-22 23:56:20,585 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-22 23:56:20,609 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-22 23:56:20,622 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-22 23:56:20,635 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-22 23:56:20,656 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-22 23:56:20,662 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-22 23:56:20,680 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-22 23:56:20,693 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-22 23:56:20,697 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-22 23:56:20,722 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-22 23:56:20,736 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-22 23:56:20,738 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-22 23:56:20,747 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-22 23:56:20,892 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-22 23:56:20,908 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-22 23:56:20,919 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-22 23:56:20,924 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-22 23:56:20,926 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-22 23:56:20,926 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-22 23:56:20,928 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-22 23:56:20,928 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-22 23:56:20,930 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-22 23:56:21,009 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-23 00:07:09,276 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-23 00:07:09,277 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-23 00:07:09,281 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-23 00:07:09,316 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-23 00:07:09,354 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-23 00:07:09,367 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-23 00:07:09,376 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-23 00:07:09,404 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-23 00:07:09,435 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-23 00:07:09,447 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-23 00:07:09,453 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-23 00:07:09,466 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-23 00:07:09,487 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-23 00:07:09,511 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-23 00:07:09,535 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-23 00:07:09,543 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-23 00:07:09,554 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-23 00:07:09,585 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-23 00:07:09,601 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-23 00:07:09,615 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-23 00:07:09,642 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-23 00:07:09,649 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-23 00:07:09,672 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-23 00:07:09,687 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-23 00:07:09,692 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-23 00:07:09,722 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-23 00:07:09,749 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-23 00:07:09,753 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-23 00:07:09,768 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-23 00:07:10,023 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-23 00:07:10,046 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-23 00:07:10,063 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-23 00:07:10,069 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-23 00:07:10,072 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-23 00:07:10,072 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-23 00:07:10,075 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-23 00:07:10,075 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-23 00:07:10,077 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-23 00:07:10,163 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-23 00:33:02,258 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-23 00:33:02,259 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-23 00:33:02,262 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-23 00:33:02,294 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-23 00:33:02,325 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-23 00:33:02,335 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-23 00:33:02,342 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-23 00:33:02,362 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-23 00:33:02,385 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-23 00:33:02,395 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-23 00:33:02,401 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-23 00:33:02,413 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-23 00:33:02,432 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-23 00:33:02,452 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-23 00:33:02,475 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-23 00:33:02,482 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-23 00:33:02,492 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-23 00:33:02,518 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-23 00:33:02,531 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-23 00:33:02,544 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-23 00:33:02,567 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-23 00:33:02,572 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-23 00:33:02,590 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-23 00:33:02,604 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-23 00:33:02,608 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-23 00:33:02,634 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-23 00:33:02,648 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-23 00:33:02,650 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-23 00:33:02,659 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-23 00:33:02,809 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-23 00:33:02,824 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-23 00:33:02,835 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-23 00:33:02,841 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-23 00:33:02,843 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-23 00:33:02,843 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-23 00:33:02,845 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-23 00:33:02,845 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-23 00:33:02,847 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-23 00:33:02,923 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-23 00:52:04,158 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-23 00:52:04,158 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-23 00:52:04,162 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-23 00:52:04,194 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-23 00:52:04,225 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-23 00:52:04,234 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-23 00:52:04,242 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-23 00:52:04,261 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-23 00:52:04,285 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-23 00:52:04,295 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-23 00:52:04,301 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-23 00:52:04,313 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-23 00:52:04,332 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-23 00:52:04,352 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-23 00:52:04,375 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-23 00:52:04,382 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-23 00:52:04,392 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-23 00:52:04,418 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-23 00:52:04,431 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-23 00:52:04,444 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-23 00:52:04,467 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-23 00:52:04,472 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-23 00:52:04,491 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-23 00:52:04,504 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-23 00:52:04,509 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-23 00:52:04,534 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-23 00:52:04,549 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-23 00:52:04,551 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-23 00:52:04,560 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-23 00:52:04,709 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-23 00:52:04,724 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-23 00:52:04,736 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-23 00:52:04,741 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-23 00:52:04,743 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-23 00:52:04,743 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-23 00:52:04,745 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-23 00:52:04,745 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-23 00:52:04,747 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-23 00:52:04,826 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-23 01:01:36,342 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-23 01:01:36,342 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-23 01:01:36,346 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-23 01:01:36,382 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-23 01:01:36,418 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-23 01:01:36,429 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-23 01:01:36,439 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-23 01:01:36,462 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-23 01:01:36,499 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-23 01:01:36,518 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-23 01:01:36,528 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-23 01:01:36,545 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-23 01:01:36,580 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-23 01:01:36,602 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-23 01:01:36,628 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-23 01:01:36,635 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-23 01:01:36,648 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-23 01:01:36,687 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-23 01:01:36,707 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-23 01:01:36,722 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-23 01:01:36,760 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-23 01:01:36,770 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-23 01:01:36,806 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-23 01:01:36,822 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-23 01:01:36,828 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-23 01:01:36,858 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-23 01:01:36,884 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-23 01:01:36,888 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-23 01:01:36,906 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-23 01:01:37,163 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-23 01:01:37,195 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-23 01:01:37,216 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-23 01:01:37,227 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-23 01:01:37,231 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-23 01:01:37,232 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-23 01:01:37,235 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-23 01:01:37,236 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-23 01:01:37,238 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-23 01:01:37,376 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-23 01:09:24,366 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-23 01:09:24,367 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-23 01:09:24,374 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-23 01:09:24,435 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-23 01:09:24,487 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-23 01:09:24,500 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-23 01:09:24,515 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-23 01:09:24,555 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-23 01:09:24,606 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-23 01:09:24,627 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-23 01:09:24,638 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-23 01:09:24,662 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-23 01:09:24,699 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-23 01:09:24,741 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-23 01:09:24,773 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-23 01:09:24,782 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-23 01:09:24,793 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-23 01:09:24,827 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-23 01:09:24,851 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-23 01:09:24,877 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-23 01:09:24,908 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-23 01:09:24,919 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-23 01:09:24,956 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-23 01:09:24,984 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-23 01:09:24,990 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-23 01:09:25,035 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-23 01:09:25,053 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-23 01:09:25,055 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-23 01:09:25,066 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-23 01:09:25,323 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-23 01:09:25,355 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-23 01:09:25,374 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-23 01:09:25,385 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-23 01:09:25,390 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-23 01:09:25,391 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-23 01:09:25,394 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-23 01:09:25,395 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-23 01:09:25,397 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-23 01:09:25,427 - WARNING - app.core.dev_bootstrap:46 - [startup] Base.create_all 실패: (sqlite3.OperationalError) index ix_departments_id already exists
+[SQL: CREATE INDEX ix_departments_id ON departments (id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-10-23 01:09:25,511 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-23 01:16:16,729 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-23 01:16:16,729 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-23 01:16:16,733 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-23 01:16:16,765 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-23 01:16:16,796 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-23 01:16:16,806 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-23 01:16:16,814 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-23 01:16:16,833 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-23 01:16:16,857 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-23 01:16:16,867 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-23 01:16:16,873 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-23 01:16:16,885 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-23 01:16:16,904 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-23 01:16:16,924 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-23 01:16:16,948 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-23 01:16:16,955 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-23 01:16:16,965 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-23 01:16:16,991 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-23 01:16:17,004 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-23 01:16:17,017 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-23 01:16:17,041 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-23 01:16:17,046 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-23 01:16:17,065 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-23 01:16:17,078 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-23 01:16:17,083 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-23 01:16:17,108 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-23 01:16:17,123 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-23 01:16:17,125 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-23 01:16:17,134 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-23 01:16:17,285 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-23 01:16:17,301 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-23 01:16:17,312 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-23 01:16:17,318 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-23 01:16:17,320 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-23 01:16:17,320 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-23 01:16:17,322 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-23 01:16:17,322 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-23 01:16:17,324 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-23 01:16:17,403 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-23 01:20:46,237 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-23 01:20:46,238 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-23 01:20:46,242 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-23 01:20:46,279 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-23 01:20:46,315 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-23 01:20:46,326 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-23 01:20:46,335 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-23 01:20:46,359 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-23 01:20:46,385 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-23 01:20:46,396 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-23 01:20:46,402 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-23 01:20:46,417 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-23 01:20:46,439 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-23 01:20:46,463 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-23 01:20:46,493 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-23 01:20:46,500 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-23 01:20:46,512 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-23 01:20:46,545 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-23 01:20:46,572 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-23 01:20:46,598 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-23 01:20:46,638 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-23 01:20:46,645 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-23 01:20:46,683 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-23 01:20:46,711 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-23 01:20:46,720 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-23 01:20:46,772 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-23 01:20:46,801 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-23 01:20:46,804 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-23 01:20:46,819 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-23 01:20:47,095 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-23 01:20:47,127 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-23 01:20:47,150 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-23 01:20:47,162 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-23 01:20:47,166 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-23 01:20:47,166 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-23 01:20:47,170 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-23 01:20:47,170 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-23 01:20:47,173 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-23 01:20:47,301 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-23 01:26:21,094 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-23 01:26:21,095 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-23 01:26:21,102 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-23 01:26:21,169 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-23 01:26:21,234 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-23 01:26:21,251 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-23 01:26:21,261 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-23 01:26:21,283 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-23 01:26:21,330 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-23 01:26:21,352 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-23 01:26:21,363 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-23 01:26:21,386 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-23 01:26:21,421 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-23 01:26:21,445 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-23 01:26:21,482 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-23 01:26:21,494 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-23 01:26:21,509 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-23 01:26:21,554 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-23 01:26:21,586 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-23 01:26:21,614 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-23 01:26:21,653 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-23 01:26:21,658 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-23 01:26:21,680 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-23 01:26:21,705 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-23 01:26:21,714 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-23 01:26:21,757 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-23 01:26:21,774 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-23 01:26:21,776 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-23 01:26:21,786 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-23 01:26:21,999 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-23 01:26:22,031 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-23 01:26:22,052 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-23 01:26:22,062 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-23 01:26:22,066 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-23 01:26:22,066 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-23 01:26:22,069 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-23 01:26:22,070 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-23 01:26:22,072 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-23 01:26:22,154 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-23 01:36:57,904 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-23 01:36:57,904 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-23 01:36:57,908 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-23 01:36:57,973 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-23 01:36:58,024 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-23 01:36:58,044 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-23 01:36:58,058 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-23 01:36:58,099 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-23 01:36:58,147 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-23 01:36:58,168 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-23 01:36:58,179 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-23 01:36:58,199 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-23 01:36:58,222 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-23 01:36:58,245 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-23 01:36:58,272 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-23 01:36:58,279 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-23 01:36:58,290 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-23 01:36:58,327 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-23 01:36:58,348 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-23 01:36:58,371 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-23 01:36:58,397 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-23 01:36:58,403 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-23 01:36:58,430 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-23 01:36:58,452 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-23 01:36:58,458 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-23 01:36:58,507 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-23 01:36:58,534 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-23 01:36:58,538 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-23 01:36:58,553 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-23 01:36:58,811 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-23 01:36:58,829 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-23 01:36:58,851 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-23 01:36:58,858 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-23 01:36:58,860 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-23 01:36:58,860 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-23 01:36:58,863 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-23 01:36:58,863 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-23 01:36:58,865 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-23 01:36:58,980 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
+2025-10-23 01:39:44,750 - INFO - app.routers:133 - [routers] include OK: auth                     /api
+2025-10-23 01:39:44,751 - INFO - app.routers:133 - [routers] include OK: health                   
+2025-10-23 01:39:44,755 - INFO - app.routers:133 - [routers] include OK: menu                     /api
+2025-10-23 01:39:44,792 - INFO - app.routers:133 - [routers] include OK: users                    /api/users
+2025-10-23 01:39:44,828 - INFO - app.routers:133 - [routers] include OK: employees                /api/employees
+2025-10-23 01:39:44,839 - INFO - app.routers:133 - [routers] include OK: roles                    /api/roles
+2025-10-23 01:39:44,848 - INFO - app.routers:133 - [routers] include OK: roles_access             /api/roles/access
+2025-10-23 01:39:44,871 - INFO - app.routers:133 - [routers] include OK: keywords                 /api/keywords
+2025-10-23 01:39:44,907 - INFO - app.routers:133 - [routers] include OK: contracts                /api/contracts
+2025-10-23 01:39:44,927 - INFO - app.routers:133 - [routers] include OK: employee_files           /api/employee-files
+2025-10-23 01:39:44,937 - INFO - app.routers:133 - [routers] include OK: hr_bridge                /api/hr
+2025-10-23 01:39:44,960 - INFO - app.routers:133 - [routers] include OK: upload                   /api/upload
+2025-10-23 01:39:44,999 - INFO - app.routers:133 - [routers] include OK: closing                  /api
+2025-10-23 01:39:45,041 - INFO - app.routers:133 - [routers] include OK: ota                      /api/ota
+2025-10-23 01:39:45,080 - INFO - app.routers:133 - [routers] include OK: reports                  /api/reports
+2025-10-23 01:39:45,092 - INFO - app.routers:133 - [routers] include OK: reports_sales            /api/reports/sales
+2025-10-23 01:39:45,105 - INFO - app.routers:133 - [routers] include OK: reports_bank             /api
+2025-10-23 01:39:45,151 - INFO - app.routers:133 - [routers] include OK: master_departments       /api/master/departments
+2025-10-23 01:39:45,167 - INFO - app.routers:133 - [routers] include OK: master_ranks             /api/master/ranks
+2025-10-23 01:39:45,193 - INFO - app.routers:133 - [routers] include OK: master_empno_policy      /api/master/empno-policy
+2025-10-23 01:39:45,228 - INFO - app.routers:133 - [routers] include OK: master_salary_grade      /api/master/salary-grades
+2025-10-23 01:39:45,236 - INFO - app.routers:133 - [routers] include OK: master_property          /api/properties
+2025-10-23 01:39:45,260 - INFO - app.routers:133 - [routers] include OK: master_bank              /api/master/banks
+2025-10-23 01:39:45,283 - INFO - app.routers:133 - [routers] include OK: master_hk_status         /api/master/hk-status
+2025-10-23 01:39:45,291 - INFO - app.routers:133 - [routers] include OK: audit                    /api/audit
+2025-10-23 01:39:45,342 - INFO - app.routers:133 - [routers] include OK: bank                     /api
+2025-10-23 01:39:45,372 - INFO - app.routers:133 - [routers] include OK: merge                    /api/merge
+2025-10-23 01:39:45,376 - INFO - app.routers:133 - [routers] include OK: debug                    /api/_debug
+2025-10-23 01:39:45,394 - INFO - app.routers:133 - [routers] include OK: board                    /api
+2025-10-23 01:39:45,667 - INFO - app.routers:133 - [routers] include OK: master                   /api/master
+2025-10-23 01:39:45,696 - INFO - app.routers:133 - [routers] include OK: master_position          /api/master/positions
+2025-10-23 01:39:45,719 - INFO - app.routers:133 - [routers] include OK: master_titles            /api/master/titles
+2025-10-23 01:39:45,731 - INFO - app.routers:133 - [routers] include OK: properties               /api/properties
+2025-10-23 01:39:45,735 - INFO - app.routers:133 - [routers] include OK: templates                /api/templates
+2025-10-23 01:39:45,735 - INFO - app.routers:137 - [routers] Routers Loaded — OK=34, FAIL=0, TOTAL=34
+2025-10-23 01:39:45,739 - WARNING - app.main:163 - [routers] loaded prefixes → /api/_debug, /api/audit, /api/bank, /api/bank_ledger, /api/closing, /api/contracts, /api/docs, /api/download, /api/employee-files, /api/employees, /api/healthz, /api/hr, /api/keywords, /api/login, /api/master, /api/menu, /api/merge, /api/openapi.json, /api/ota, /api/password, /api/properties, /api/reports, /api/roles, /api/templates, /api/upload, /api/users
+2025-10-23 01:39:45,740 - WARNING - app.main:168 - [routers] ota paths → /api/master/ota-channel, /api/master/ota-channel/{id}, /api/ota/channels, /api/ota/commissions, /api/ota/orders, /api/ota/summary, /api/reports/ota-sales
+2025-10-23 01:39:45,742 - INFO - app.core.dev_bootstrap:38 - [startup] DEV bootstrap 시작
+2025-10-23 01:39:45,847 - INFO - app.core.dev_bootstrap:125 - [startup] DEV bootstrap 완료 ✅
