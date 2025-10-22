@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # ============================================================================
 # File      : app/merge_engine/audit.py
-# Version   : 2025.10-30 · v3.5 (SSOT Final · Banking/OTA Enhanced)
+# Version   : 2025-10-31 · v3.6 (SSOT Stable · Hotfix MergeBatch Import)
 # Purpose   : Hotel Admin — Merge Engine Audit Logger
 # ----------------------------------------------------------------------------
 # 목적:
@@ -11,27 +11,29 @@
 # ----------------------------------------------------------------------------
 # 특징:
 #   ✅ dry_run 모드 안전 스킵
-#   ✅ dataset 별 로그 구분
+#   ✅ dataset별 로그 구분
 #   ✅ action 대소문자 표준화
 #   ✅ summary 자동 계산
+#   ✅ MergeBatch import 경로 수정(app.models.merge)
 # ----------------------------------------------------------------------------
 # 연계:
 #   • app/merge_engine/repository.py → MergeAuditRepository
 #   • app/core/settings_merge.py     → 병합 정책 조회
-#   • app/models/audit.py            → MergeBatch / MergeChangeLog ORM
+#   • app/models/merge.py            → MergeBatch / MergeChangeLog ORM
 # ----------------------------------------------------------------------------
 # 변경 로그:
-#   v3.5 (2025-10-30)
-#     ✅ dataset 기반 로깅 및 business_date 보강
-#     ✅ action 정규화 (INSERT/UPSERT/DELETE/NOOP)
-#     ✅ summary 계산 개선 (.lower())
+#   v3.6 (2025-10-31)
+#     ✅ MergeBatch import hotfix (audit→merge)
+#     ✅ 로그 메시지 일관성 개선
 # ============================================================================
+
 import logging
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 
-from app.models.audit import MergeBatch
+# ✅ MergeBatch import hotfix
+from app.models.merge import MergeBatch
 from app.merge_engine.repository import MergeAuditRepository
 from app.core import settings_merge
 
@@ -61,7 +63,6 @@ def record_merge_audit(
     • settings_merge 정책(audit_enabled) 반영
     • 실패 시 rollback 보장
     """
-
     # 0️⃣ Dry-run 모드: 스킵
     if dry_run:
         log.info("[AUDIT] dry_run → skip audit (dataset=%s)", dataset)
