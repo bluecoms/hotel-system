@@ -1,6 +1,6 @@
 // ============================================================================
 // File      : src/router/index.ts
-// Version   : 2025.11-01 · v3.6 (DeptAccess Guard 안정판 · SSOT 완성)
+// Version   : 2025.11-02 · v3.7 (DeptAccess Guard 안정판 · 권한관리 라우트 추가)
 // Purpose   : Hotel Admin — Router (DeptAccess 기반 접근제어 / 무한루프 완전 차단)
 // ----------------------------------------------------------------------------
 // 설계 요약
@@ -41,6 +41,9 @@ const MyInfo            = () => import('@/views/Users/MyInfo.vue')
 const Users             = () => import('@/views/Users/Users.vue')
 const ResetUserPassword = () => import('@/views/Admin/ResetUserPassword.vue')
 
+// ✅ 권한 관리(DeptAccess 관리) 화면 추가
+const RoleAccess        = () => import('@/views/Admin/RoleAccess.vue')
+
 // ─────────────────────────────────────────────
 // Routes 정의
 //   • meta.requiresAuth === false : 로그인 불필요
@@ -59,8 +62,11 @@ const routes: RouteRecordRaw[] = [
   { path: '/account/info', name: 'account-info', component: MyInfo, meta: { title: '내 정보', requiresAuth: true, routeName: 'account-info' } },
 
   // 사용자/시스템
-  { path: '/admin/users',                name: 'admin-users',             component: Users,             meta: { title: '사용자 목록',   requiresAuth: true, routeName: 'users' } },
-  { path: '/admin/users/password-reset', name: 'admin-users-password-reset', component: ResetUserPassword, meta: { title: '비밀번호 초기화', requiresAuth: true, routeName: 'users-password-reset' } },
+  { path: '/admin/users',                name: 'admin-users',               component: Users,             meta: { title: '사용자 목록',     requiresAuth: true, routeName: 'users' } },
+  { path: '/admin/users/password-reset', name: 'admin-users-password-reset', component: ResetUserPassword, meta: { title: '비밀번호 초기화',   requiresAuth: true, routeName: 'users-password-reset' } },
+
+  // ✅ 권한 관리(DeptAccess) — 백엔드 키와 정확히 일치: routeName = 'role-access'
+  { path: '/admin/role-access',          name: 'role-access',               component: RoleAccess,        meta: { title: '권한 관리',       requiresAuth: true, routeName: 'role-access' } },
 
   // 예외
   { path: '/:pathMatch(.*)*', redirect: '/' },
@@ -152,7 +158,12 @@ router.beforeEach(async (to, from, next) => {
   // ⑧ 실효 접근맵으로 접근 가능 여부 검사
   //   - 접근 거부 시 /forbidden으로 1회 이동
   //   - 이미 forbidden이라면 더 이상 진행하지 않고 중단(next(false))
-  const hasAccess = canAccessRoute(routeName, (auth as any).effectiveDeptAccess)
+  const hasAccess = canAccessRoute(
+    routeName,
+    (auth as any).effectiveDeptAccess,
+    auth.user?.roles || null // v3.8: SUPERADMIN 우선 통과 추가 파라미터(services/auth.ts 호환)
+  )
+
   if (requiresAuth && !hasAccess) {
     if (to.name !== 'forbidden') return next({ name: 'forbidden' })
     return next(false)

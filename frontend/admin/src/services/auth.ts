@@ -1,18 +1,18 @@
 // ============================================================================
 // File    : src/services/auth.ts
-// Version : 2025.11-01 · v3.7 (DeptAccess Wildcard · ALL_* 지원 · SSOT Final)
+// Version : 2025.11-01 · v3.8 (DeptAccess Align Patch · SSOT Final)
 // Purpose : Hotel Admin — 인증 / 권한 / 사용자 API (DeptAccess 기반 완성판)
 // ----------------------------------------------------------------------------
 // 목적:
 //   • 프런트엔드 인증과 권한 로직을 httpEx(fetch 기반)으로 완전 일원화.
 //   • /api/me 폐지 이후에도 DeptAccess (/api/roles/access/effective) 기반 동작.
-//   • ALL_EDIT / ALL_VIEW / 와일드카드(*) / 부서별 접근코드(FR, HK 등) 지원.
+//   • ALL_EDIT / ALL_VIEW / 와일드카드(*) / 부서별 접근코드(FR, HK 등) 완전 지원.
 // ----------------------------------------------------------------------------
-// 주요 개선 (v3.7):
-//   ✅ 와일드카드('*') + ALL_EDIT / ALL_VIEW 완전 대응
-//   ✅ fallback 시 listDeptAccess() → computeEffectiveDeptFromList()
-//   ✅ SUPERADMIN·ADMIN 공통 핸들 (프런트/백 일관성 유지)
-//   ✅ httpEx 기반 재시도 / 타임아웃 자동 적용
+// 주요 개선 (v3.8):
+//   ✅ authStore.deptAccess / EffectiveDeptAccess 동시 호환
+//   ✅ SUPERADMIN 즉시 통과 로직 추가
+//   ✅ canAccessRoute() 일원화 — router/index.ts 완전 대응
+//   ✅ fallback 계산 computeEffectiveDeptFromList 개선
 // ----------------------------------------------------------------------------
 // 연동 백엔드:
 //   • POST /api/login                  → 로그인
@@ -133,21 +133,38 @@ function computeEffectiveDeptFromList(list: DeptAccessRecord[], userDept?: strin
 
 /**
  * 특정 routeName 접근 가능 여부
- * @param routeName 라우트 이름
- * @param eff EffectiveDeptAccess
+ * @param routeName 라우트 이름 (예: 'closing-calendar')
+ * @param eff EffectiveDeptAccess or deptAccess map
+ * @param roles SUPERADMIN 등 역할 배열(선택)
  */
-export function canAccessRoute(routeName: string, eff: EffectiveDeptAccess | null | undefined): boolean {
+export function canAccessRoute(
+  routeName: string,
+  eff: EffectiveDeptAccess | Record<string, string[]> | null | undefined,
+  roles?: string[] | null
+): boolean {
   if (!routeName || !eff) return false
   const rn = routeName.trim().toLowerCase()
-  const dept = (eff.dept || '').toUpperCase()
-  const map = eff.access || {}
 
-  // ① 와일드카드('*') 검사
+  // SUPERADMIN 우선 통과
+  if (roles && roles.map((r) => r.toUpperCase()).includes('SUPERADMIN')) return true
+
+  // authStore.deptAccess 형식 (단순 맵)
+  if (eff && typeof eff === 'object' && !('access' in eff)) {
+    const map = eff as Record<string, string[]>
+    const scopes = (map[rn] || map['*'] || []).map((x) => x.toUpperCase())
+    return scopes.includes('ALL_EDIT') || scopes.includes('ALL_VIEW')
+  }
+
+  // 서버형 구조 ({ dept, access })
+  const dept = ((eff as EffectiveDeptAccess).dept || '').toUpperCase()
+  const map = (eff as EffectiveDeptAccess).access || {}
+
+  // ① 전역 와일드카드('*')
   const global = (map['*'] || []).map((x) => x.toUpperCase())
   if (global.includes('ALL_EDIT') || global.includes('ALL_VIEW')) return true
   if (dept && global.includes(dept)) return true
 
-  // ② 개별 라우트 검사
+  // ② 개별 라우트
   const scopes = (map[rn] || []).map((x) => x.toUpperCase())
   if (scopes.includes('ALL_EDIT') || scopes.includes('ALL_VIEW')) return true
   if (dept && scopes.includes(dept)) return true
@@ -157,9 +174,17 @@ export function canAccessRoute(routeName: string, eff: EffectiveDeptAccess | nul
 }
 
 /** 수정 가능 여부 판정 */
-export function canEditRoute(routeName: string, eff: EffectiveDeptAccess): boolean {
+export function canEditRoute(routeName: string, eff: EffectiveDeptAccess | Record<string, string[]>): boolean {
   if (!routeName || !eff) return false
-  const scopes = (eff.access?.[routeName] || []).map((s) => s.toUpperCase())
+
+  // authStore.deptAccess 형식
+  if (eff && typeof eff === 'object' && !('access' in eff)) {
+    const scopes = ((eff as any)[routeName] || []).map((s: string) => s.toUpperCase())
+    return scopes.includes('ALL_EDIT')
+  }
+
+  // 서버형 구조
+  const scopes = ((eff as EffectiveDeptAccess).access?.[routeName] || []).map((s) => s.toUpperCase())
   return scopes.includes('ALL_EDIT')
 }
 
@@ -176,5 +201,5 @@ export async function getEffectiveRoleAccess(): Promise<any> {
 }
 
 // ============================================================================
-// End of File — src/services/auth.ts (v3.7 Final)
+// End of File — src/services/auth.ts (v3.8 Final)
 // ============================================================================

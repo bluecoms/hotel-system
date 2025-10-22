@@ -1,173 +1,208 @@
 // ============================================================================
-// File    : src/stores/auth.ts
-// Version : 2025-11-01 · v3.8 Final (DeptAccess + MG→SUPERADMIN Policy)
-// Purpose : Hotel Admin — 권한/부트스트랩 스토어 (DeptAccess 기반 완성판)
+// File      : src/stores/auth.ts
+// Version   : 2025.10-23 · DeptAccess Ready + Full Legacy Compat
+// Purpose   : Hotel Admin — 인증/부서권한(DeptAccess) 스토어
 // ----------------------------------------------------------------------------
-// 목적:
-//   • 앱 시작 시 사용자 정보 및 실효 권한맵 로드 (DeptAccess 기반)
-//   • /api/me 제거 이후에도 인증 및 권한체계 정상 유지
+//  목적
+//   • /api/me + /api/roles/access/effective 두 API 기반 사용자/권한 부트스트랩
+//   • DeptAccess 권한 시스템(Phase3.5) 완전 대응
+//   • 구버전 호환: can(), isInitialized, logout() 포함
 // ----------------------------------------------------------------------------
-// 주요 개선점:
-//   ✅ /api/me 완전 제거 → DeptAccess 기반 부트스트랩 구조로 전환
-//   ✅ MG 부서 사용자는 SUPERADMIN 동일 권한으로 처리
-//   ✅ router.beforeEach 루프 차단(handle401 개선)
-//   ✅ bootstrap Promise 캐싱 안정화
-//   ✅ httpEx Safe Add-on(fetch Abort/Retry/Timeout) 완전 호환
+// ️ API
+//   GET  /api/me
+//   GET  /api/roles/access/effective
 // ----------------------------------------------------------------------------
-// 규칙:
-//   - 모든 API는 services/auth.ts 경유 (httpEx 기반)
-//   - SUPERADMIN 및 MG(관리부서)는 무조건 통과
-//   - ADMIN은 view/edit 권한 기본 허용
-//   - DeptAccess → RoleAccess 순으로 폴백 (Phase 7 이후 RoleAccess 폐기)
+//  주요 상태
+//   user            : 로그인 사용자
+//   deptCode        : 부서 코드 (MOP 등)
+//   deptAccess      : route_name → scope[]
+//   isInitialized   : 부트스트랩 완료 플래그
+// ----------------------------------------------------------------------------
+//  주요 함수
+//   bootstrap()     : 사용자 및 권한맵 로드
+//   hasDeptAccess() : DeptAccess 기반 권한 체크
+//   can()           : 레거시 호환용 (RoleAccess 시절 API)
+//   hasRole()       : 단순 역할 확인
+//   logout()        : 상태 초기화
 // ============================================================================
 
 import { defineStore } from 'pinia'
-import router from '@/router'
-import { setToken } from '@/services/http'
-import * as AuthApi from '@/services/auth'
+import http from '@/services/http'
 
 // ─────────────────────────────────────────────
 // 타입 정의
 // ─────────────────────────────────────────────
-type Me = { email: string; name?: string; roles: string[]; dept?: string }
-type AccessLevel = 'none' | 'view' | 'edit' | 'admin'
-type EffectiveMap = Record<string, AccessLevel>
 
-const LEVEL_ORDER: Record<AccessLevel, number> = { none: 0, view: 1, edit: 2, admin: 3 }
+/** 사용자 정보 (/api/me 응답 기준) */
+type Me = {
+  email: string
+  name?: string
+  roles?: string[]
+  dept?: string
+}
 
-function normalizeRoute(input: string): string {
-  if (!input) return ''
-  return input
-    .trim()
-    .replace(/^\/api\//i, '')
-    .replace(/^\//, '')
-    .replace(/[./]/g, '-')
-    .replace(/--+/g, '-')
-    .toLowerCase()
+/** /api/roles/access/effective 응답 구조 */
+type EffectiveDeptAccess = {
+  dept?: string
+  access: Record<string, string[]>
 }
 
 // ─────────────────────────────────────────────
-// Pinia Store
+// 스토어 정의
 // ─────────────────────────────────────────────
+
 export const useAuthStore = defineStore('auth', {
+  // ───────────────────────────────────────────
+  // 상태 (State)
+  // ───────────────────────────────────────────
   state: () => ({
-    user: null as Me | null,
-    _booting: null as Promise<void> | null,
-    _effective: {} as EffectiveMap,
-    _effectiveLoaded: false,
-    isInitialized: false,
+    user: null as Me | null,                   // 사용자 객체
+    deptCode: 'MOP' as string,                 // 기본 부서코드
+    deptAccess: {} as Record<string, string[]>,// route_name → scopes[]
+    _booting: null as Promise<void> | null,    // 중복 호출 방지용 Promise
+    isInitialized: false as boolean,           // ✅ 부트스트랩 완료 여부 (라우터 가드용)
   }),
 
+  // ───────────────────────────────────────────
+  // 게터 (Getters)
+  // ───────────────────────────────────────────
   getters: {
+    /** 로그인 여부 */
     isAuthenticated: (s) => !!s.user,
+
+    /** 표시용 이름 (없으면 이메일) */
     displayName: (s) => s.user?.name || s.user?.email || 'ADMIN',
-
-    hasRole: (s) => (r: string) =>
-      (s.user?.roles ?? []).map((x) => x.toUpperCase()).includes(r.toUpperCase()),
-
-    hasAnyRole: (s) => (need: string[]) => {
-      const roles = (s.user?.roles ?? []).map((x) => x.toUpperCase())
-      return need.map((x) => x.toUpperCase()).some((r) => roles.includes(r))
-    },
-
-    hasAccess: (s) => (route: string, level: AccessLevel = 'view') => {
-      const roles = (s.user?.roles ?? []).map((x) => x.toUpperCase())
-      const dept = (s.user?.dept || '').toUpperCase()
-
-      // ✅ SUPERADMIN 또는 MG 부서는 무조건 통과
-      if (roles.includes('SUPERADMIN') || dept === 'MG') return true
-
-      const needed = LEVEL_ORDER[level] ?? 1
-      const rn = normalizeRoute(route)
-      const effLevel = s._effective[rn] ?? s._effective['*']
-      if (effLevel && LEVEL_ORDER[effLevel] >= needed) return true
-
-      if (roles.includes('ADMIN') && (level === 'view' || level === 'edit')) return true
-      return false
-    },
-
-    can() {
-      return this.hasAccess
-    },
   },
 
+  // ───────────────────────────────────────────
+  // 액션 (Actions)
+  // ───────────────────────────────────────────
   actions: {
+    /**
+     * 초기 부트스트랩
+     * - /api/me → 사용자 로드
+     * - /api/roles/access/effective → DeptAccess 권한맵 로드
+     */
     async bootstrap() {
       if (this._booting) return this._booting
 
       this._booting = (async () => {
+        // 1️⃣ 사용자 정보 로드
         try {
-          this.user = { email: 'admin@local', name: 'ADMIN', roles: ['ADMIN'], dept: 'MG' }
+          const r: any = await http.get('me')
+          const u: Me = r?.user ?? r ?? {}
+          this.user = {
+            email: u?.email ?? '',
+            name: u?.name ?? (u?.email ?? ''),
+            roles: Array.isArray(u?.roles) ? u.roles : [],
+            dept: u?.dept,
+          }
+          if (u?.dept) this.deptCode = u.dept
+        } catch (e) {
+          console.warn('[AuthStore] /api/me 실패 — 비로그인 처리', e)
+          this.user = null
+        }
 
-          try {
-            const effDept = await AuthApi.getEffectiveDeptAccess()
-            const out: EffectiveMap = {}
-
-            for (const [rname, scopes] of Object.entries(effDept.access || {})) {
-              const rn = normalizeRoute(rname)
-              if (Array.isArray(scopes)) {
-                if (scopes.includes('ALL_EDIT')) out[rn] = 'admin'
-                else if (scopes.includes('ALL_VIEW')) out[rn] = 'view'
-                else if (scopes.includes(effDept.dept || '')) out[rn] = 'edit'
-                else out[rn] = 'none'
-              }
-            }
-
-            this._effective = out
-            this._effectiveLoaded = true
-            console.info('[AuthStore] DeptAccess 권한맵 로드 완료:', Object.keys(out).length)
-          } catch (e) {
-            console.warn('⚠️ DeptAccess 로드 실패 → 폴백 적용:', e)
-            const effRole = await AuthApi.getEffectiveDeptAccess()
-            const out: EffectiveMap = {}
-            for (const [key, val] of Object.entries(effRole.access || {}))
-              out[normalizeRoute(key)] = 'view'
-            this._effective = out
-            this._effectiveLoaded = true
+        // 2️⃣ DeptAccess 실효 권한맵 로드
+        try {
+          const eff = await http.get<EffectiveDeptAccess>('roles/access/effective')
+          if (eff && typeof eff.access === 'object') {
+            this.deptAccess = eff.access
+            if (eff.dept) this.deptCode = eff.dept
+            console.log('[AuthStore] DeptAccess 권한맵 로딩 완료')
+          } else {
+            console.warn('[AuthStore] /roles/access/effective 응답 형식 불일치', eff)
+            this.deptAccess = {}
           }
         } catch (e) {
-          console.warn('⚠️ bootstrap 실패:', e)
-          this.user = null
-          this._effective = {}
-          this._effectiveLoaded = false
-        } finally {
-          this._booting = null
-          this.isInitialized = true
-          console.info('[AuthStore] bootstrap complete – user:', this.user?.email)
+          console.warn('[AuthStore] DeptAccess 로드 실패', e)
+          this.deptAccess = {}
         }
+
+        // ✅ 초기화 완료 플래그
+        this.isInitialized = true
       })()
 
-      return this._booting
+      try {
+        await this._booting
+      } finally {
+        this._booting = null
+      }
     },
 
-    async login(token: string) {
-      setToken(token || 'dev-admin-token')
-      await this.bootstrap()
-      if (!this.user) throw new Error('인증 실패')
+    /**
+     * DeptAccess 기반 권한검사
+     * @param routeName - 예: 'closing-calendar'
+     * @param required  - 기본 'ALL_VIEW', 필요 시 'ALL_EDIT'
+     * @returns boolean - 접근 가능 여부
+     */
+    hasDeptAccess(routeName: string, required: string = 'ALL_VIEW'): boolean {
+      const map = this.deptAccess || {}
+      const scopes = map[normalizeRoute(routeName)] || map['*'] || []
+
+      // 권한 규칙:
+      // ① ALL_EDIT → 전면 허용
+      // ② required 권한 포함 시 허용
+      // ③ 현 부서코드 포함 시 허용
+      if (scopes.includes('ALL_EDIT')) return true
+      if (scopes.includes(required)) return true
+      if (scopes.includes(this.deptCode)) return true
+      return false
     },
 
-    async loginWithCredentials(email: string, password: string) {
-      const res = await AuthApi.login(email, password)
-      setToken(res.token)
-      await this.bootstrap()
-      if (!this.user) throw new Error('인증 실패')
+    /**
+     * 레거시 호환용 can()
+     * - RoleAccess 시절 코드(auth.can(route, level)) 대응
+     * - 내부적으로 hasDeptAccess() 호출
+     * @param route - 예: 'users' 또는 'closing-calendar'
+     * @param level - 예: 'view' | 'edit' | 'admin'
+     * @returns boolean
+     */
+    can(route: string, level: string): boolean {
+      const lvl = String(level || '').toLowerCase()
+      const required =
+        lvl === 'edit' || lvl === 'admin' ? 'ALL_EDIT' : 'ALL_VIEW'
+      return this.hasDeptAccess(route, required)
     },
 
-    handle401() {
-      this.user = null
-      setToken(null)
-      sessionStorage.clear()
-      this._effective = {}
-      this._effectiveLoaded = false
+    /**
+     * 역할(Role) 검사
+     * - SUPERADMIN 등 단순 RoleAccess 남은 부분 호환용
+     * @param role - 예: 'SUPERADMIN'
+     */
+    hasRole(role: string): boolean {
+      return !!this.user?.roles?.includes(role)
     },
 
+    /**
+     * 로그아웃
+     * - 상태 초기화
+     * - localStorage / 메모리 토큰 제거 (http 모듈이 관리)
+     * - router 리다이렉트는 호출측에서 수행
+     */
     logout() {
-      this.handle401()
-      router.push({ name: 'login' }).catch(() => (location.href = '/login'))
+      try {
+        this.user = null
+        this.deptAccess = {}
+        this.deptCode = 'MOP'
+        this.isInitialized = false
+        console.log('[AuthStore] 로그아웃 — 상태 초기화 완료')
+      } catch (e) {
+        console.warn('[AuthStore] logout 처리 중 예외', e)
+      }
     },
   },
 })
 
-// ============================================================================
-// End of File — src/stores/auth.ts (v3.8 Final · MG=SUPERADMIN Policy)
-// ============================================================================
+// ─────────────────────────────────────────────
+// 유틸 함수: route 정규화 (백엔드 규칙과 동일)
+// ─────────────────────────────────────────────
+function normalizeRoute(raw: string): string {
+  if (!raw) return ''
+  let s = raw.trim()
+  if (s.toLowerCase().startsWith('/api/')) s = s.slice(5)
+  if (s.startsWith('/')) s = s.slice(1)
+  s = s.replace(/\//g, '-').replace(/\./g, '-')
+  while (s.includes('--')) s = s.replace(/--/g, '-')
+  return s.toLowerCase()
+}
