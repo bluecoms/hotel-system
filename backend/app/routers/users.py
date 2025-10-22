@@ -1,16 +1,17 @@
+# -*- coding: utf-8 -*-
 # ============================================================================
 # File    : app/routers/users.py
-# Version : 2025-10-23 · v3.1 (Auto Default Password · Stable)
+# Version : 2025-10-31 · v3.2 (InternalToken Guard · SSOT Stable)
 # Purpose : Hotel Admin — 사용자 관리 라우터 (/api/users)
 # ----------------------------------------------------------------------------
 # 목적:
-#   • 사용자 계정 생성, 목록, 비활성화, 사원 매핑 관리
+#   • 사용자 계정 CRUD + 역할 접근 관리
+#   • 내부 API(X-Internal-Token) 기반 보호
 # ----------------------------------------------------------------------------
-# 변경사항 (v3.1)
-#   ✅ 신규 사용자 생성 시 비밀번호 자동 생성("hotel1234")
-#   ✅ bcrypt 해시 적용 (passlib)
-#   ✅ UserCreate.password 필드 없이도 정상 등록
-#   ✅ 생성 시 Audit 로그 기록 유지
+# 정책 요약:
+#   ✅ 인증: require_token_local (헤더 X-Internal-Token)
+#   ✅ 권한: require_roles(["ADMIN","SUPERADMIN"]) 등 최소 가드
+#   ✅ Audit 로그: 모든 변경 동작 기록
 # ============================================================================
 from __future__ import annotations
 import secrets
@@ -21,13 +22,13 @@ from sqlalchemy import and_
 from passlib.hash import bcrypt
 
 from app.core.locale import set_lang
-from app.core.auth import require_user, require_roles
+from app.core.auth import require_token_local, require_roles
 from app.db.session import get_db
 from app.models.user import User
 from app.models.employee import Employee, UserEmployeeMap
 from app.models.role import RoleAccess
 from app.schemas.users import (
-    UserCreate, UserListOut, UserActivateIn, CreateFromEmployeeIn
+    UserCreate, UserListOut, UserActivateIn, CreateFromEmployeeIn,
 )
 from app.core.audit import write_audit
 
@@ -37,7 +38,10 @@ from app.core.audit import write_audit
 router = APIRouter(
     prefix="/api/users",
     tags=["users"],
-    dependencies=[Depends(set_lang), Depends(require_user)],
+    dependencies=[
+        Depends(set_lang),
+        Depends(require_token_local),  # ✅ 내부 토큰 인증
+    ],
 )
 
 # ============================================================================
@@ -61,6 +65,7 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
         "roles": roles,
         "employee_id": employee_id,
     }
+
 
 # ============================================================================
 # 2️⃣ 사용자 목록 조회 (ADMIN+)
@@ -99,6 +104,7 @@ def list_users(
     ]
     return {"items": [i.model_dump() for i in items], "page": page, "size": size, "total": total}
 
+
 # ============================================================================
 # 3️⃣ 사용자 생성 (SUPERADMIN)
 # ============================================================================
@@ -108,7 +114,6 @@ def create_user(body: UserCreate, db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == body.email).first():
         raise HTTPException(status_code=400, detail="email exists")
 
-    # ✅ 비밀번호 자동 생성 (없으면 기본값 hotel1234)
     raw_pw = body.password or "hotel1234"
     hashed = bcrypt.hash(raw_pw)
 
@@ -122,9 +127,10 @@ def create_user(body: UserCreate, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
-
     write_audit(db, "system", "user.create", f"user={user.email}, pw=default")
+
     return {"ok": True, "id": user.id, "default_password": "hotel1234"}
+
 
 # ============================================================================
 # 4️⃣ 사용자 승인/비활성화 (ADMIN+)
@@ -139,6 +145,7 @@ def approve_user(user_id: int, body: UserActivateIn, db: Session = Depends(get_d
     write_audit(db, "system", "user.approve", f"user={user_id}, active={u.is_active}")
     return {"ok": True, "id": user_id, "is_active": u.is_active}
 
+
 # ============================================================================
 # 5️⃣ 사용자 삭제(비활성화)
 # ============================================================================
@@ -151,6 +158,7 @@ def deactivate_user(user_id: int, db: Session = Depends(get_db)):
     db.commit()
     write_audit(db, "system", "user.deactivate", f"user={user_id}")
     return {"ok": True}
+
 
 # ============================================================================
 # 6️⃣ 사용자-사원 매핑 (ADMIN+)
@@ -171,6 +179,7 @@ def map_employee(user_id: int, emp_id: int, db: Session = Depends(get_db)):
     write_audit(db, "system", "user.map.employee", f"user={user_id}, emp={emp_id}")
     return {"ok": True}
 
+
 # ============================================================================
 # 7️⃣ 사원으로부터 사용자 생성 (HRADMIN+)
 # ============================================================================
@@ -190,9 +199,10 @@ def create_from_employee(body: CreateFromEmployeeIn, db: Session = Depends(get_d
     db.refresh(user)
     db.add(UserEmployeeMap(user_id=user.id, employee_id=emp.id))
     db.commit()
-
     write_audit(db, "system", "user.create.from_employee", f"user={user.id}, emp={emp.id}")
+
     return {"ok": True, "id": user.id, "default_password": default_pw}
+
 
 # ============================================================================
 # 8️⃣ 역할 접근 관리 (ADMIN+)
@@ -203,6 +213,7 @@ def get_effective_access(db: Session = Depends(get_db)):
     items = [{"role": r.role, "resource": r.resource, "access": r.access} for r in rows]
     return {"items": items, "total": len(items)}
 
+
 @router.put("/roles/access", dependencies=[Depends(require_roles(["SUPERADMIN"]))])
 def update_access(data: List[Dict[str, Any]], db: Session = Depends(get_db)):
     db.query(RoleAccess).delete()
@@ -211,6 +222,7 @@ def update_access(data: List[Dict[str, Any]], db: Session = Depends(get_db)):
     db.commit()
     write_audit(db, "system", "roleaccess.update", f"count={len(data)}")
     return {"ok": True, "count": len(data)}
+
 
 @router.delete("/roles/access", dependencies=[Depends(require_roles(["SUPERADMIN"]))])
 def clear_access(db: Session = Depends(get_db)):
