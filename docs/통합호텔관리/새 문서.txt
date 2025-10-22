@@ -1,0 +1,113 @@
+**`ui_components_registry.md`**
+**실행 규약 문서**
+
+---
+
+#  Hotel Admin UI Components — Usage Registry (v2025-10)
+
+**경로:** `frontend/admin/src/ui/components/`  
+**목적:** 이미 완성된 공통 UI 세트를 기반으로, 새로운 화면/모듈 개발 시 일관된 UX와 코드 재사용을 보장한다.  
+**규칙:**
+- 신규 컴포넌트 생성 금지 (이 디렉터리 내부는 SSOT)
+- 수정 필요 시 `ui/components` 내 직접 수정 금지 — `/ui/views`에서 slot·상속 방식으로 확장
+- import 시 반드시 `@/ui/components/<FileName>.vue` 경로를 사용
+
+---
+
+##  컴포넌트 카테고리별 정리
+
+###  페이지 & 리스트
+
+| 파일명 | 역할 / 사용 위치 | 예시 |
+|--------|------------------|------|
+| **PageHeader.vue** | 페이지 제목, 부제, 상단 액션 | `<PageHeader title="마감관리" />` |
+| **SmartFilterBar.vue** | 검색/필터 바 (날짜, 키워드, 버튼) | `<SmartFilterBar :filters="filters" @search="load" />` |
+| **BoardList.vue** | 공통 리스트/테이블 컨테이너 | `<BoardList :headers="headers" :items="rows" />` |
+| **NoDataBox.vue** | 데이터 없음 안내 박스 | `<NoDataBox @retry="reload" />` |
+| **DatasetCard.vue** | 업로드 데이터 요약 카드 | 대시보드, 업로드 이력 |
+| **PageShell.vue** | 페이지 기본 레이아웃 컨테이너 | 모든 주요 뷰의 상위 컨테이너 |
+
+---
+
+###  대화상자 (Dialogs)
+
+| 파일명 | 기능 | 비고 |
+|--------|------|------|
+| **DialogUpload.vue** | 파일 업로드 다이얼로그 | 모든 업로드형 기능의 공통 UI |
+| **DialogContractForm.vue** | 계약 입력/수정 다이얼로그 | Admin - Contracts |
+| **DialogContractHistory.vue** | 계약 이력 보기 다이얼로그 | 버전형 이력 표시 |
+| **DialogLinkAccount.vue** | 외부 계정 연결 | OTA / 외부 연동용 |
+
+---
+
+###  카드 / 요약
+
+| 파일명 | 기능 | 예시 |
+|--------|------|------|
+| **KpiCard.vue** | KPI 요약 카드 | `<KpiCard label="매출" :value="100000" />` |
+| **SkeletonCard.vue** | 로딩 스켈레톤 | KPI 대체 뷰 |
+| **StatPill.vue** | 수치형 배지 | `<StatPill color="success" text="완료" />` |
+| **StateBlock.vue** | 상태 블록 (상태+값) | 보고서, 대시보드 |
+| **EmptyState.vue** | 공통 빈 상태 화면 | `<EmptyState message="데이터 없음" />` |
+
+---
+
+###  피드백 / UX
+
+| 파일명 | 기능 | 예시 |
+|--------|------|------|
+| **ToastHost.vue** | 전역 토스트 메시지 | `useToast().success('저장되었습니다')` |
+| **ConfirmHost.vue** | 전역 확인 모달 | `useConfirm()`과 연동 |
+| **LoadingOverlay.vue** | 전체화면 로딩 스피너 | `<LoadingOverlay v-if="loading" />` |
+| **ComingSoonOverlay.vue** | 준비중 오버레이 | `<ComingSoonOverlay />` |
+
+---
+
+###  사용자 / 유틸리티
+
+| 파일명 | 기능 | 비고 |
+|--------|------|------|
+| **UserMenu.vue** | 상단 유저 메뉴 | 로그아웃, 설정 |
+| **NoTxnModal.vue** | 거래 없음 알림 | Reports |
+| **BankLedgerSummary.vue** | 입금/출금 합계 카드 | Finance |
+| **BizDatePicker.vue** | 날짜 선택 (YYYY-MM-DD) | 필터바 공통 |
+| **ConfirmHost.vue** | 전역 Confirm Dialog | `useConfirm()` 전용 |
+
+---
+
+##  연결된 Composables
+
+| 파일명 | 기능 | 사용처 |
+|--------|------|--------|
+| **useToast.ts** | 토스트 메시지 큐 관리 | `ToastHost.vue` |
+| **useConfirm.ts** | 확인/취소 다이얼로그 핸들러 | `ConfirmHost.vue` |
+
+---
+
+## ⚙️ 기본 사용 규칙
+
+1. 모든 화면은 다음 기본 구조를 따름:
+   ```vue
+   <template>
+     <PageShell>
+       <PageHeader title="페이지명" />
+       <SmartFilterBar :filters="filters" @search="load" />
+       <BoardList :headers="headers" :items="rows" />
+       <NoDataBox v-if="!rows.length" />
+     </PageShell>
+   </template>
+````
+
+2. 통신은 반드시 `@/services/http.ts` 사용
+3. 알림은 `useToast()`, 확인은 `useConfirm()` 사용
+4. 색상은 `src/ui/tokens.ts`의 CSS 변수 사용 (`--brand-*`, `--color-*`)
+5. 새 컴포넌트 추가 금지 — 필요 시 slot, mixin, 상속으로 확장
+6. QA 시 `/admin/ui-demo` 화면에서 전체 컴포넌트 로드 테스트 수행
+
+---
+
+**상태:** ✅ Stable
+**최종 업데이트:** 2025-10-13
+**작성자:** Hotel System Frontend Core
+
+````

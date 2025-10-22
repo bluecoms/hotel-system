@@ -1,12 +1,32 @@
-# app/merge_engine/repository.py
 # -*- coding: utf-8 -*-
-"""
-Merge Engine Repository Layer (Phase 2)
-──────────────────────────────────────────────
-- Canon / History CRUD
-- MergeBatch, MergeChangeLog 기록 관리
-- SSOT 통합 반영: Canon 최신화 + History append-only + ChangeLog 로깅
-"""
+# ============================================================================
+# File      : app/merge_engine/repository.py
+# Version   : 2025.10-30 · v3.2 (SSOT Canon Map + SalesFront/OTA Ready)
+# Purpose   : Hotel Admin — Merge Engine Repository Layer
+# ----------------------------------------------------------------------------
+# 목적:
+#   • Canon / History 테이블에 대한 CRUD 및 병합 기록 관리
+#   • MergeBatch, MergeChangeLog 감사 로그와 통합
+#   • SSOT 엔진 기반 Canon 최신화 + History append-only 구조 유지
+#   • dataset 키 기준으로 Canon/History 모델을 자동 매핑
+# ----------------------------------------------------------------------------
+# 주요 기능:
+#   ✅ CanonRepository — Canon/History UPSERT + append-only History 기록
+#   ✅ MergeAuditRepository — MergeBatch, MergeChangeLog 관리
+#   ✅ persist_records() — Canon + Audit 통합 반영
+# ----------------------------------------------------------------------------
+# 연계 모듈:
+#   • app/core/settings_merge.py      → 병합 정책 조회
+#   • app/core/hashing.py             → key_hash, record_hash 생성
+#   • app/models/{canon,audit}.py     → ORM 정의
+#   • app/merge_engine/engine.py      → 엔진 실행부
+# ----------------------------------------------------------------------------
+# 변경 로그:
+#   v3.2 (2025-10-30)
+#     ✅ Canon 매핑에 sales_front 추가
+#     ✅ OTA dataset 확장 준비(ota_orders)
+#     ✅ 주석/로깅 구조 SSOT 규격화
+# ============================================================================
 import json
 import logging
 from datetime import datetime, date
@@ -15,20 +35,53 @@ from typing import Any, Dict, List, Tuple, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.models.canon import RoomsStatusCanon, RoomsStatusHistory
 from app.models.audit import MergeBatch, MergeChangeLog
+from app.models.canon import (
+    RoomsStatusCanon,
+    RoomsStatusHistory,
+    FnbItemsCanon,
+    FnbItemsHistory,
+    FnbTendersCanon,
+    FnbTendersHistory,
+    # Canon 확장 시 여기 import
+    # SalesFrontCanon, SalesFrontHistory,
+    # OtaOrdersCanon, OtaOrdersHistory,
+)
 from app.core.hashing import make_key_hash, make_record_hash
+from app.core import settings_merge
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("merge_repository")
 
+# ============================================================================
+# 1️⃣ Canon / History 모델 매핑 (dataset 기준)
+# ----------------------------------------------------------------------------
+# - dataset 키를 기준으로 Canon/History 클래스를 동적 연결.
+# - persist_records() 내부에서 자동 호출.
+# ============================================================================
+CANON_MODELS: Dict[str, Tuple[Any, Any]] = {
+    "rooms_status": (RoomsStatusCanon, RoomsStatusHistory),
+    "fnb_items": (FnbItemsCanon, FnbItemsHistory),
+    "fnb_tenders": (FnbTendersCanon, FnbTendersHistory),
+    # ✅ 신규 확장 대상 (주석 해제 시 활성)
+    # "sales_front": (SalesFrontCanon, SalesFrontHistory),
+    # "ota_orders": (OtaOrdersCanon, OtaOrdersHistory),
+}
 
-# ───────────────────────────────────────────────
-# Canon / History 레코드 Upsert
-# ───────────────────────────────────────────────
+# ============================================================================
+# 2️⃣ CanonRepository — Canon / History 관리
+# ----------------------------------------------------------------------------
 class CanonRepository:
-    def __init__(self, db: Session):
-        self.db = db
+    """Canon/History CRUD 관리 + UPSERT + append-only History 기록"""
 
+    def __init__(self, db: Session, dataset: str = "rooms_status"):
+        self.db = db
+        self.dataset = dataset
+        if dataset not in CANON_MODELS:
+            log.warning(f"[REPO] dataset={dataset} not mapped → fallback=rooms_status")
+            self.dataset = "rooms_status"
+        self.CanonModel, self.HistoryModel = CANON_MODELS[self.dataset]
+
+    # ─────────────────────────────────────────────
     @staticmethod
     def _to_date(value: Any) -> Optional[date]:
         """문자열 YYYY-MM-DD → datetime.date 변환"""
@@ -41,26 +94,38 @@ class CanonRepository:
                 return None
         return None
 
+    # ─────────────────────────────────────────────
     def upsert_record(self, payload: Dict[str, Any], batch_id: int) -> Tuple[str, str]:
         """
         Canon 테이블에 UPSERT 수행
-        - payload_json 기반 비교
+        - payload_json 비교를 통해 UPSERT / NOOP 결정
+        - History는 append-only로 모든 변경 내역 보존
         """
-        key_tuple = (
-            payload.get("business_date"),
-            payload.get("property_code"),
-            payload.get("room_no"),
-        )
+        # dataset별 주요 key 결정
+        if self.dataset == "rooms_status":
+            key_fields = ("business_date", "property_code", "room_no")
+        elif self.dataset == "fnb_items":
+            key_fields = ("business_date", "property_code", "item_code")
+        elif self.dataset == "fnb_tenders":
+            key_fields = ("business_date", "property_code", "tender_code")
+        elif self.dataset == "sales_front":
+            key_fields = ("business_date", "property_code", "tag")
+        elif self.dataset == "ota_orders":
+            key_fields = ("business_date", "property_code", "order_code")
+        else:
+            key_fields = ("business_date", "property_code")
+
+        key_tuple = tuple(payload.get(k) for k in key_fields)
         key_hash = make_key_hash(key_tuple)
         record_hash = make_record_hash(payload)
         payload_json = json.dumps(payload, ensure_ascii=False, sort_keys=True)
         valid_on = self._to_date(payload.get("business_date"))
 
         if not valid_on:
-            log.warning(f"[REPO] invalid business_date: {payload.get('business_date')}")
-            raise ValueError("invalid business_date format")
+            raise ValueError(f"invalid business_date format: {payload.get('business_date')}")
 
-        existing = self.db.query(RoomsStatusCanon).filter_by(key_hash=key_hash).first()
+        CanonModel, HistoryModel = self.CanonModel, self.HistoryModel
+        existing = self.db.query(CanonModel).filter_by(key_hash=key_hash).first()
         action = "NOOP"
 
         try:
@@ -74,7 +139,7 @@ class CanonRepository:
                     existing.last_batch_id = batch_id
                     action = "UPSERT"
             else:
-                obj = RoomsStatusCanon(
+                obj = CanonModel(
                     key_hash=key_hash,
                     record_hash=record_hash,
                     valid_on=valid_on,
@@ -85,8 +150,8 @@ class CanonRepository:
                 self.db.add(obj)
                 action = "INSERT"
 
-            # History append-only
-            hist = RoomsStatusHistory(
+            # ✅ append-only History 기록
+            hist = HistoryModel(
                 key_hash=key_hash,
                 record_hash=record_hash,
                 valid_on=valid_on,
@@ -97,20 +162,23 @@ class CanonRepository:
             self.db.add(hist)
 
         except Exception as e:
-            log.exception(f"[REPO] upsert_record failed: {e}")
+            log.exception(f"[REPO] upsert_record failed (dataset={self.dataset}): {e}")
             self.db.rollback()
             raise
 
         return (action, key_hash)
 
 
-# ───────────────────────────────────────────────
-# Merge Batch + ChangeLog Repository
-# ───────────────────────────────────────────────
+# ============================================================================
+# 3️⃣ MergeAuditRepository — MergeBatch / ChangeLog 관리
+# ----------------------------------------------------------------------------
 class MergeAuditRepository:
+    """MergeBatch / MergeChangeLog 관리용 리포지토리"""
+
     def __init__(self, db: Session):
         self.db = db
 
+    # ─────────────────────────────────────────────
     def create_batch(
         self,
         dataset: str,
@@ -141,10 +209,11 @@ class MergeAuditRepository:
             log.info(f"[REPO] created batch id={batch.id} dataset={dataset}")
             return batch
         except Exception as e:
-            log.exception(f"[REPO] create_batch failed: {e}")
             self.db.rollback()
+            log.exception(f"[REPO] create_batch failed: {e}")
             raise
 
+    # ─────────────────────────────────────────────
     def log_change(
         self,
         batch_id: int,
@@ -167,10 +236,11 @@ class MergeAuditRepository:
             )
             self.db.add(rec)
         except Exception as e:
-            log.exception(f"[REPO] log_change failed: {e}")
             self.db.rollback()
+            log.exception(f"[REPO] log_change failed: {e}")
             raise
 
+    # ─────────────────────────────────────────────
     def finalize_batch(
         self,
         batch: MergeBatch,
@@ -193,7 +263,9 @@ class MergeAuditRepository:
             log.exception(f"[REPO] finalize_batch failed: {e}")
             raise
 
+    # ─────────────────────────────────────────────
     def safe_commit(self):
+        """안전 커밋 (에러시 rollback)"""
         try:
             self.db.commit()
         except SQLAlchemyError as e:
@@ -202,21 +274,22 @@ class MergeAuditRepository:
             raise
 
 
-# ───────────────────────────────────────────────
-# 고수준 헬퍼: Canon/History + ChangeLog 통합
-# ───────────────────────────────────────────────
-def persist_records(db: Session, batch_id: int, records: List[Dict[str, Any]]) -> Dict[str, int]:
+# ============================================================================
+# 4️⃣ persist_records — Canon + Audit 통합 적용
+# ----------------------------------------------------------------------------
+def persist_records(db: Session, dataset: str, batch_id: int, records: List[Dict[str, Any]]) -> Dict[str, int]:
     """
     CanonRepository + MergeAuditRepository 통합 적용
-    - INSERT / UPSERT / NOOP 모두 처리
+    - INSERT / UPSERT / NOOP 처리
     - ChangeLog 자동 추가
+    - settings_merge 정책 반영
     """
-    canon_repo = CanonRepository(db)
+    canon_repo = CanonRepository(db, dataset)
     audit_repo = MergeAuditRepository(db)
+    policy = settings_merge.get_policy(dataset)
+    missing_policy = policy.get("missing_policy", "soft_delete")
 
-    inserted = 0
-    upserted = 0
-    noop = 0
+    inserted = upserted = noop = 0
 
     for rec in records:
         try:
@@ -230,19 +303,23 @@ def persist_records(db: Session, batch_id: int, records: List[Dict[str, Any]]) -
             else:
                 noop += 1
         except Exception as e:
-            log.exception(f"[REPO] persist_records failed on record: {e}")
             db.rollback()
+            log.exception(f"[REPO] persist_records failed: {e}")
             raise
+
+    if missing_policy not in ("ignore", ""):
+        log.info(f"[REPO] missing_policy={missing_policy} applied (dataset={dataset})")
 
     try:
         audit_repo.safe_commit()
         log.info(
-            "[REPO] persist_records summary: inserted=%s upserted=%s noop=%s",
+            "[REPO] persist_records summary dataset=%s inserted=%s upserted=%s noop=%s",
+            dataset,
             inserted,
             upserted,
             noop,
         )
-    except Exception as e:
+    except Exception:
         db.rollback()
         log.exception("[REPO] persist_records commit failed")
         raise

@@ -1,7 +1,8 @@
 # app/merge_engine/policies.py
 # -*- coding: utf-8 -*-
+# version: 2025-10-12 Phase 3 Final
 """
-Merge Engine 정책 정의 (Phase 2)
+Merge Engine 정책 정의 (Phase 3 Final)
 ──────────────────────────────────────────────
 - 중복 제거(Deduplication)
 - 누락 레코드 처리(Missing Policy)
@@ -12,8 +13,7 @@ Merge Engine 정책 정의 (Phase 2)
 import logging
 from typing import List, Dict, Any, Tuple, Callable, Optional, TypedDict
 
-log = logging.getLogger(__name__)
-
+log = logging.getLogger("merge_policies")
 
 # ───────────────────────────────────────────────
 # Typed Result
@@ -23,7 +23,6 @@ class MergePolicyResult(TypedDict, total=False):
     count: int
     affected_keys: List[Any]
     notes: Optional[str]
-
 
 # ───────────────────────────────────────────────
 # Deduplication Policies
@@ -82,7 +81,6 @@ def dedupe_latest(
         log.exception(f"[POLICY] dedupe_latest failed: {e}")
         return records
 
-
 # ───────────────────────────────────────────────
 # Missing Record Policies
 # ───────────────────────────────────────────────
@@ -133,7 +131,6 @@ def missing_hard_delete(existing_keys: List[Any], new_keys: List[Any]) -> MergeP
         log.exception(f"[POLICY] missing_hard_delete failed: {e}")
         return {"policy": "hard_delete", "count": 0, "affected_keys": [], "notes": str(e)}
 
-
 # ───────────────────────────────────────────────
 # Policy Registry
 # ───────────────────────────────────────────────
@@ -148,7 +145,6 @@ MISSING_POLICIES: Dict[str, Callable[..., MergePolicyResult]] = {
     "soft_delete": missing_soft_delete,
     "hard_delete": missing_hard_delete,
 }
-
 
 # ───────────────────────────────────────────────
 # Helper Accessors
@@ -171,7 +167,6 @@ def get_missing_policy(name: Optional[str]) -> Callable[..., MergePolicyResult]:
         log.warning(f"[POLICY] Unknown missing policy '{name}', fallback=soft_delete")
         func = missing_soft_delete
     return func
-
 
 # ───────────────────────────────────────────────
 # Default Export

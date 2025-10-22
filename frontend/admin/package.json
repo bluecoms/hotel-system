@@ -15,13 +15,22 @@
   "dependencies": {
     "@fontsource/pretendard": "^5.2.5",
     "@mdi/font": "^7.4.47",
+    "@types/chart.js": "^4.0.1",
+    "chart.js": "^4.5.0",
+    "lodash-es": "^4.17.21",
     "pinia": "^2.2.6",
+    "sass": "^1.93.2",
     "vue": "^3.5.10",
     "vue-i18n": "^9.14.5",
     "vue-router": "^4.4.5",
+    "vuedraggable": "^4.1.0",
     "vuetify": "^3.10.2"
   },
   "devDependencies": {
+    "@fontsource-variable/inter": "^5.2.8",
+    "@fontsource/fraunces": "^5.2.9",
+    "@fontsource/inter": "^5.2.8",
+    "@types/lodash-es": "^4.17.12",
     "@typescript-eslint/eslint-plugin": "^8.44.1",
     "@typescript-eslint/parser": "^8.44.1",
     "@vitejs/plugin-vue": "^5.1.2",

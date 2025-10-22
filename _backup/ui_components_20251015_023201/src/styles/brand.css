@@ -1,0 +1,104 @@
+/* ======================================================================
+   Hotel Admin — Design Tokens (2025)
+   Neutral Blue Theme · Light Only (Dark Removed)
+   SSOT for colors / spacing / typography
+   ----------------------------------------------------------------------
+   NOTE:
+   - Only light theme is retained.
+   - All dark mode rules and data-theme overrides removed.
+====================================================================== */
+
+/* ========== 1) Fonts ========== */
+:root {
+  --font-en: "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-kr: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --font-base: var(--font-en), var(--font-kr);
+}
+
+/* ========== 2) Radius / Shadow / Spacing ========== */
+:root {
+  --radius-2xs: 8px;
+  --radius-xs: 10px;
+  --radius-sm: 12px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+
+  --shadow-0: none;
+  --shadow-sm: 0 2px 10px rgba(16,24,40,.06);
+  --shadow-md: 0 6px 22px rgba(16,24,40,.08);
+  --shadow-lg: 0 12px 40px rgba(16,24,40,.12);
+
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+
+  --control-h: 40px;
+}
+
+/* ========== 3) Colors — LIGHT (Neutral Blue) ========== */
+:root {
+  /* Brand (primary UI identity) */
+  --brand-primary:   #2563EB;  /* Blue-600 */
+  --brand-secondary: #1E40AF;  /* Blue-800 */
+  --brand-accent:    #60A5FA;  /* Blue-400 */
+
+  /* Surfaces / Text */
+  --color-bg:       #F8FAFC;   /* slate-50 */
+  --color-surface:  #FFFFFF;
+  --color-text:     #0F172A;   /* slate-900 */
+  --color-muted:    #64748B;   /* slate-500 */
+  --color-line:     #E5E7EB;   /* gray-200 */
+
+  /* Semantic */
+  --color-success:  #10B981;   /* emerald-500 */
+  --color-warning:  #F59E0B;   /* amber-500 */
+  --color-error:    #EF4444;   /* red-500 */
+  --color-info:     #3B82F6;   /* blue-500 */
+
+  /* Gradients / Accents */
+  --accent-gradient:  linear-gradient(90deg, #60A5FA, #3B82F6); /* 400→500 */
+  --accent-secondary: linear-gradient(90deg, #60A5FA, #2563EB); /* 400→600 */
+
+  /* State helpers (calendar, badges, etc.) */
+  --state-open-bg:    rgba(37, 99, 235, .06);
+  --state-closed-bg:  rgba(239, 68, 68,  .06);
+  --state-holiday-bg: rgba(234, 179, 8,  .08);
+}
+
+/* ========== 5) Motion / Accessibility ========== */
+@media (prefers-reduced-motion: reduce) {
+  :root { scroll-behavior: auto; }
+}
+
+/* ========== 6) Legacy aliases (backward-compat) ========== */
+:root {
+  --bg:    var(--color-bg);
+  --panel: var(--color-surface);
+  --text:  var(--color-text);
+  --muted: var(--color-muted);
+  --line:  var(--color-line);
+
+  /* Old radius/shadow names used in some components */
+  --radius:    var(--radius-sm);
+  --radius-sm: var(--radius-xs);
+  --shadow-1:  var(--shadow-md);
+  --shadow-2:  var(--shadow-lg);
+
+  /* Old gap var */
+  --gap: var(--space-3);
+}
+
+:root {
+  /* Layout Width & Padding Tokens */
+  --content-max: 1280px;
+  --app-padding-x: 20px;
+  --app-padding-y: 24px;
+}
+
+.btn-default.v-btn.v-btn--disabled {
+  opacity: 0.5 !important;            /* 완전히 투명하지 않게 */
+  background-color: rgba(148,163,184,0.2) !important; /* 회색 배경 */
+  color: rgba(255,255,255,0.6) !important;             /* 글씨도 보이게 */
+}

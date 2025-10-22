@@ -1,14 +1,32 @@
 # app/datasets/adapters/fnb_tenders.py
 # -*- coding: utf-8 -*-
-# version: 2025-10-11 Phase 2 (fnb_tenders adapter)
+# version: 2025-10-12 Phase 2 Final (fnb_tenders adapter)
 
 import csv
 import io
 from typing import Iterable, Dict, Any, Tuple, List
+from pydantic import BaseModel, ValidationError
 
 from app.datasets.adapters.base import DatasetAdapter, CanonRecord
 
 
+# ─────────────────────────────────────────────
+# Pydantic Schema
+# ─────────────────────────────────────────────
+class FnbTendersSchema(BaseModel):
+    business_date: str
+    property_code: str
+    tender_code: str
+    amount: str = "0"
+    count: str = "0"
+
+    class Config:
+        from_attributes = True
+
+
+# ─────────────────────────────────────────────
+# Adapter 본체
+# ─────────────────────────────────────────────
 class FnbTendersAdapter(DatasetAdapter):
     """
     F&B Tenders (결제수단별 매출) 업로드 어댑터
@@ -17,6 +35,7 @@ class FnbTendersAdapter(DatasetAdapter):
     - merge mode: snapshot
     """
     dataset = "fnb_tenders"
+    schema_model = FnbTendersSchema
     key_fields: Tuple[str, ...] = ("business_date", "property_code", "tender_code")
     hash_fields: Tuple[str, ...] = ("amount", "count")
     default_missing_policy: str = "soft_delete"
@@ -50,7 +69,7 @@ class FnbTendersAdapter(DatasetAdapter):
 
             rows.append({
                 "business_date": bd,
-                "property_code": pc,
+                "property_code": pc.upper(),
                 "tender_code": tc,
                 "amount": amt,
                 "count": cnt,
@@ -61,19 +80,15 @@ class FnbTendersAdapter(DatasetAdapter):
     def parse(self, canon_csv_text: str) -> Iterable[CanonRecord]:
         reader = csv.DictReader(io.StringIO(canon_csv_text or ""))
         for r in reader:
-            payload = {
-                "business_date": r.get("business_date", "").strip(),
-                "property_code": r.get("property_code", "").strip(),
-                "tender_code": r.get("tender_code", "").strip(),
-                "amount": r.get("amount", "0").replace(",", "").strip(),
-                "count": r.get("count", "0").strip(),
-            }
-            key_tuple = (
-                payload["business_date"],
-                payload["property_code"],
-                payload["tender_code"],
-            )
-            yield CanonRecord(key_tuple=key_tuple, payload=payload)
+            if not any((v or "").strip() for v in r.values()):
+                continue
+            try:
+                data = self.schema_model(**r).dict()
+            except ValidationError as e:
+                raise ValueError(f"Invalid row: {r} ({e})")
+
+            key_tuple = tuple(data[k] for k in self.key_fields)
+            yield CanonRecord.from_parsed(data, key_tuple)
 
     def merge_mode(self, form: Dict[str, Any]) -> str:
         return "snapshot"

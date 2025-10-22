@@ -1,0 +1,8 @@
+▶ [1/3] 공통 컴포넌트 이동 시작...
+renamed '/volume1/web/hotel-system/frontend/admin/src/ui/Badge.vue' -> '/volume1/web/hotel-system/frontend/admin/src/ui/components/common/Badge.vue'
+renamed '/volume1/web/hotel-system/frontend/admin/src/ui/Button.vue' -> '/volume1/web/hotel-system/frontend/admin/src/ui/components/common/Button.vue'
+renamed '/volume1/web/hotel-system/frontend/admin/src/ui/ProgressBar.vue' -> '/volume1/web/hotel-system/frontend/admin/src/ui/components/common/ProgressBar.vue'
+renamed '/volume1/web/hotel-system/frontend/admin/src/ui/ProgressRing.vue' -> '/volume1/web/hotel-system/frontend/admin/src/ui/components/common/ProgressRing.vue'
+renamed '/volume1/web/hotel-system/frontend/admin/src/ui/Tooltip.vue' -> '/volume1/web/hotel-system/frontend/admin/src/ui/components/common/Tooltip.vue'
+✅ [2/3] 이동 완료 — theme.ts, tokens.ts는 그대로 유지
+▶ [3/3] 최종 구조 확인:

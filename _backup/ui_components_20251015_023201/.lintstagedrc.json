@@ -1,0 +1,4 @@
+{
+  "*.{ts,tsx,js,vue}": ["./node_modules/.bin/eslint --fix"],
+  "*.{vue,css,scss,md,json,yml,yaml}": ["./node_modules/.bin/prettier --write"]
+}

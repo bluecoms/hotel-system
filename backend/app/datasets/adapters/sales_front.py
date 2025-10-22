@@ -1,14 +1,31 @@
 # app/datasets/adapters/sales_front.py
 # -*- coding: utf-8 -*-
-# version: 2025-10-11 Phase 2 (sales_front adapter)
+# version: 2025-10-12 Phase 2 Final (sales_front adapter)
 
-from io import StringIO
 import csv
-from typing import Dict, Any, Iterable, List
+from io import StringIO
+from typing import Dict, Any, Iterable, List, Tuple
+from pydantic import BaseModel, ValidationError
 
-from .base import DatasetAdapter, CanonRecord
+from app.datasets.adapters.base import DatasetAdapter, CanonRecord
 
 
+# ─────────────────────────────────────────────
+# Pydantic 스키마
+# ─────────────────────────────────────────────
+class SalesFrontSchema(BaseModel):
+    business_date: str
+    property_code: str
+    tag: str
+    amount: str = "0"
+
+    class Config:
+        from_attributes = True
+
+
+# ─────────────────────────────────────────────
+# Adapter 본체
+# ─────────────────────────────────────────────
 class SalesFrontAdapter(DatasetAdapter):
     """
     Front Sales (전면 매출) 업로드 어댑터
@@ -17,9 +34,10 @@ class SalesFrontAdapter(DatasetAdapter):
     - merge mode: snapshot (기본)
     """
     dataset = "sales_front"
-    key_fields = ["business_date", "property_code", "tag"]
-    hash_fields = ["amount"]
-    default_missing_policy = "soft_delete"  # snapshot 기본
+    schema_model = SalesFrontSchema
+    key_fields: Tuple[str, ...] = ("business_date", "property_code", "tag")
+    hash_fields: Tuple[str, ...] = ("amount",)
+    default_missing_policy: str = "soft_delete"
 
     # ─────────────────────────────────────────────
     # 업로드 파일 → Canon CSV 문자열
@@ -50,30 +68,25 @@ class SalesFrontAdapter(DatasetAdapter):
         lower_map = {h.lower(): h for h in headers}
 
         def pick(row: Dict[str, Any], key: str, default: Any = "") -> Any:
-            if key in row:
-                return row[key]
             lk = key.lower()
             src_key = lower_map.get(lk)
-            if src_key and src_key in row:
-                return row[src_key]
-            return default
+            return (row.get(src_key or key, default) or "").strip()
 
         for r in reader:
-            bd = str(pick(r, "business_date", fallback_business_date)).strip()
-            pc = str(pick(r, "property_code", property_code)).strip()
-            tag = str(pick(r, "tag", "")).strip()
-            amt = str(pick(r, "amount", "0")).strip()
+            bd = pick(r, "business_date", fallback_business_date)
+            pc = pick(r, "property_code", property_code)
+            tag = pick(r, "tag", "")
+            amt = pick(r, "amount", "0").replace(",", "")
 
             if not bd or not pc or not tag:
                 continue
 
-            amt = amt.replace(",", "").strip()
             if amt == "":
                 amt = "0"
 
             rows.append({
                 "business_date": bd,
-                "property_code": pc,
+                "property_code": pc.upper(),
                 "tag": tag,
                 "amount": amt,
             })
@@ -84,25 +97,26 @@ class SalesFrontAdapter(DatasetAdapter):
     # Canon CSV → CanonRecord generator
     # ─────────────────────────────────────────────
     def parse(self, canon_csv_text: str) -> Iterable[CanonRecord]:
+        """
+        정규화된 Canon CSV를 CanonRecord 시퀀스로 변환
+        """
         reader = csv.DictReader(StringIO(canon_csv_text or ""))
         for r in reader:
-            bd = (r.get("business_date") or "").strip()
-            pc = (r.get("property_code") or "").strip()
-            tag = (r.get("tag") or "").strip()
-            amt = (r.get("amount") or "0").replace(",", "").strip()
-            payload = {
-                "business_date": bd,
-                "property_code": pc,
-                "tag": tag,
-                "amount": amt,
-            }
-            key_tuple = (bd, pc, tag)
-            yield CanonRecord(key_tuple=key_tuple, payload=payload)
+            if not any((v or "").strip() for v in r.values()):
+                continue
+            try:
+                data = self.schema_model(**r).dict()
+            except ValidationError as e:
+                raise ValueError(f"Invalid row: {r} ({e})")
+
+            key_tuple = tuple(data[k] for k in self.key_fields)
+            yield CanonRecord.from_parsed(data, key_tuple)
 
     # ─────────────────────────────────────────────
     # 병합 모드 (snapshot / append ... )
     # ─────────────────────────────────────────────
     def merge_mode(self, form: Dict[str, Any]) -> str:
+        """Front Sales는 기본 snapshot"""
         return "snapshot"
 
     # ─────────────────────────────────────────────
@@ -110,6 +124,7 @@ class SalesFrontAdapter(DatasetAdapter):
     # ─────────────────────────────────────────────
     @staticmethod
     def _to_csv(headers: List[str], rows: List[Dict[str, Any]]) -> str:
+        """Dict 리스트를 CSV 문자열로 변환"""
         buf = StringIO()
         writer = csv.DictWriter(buf, fieldnames=headers)
         writer.writeheader()

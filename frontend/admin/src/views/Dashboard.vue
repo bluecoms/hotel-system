@@ -1,199 +1,302 @@
+<!--
+===============================================================
+ Hotel Admin — Dashboard View (v2025.10 Final / business_date Server Source)
+---------------------------------------------------------------
+ 목적:
+  - 접속 시 KPI·Bank 요약 및 마감 상태(Closing) 요약 표시
+  - SmartFilterBar + BizDatePicker 로 날짜·속성 제어
+  - ⚠️ 프런트는 날짜를 "계산"하지 않음(하루/월 이동 연산 금지)
+    → 서버가 산출한 business_date만 사용/표시
+---------------------------------------------------------------
+ 주요 수정 (2025-10-20):
+  ✅ 초기값/리셋: 서버 `/closing/day?property_code=...` (date 없이)로 business_date 획득
+  ✅ KPI: `/reports/dashboard-kpi?property_code=...&business_date=<서버값>`
+  ✅ Closing: `/closing/day?property_code=...` (기본) 또는 `&date=<서버값>` 동기화
+  ✅ 프런트 new Date()/toISOString() 등 날짜 계산 제거
+  ✅ Debounce 로드 및 watch 안정화
+===============================================================
+-->
+
 <template>
-  <div class="dash-wrap">
-    <!-- Toolbar -->
-    <div class="toolbar panel">
-      <div class="left row">
-        <label class="lbl">Property</label>
-        <select v-model="propertyCode">
-          <option v-for="p in propertyOptions" :key="p" :value="p">{{ p }}</option>
-        </select>
-
-        <span class="sep" />
-
-        <label class="lbl">Business Date</label>
-        <Button variant="ghost" size="sm" @click="shiftDay(-1)">‹</Button>
-        <input type="date" v-model="bizDate" />
-        <Button variant="ghost" size="sm" @click="shiftDay(1)">›</Button>
-        <Button variant="outline" size="sm" @click="setToday">Today</Button>
-      </div>
-
-      <div class="space" />
-
-      <!-- Closing status block -->
-      <div class="right row">
-        <Tooltip :text="closingTooltip" placement="bottom">
-          <Badge :class="closingBadgeClass">
-            <template v-if="closing.status==='CLOSED'">CLOSED</template>
-            <template v-else>OPEN · {{ closing.done }}/{{ closing.total }}</template>
-          </Badge>
-        </Tooltip>
-        <div class="progress-wrap">
-          <ProgressBar :percent="closingPercent" />
-        </div>
-        <Button variant="solid" size="sm" @click="fetchAll">Refresh</Button>
-      </div>
-    </div>
-
-    <!-- KPI grid -->
-    <div class="top-grid">
-      <KpiCard
-        title="Rooms"
-        :value="`${rooms.occ}/${totalRooms}`"
-        :sub="`Sold ${rooms.sold}, Stay ${rooms.stay}`"
+  <PageShell title="Dashboard" icon="mdi-view-dashboard">
+    <!-- ───────────────────────── Toolbar ───────────────────────── -->
+    <template #toolbar>
+      <SmartFilterBar
+        v-model:property="propertyCode"
+        :property-options="propertyOptions"
+        @search="fetchAll"
+        @reset="resetToServerBizDate"
       >
-        <div class="rooms-row">
-          <ProgressRing :percent="roomsPct" :size="96" />
-          <div class="chips">
-            <span class="tag">Sold {{ rooms.sold }}</span>
-            <span class="tag">Stay {{ rooms.stay }}</span>
-            <span class="tag">Arrivals {{ rooms.arrivals }}</span>
-            <span class="tag">Departures {{ rooms.departures }}</span>
-          </div>
-        </div>
-      </KpiCard>
+        <!-- 날짜 제어: BizDatePicker는 서버에서 받은 business_date만 바인딩하여 표시 -->
+        <template #filters>
+          <BizDatePicker v-model="bizDate" mode="day" />
+        </template>
 
-      <KpiCard title="Front Sales" :value="front.v" prefix="₩" />
-      <KpiCard title="F&B Sales"    :value="fnb.v"   prefix="₩" />
-      <KpiCard title="Expenses"     :value="exp.v"   prefix="₩" />
-      <KpiCard title="Settlement"   :value="pay.v"   prefix="₩" />
+        <!-- 상태칩 / 진행률 / 새로고침 -->
+        <template #extra>
+          <v-chip
+            :color="closing.status === 'CLOSED' ? 'green' : 'orange'"
+            label
+            class="ml-3"
+          >
+            <template v-if="closing.status === 'CLOSED'">CLOSED</template>
+            <template v-else>OPEN · {{ closing.done }}/{{ closing.total }}</template>
+          </v-chip>
+
+          <div class="progress-wrap">
+            <v-progress-linear
+              :model-value="Math.round(closingPercent)"
+              height="8"
+              rounded
+              color="primary"
+            />
+          </div>
+
+          <v-btn color="primary" size="small" @click="fetchAll">Refresh</v-btn>
+        </template>
+      </SmartFilterBar>
+    </template>
+
+    <!-- ───────────────────────── KPI Cards ───────────────────────── -->
+    <div class="top-grid">
+      <KpiCard title="Room Only" :value="kpi?.room_only_amount ?? 0" prefix="₩" />
+      <KpiCard title="Package"   :value="kpi?.package_amount   ?? 0" prefix="₩" />
+      <KpiCard title="Other"     :value="kpi?.other_amount     ?? 0" prefix="₩" />
+      <KpiCard title="Total"     :value="totalAmount"               prefix="₩" />
     </div>
-  </div>
+
+    <!-- ─────────────────────── Bank & Cash ─────────────────────── -->
+    <v-card class="panel">
+      <v-card-title class="d-flex align-center justify-space-between">
+        <h3 class="text-h6 font-weight-bold">Bank & Cash</h3>
+      </v-card-title>
+      <v-card-text>
+        <BankLedgerSummary
+          :key="propertyCode + ':' + (bizDate || 'auto')"
+          :property-code="propertyCode"
+          :default-date="bizDate"
+          :default-account="'NH-301-xxxx'"
+        />
+      </v-card-text>
+    </v-card>
+
+    <!-- ───────────────────── Inventory / HR (Soon) ───────────────────── -->
+    <div class="grid-2">
+      <ComingSoonOverlay label="Inventory v1 예정">
+        <v-card class="panel">
+          <v-card-title><h3 class="text-h6 font-weight-bold">재고 요약</h3></v-card-title>
+          <v-card-text><SkeletonCard :lines="4" /></v-card-text>
+        </v-card>
+      </ComingSoonOverlay>
+
+      <ComingSoonOverlay label="근태 v1 예정">
+        <v-card class="panel">
+          <v-card-title><h3 class="text-h6 font-weight-bold">근태 요약</h3></v-card-title>
+          <v-card-text><SkeletonCard :lines="4" /></v-card-text>
+        </v-card>
+      </ComingSoonOverlay>
+    </div>
+  </PageShell>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref, computed, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import KpiCard from '@/ui/KpiCard.vue'
-import ProgressRing from '@/ui/ProgressRing.vue'
-import Button from '@/ui/Button.vue'
-import Badge from '@/ui/Badge.vue'
-import Tooltip from '@/ui/Tooltip.vue'
-import ProgressBar from '@/ui/ProgressBar.vue'
+/* ============================================================
+   Dashboard Logic Section
+   ------------------------------------------------------------
+   - 날짜는 프런트에서 계산하지 않고 서버 산출값만 사용
+   - 초기/리셋: /closing/day?property_code=... (date 없이)
+   - 이후 KPI/Closing 요청에 해당 business_date 그대로 전달
+=========================================================== */
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { debounce } from 'lodash-es'
+import http from '@/services/http'
 
-/** 호텔별 객실 수 */
-const ROOMS_BY_PROPERTY: Record<string, number> = {
-  MOP: 170,
-  // 다른 호텔 있으면 추가
+import PageShell from '@/ui/components/layout/PageShell.vue'
+import SmartFilterBar from '@/ui/components/common/SmartFilterBar.vue'
+import BizDatePicker from '@/ui/components/common/BizDatePicker.vue'
+import KpiCard from '@/ui/components/common/KpiCard.vue'
+import SkeletonCard from '@/ui/components/common/SkeletonCard.vue'
+import ComingSoonOverlay from '@/ui/components/common/ComingSoonOverlay.vue'
+import BankLedgerSummary from '@/ui/components/reports/BankLedgerSummary.vue'
+
+// ────────────────────────────── 상태 정의 ──────────────────────────────
+const propertyCode = ref<string>('MOP')
+const propertyOptions = ['MOP']
+
+// ✅ 서버에서 받은 business_date를 보관 (초기 빈값 → 서버에서 세팅)
+const bizDate = ref<string>('')
+
+const kpi = ref<any>(null)
+const closing = ref<{ status: 'OPEN' | 'CLOSED'; done: number; total: number }>({
+  status: 'OPEN',
+  done: 0,
+  total: 0,
+})
+
+// ────────────────────────────── 계산 속성 ──────────────────────────────
+const totalAmount = computed<number>(() => {
+  return (
+    (kpi.value?.room_only_amount ?? 0) +
+    (kpi.value?.package_amount ?? 0) +
+    (kpi.value?.other_amount ?? 0)
+  )
+})
+const closingPercent = computed<number>(() => {
+  const t = closing.value.total || 0
+  const d = closing.value.done || 0
+  return t > 0 ? (d / t) * 100 : 0
+})
+
+// ────────────────────────────── 서버 사업일 획득 ──────────────────────────────
+/**
+ * 서버에서 기본 사업일(business_date) 및 요약을 받아와 bizDate/closing을 동기화.
+ * - date 없이 호출 → 서버가 오늘의 사업일을 판단.
+ */
+async function fetchServerBizDate() {
+  const pc = propertyCode.value || 'MOP'
+  const res: any = await http.get(`/closing/day?property_code=${encodeURIComponent(pc)}`)
+  const d = res?.business_date || res?.date || ''
+  if (!d) throw new Error('Server did not return business_date')
+
+  // 서버 요약도 같이 왔다면 즉시 반영
+  const status = String(res.status || 'OPEN').toUpperCase()
+  const done = Number(res.done ?? 0)
+  const total = Number(res.total ?? 0)
+  bizDate.value = d
+  closing.value = { status: status === 'CLOSED' ? 'CLOSED' : 'OPEN', done, total }
 }
 
-const propertyOptions = ref<string[]>(Object.keys(ROOMS_BY_PROPERTY))
-const route = useRoute()
-const router = useRouter()
-
-function toYMD(d: Date) {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${dd}`
-}
-function parseYMD(s: string) {
-  const [y, m, d] = (s || '').split('-').map(Number)
-  return new Date(y || 1970, (m || 1) - 1, d || 1)
-}
-
-const propertyCode = ref<string>(
-  (route.query.property_code as string) || localStorage.getItem('__property') || 'MOP'
-)
-watch(propertyCode, (v) => localStorage.setItem('__property', v))
-
-const bizDate = ref<string>((route.query.date as string) || toYMD(new Date()))
-
-function syncUrl() {
-  router.replace({ query: { ...route.query, date: bizDate.value, property_code: propertyCode.value } })
-}
-watch([bizDate, propertyCode], () => { syncUrl(); fetchAll() })
-watch(() => route.query.date, (v) => { if (typeof v==='string' && v && v!==bizDate.value) bizDate.value = v })
-watch(() => route.query.property_code, (v) => { if (typeof v==='string' && v && v!==propertyCode.value) propertyCode.value = v })
-
-const totalRooms = computed(() => ROOMS_BY_PROPERTY[propertyCode.value] ?? 0)
-
-/** Rooms KPI */
-const rooms = reactive({ occ: 0, sold: 0, stay: 0, arrivals: 0, departures: 0 })
-const roomsPct = computed(() => totalRooms.value ? (rooms.occ / totalRooms.value) * 100 : 0)
-const front = reactive({ v: 0 }); const fnb = reactive({ v: 0 })
-const exp   = reactive({ v: 0 }); const pay = reactive({ v: 0 })
-
-/** Closing status */
-const closing = reactive({ status: 'OPEN', done: 0, total: 5, complete: false })
-const closingPercent = computed(() => closing.total ? Math.round((closing.done/closing.total)*100) : 0)
-const closingBadgeClass = computed(() => ({
-  success: closing.status === 'CLOSED',
-  warn: closing.status !== 'CLOSED' && closingPercent.value >= 60,
-  danger: closing.status !== 'CLOSED' && closingPercent.value < 60
-}))
-const closingTooltip = computed(() =>
-  closing.status === 'CLOSED'
-    ? '마감 완료'
-    : `진행 ${closing.done}/${closing.total} (${closingPercent.value}%)`
-)
-
-/** 날짜 이동 */
-function shiftDay(delta: number) {
-  const d = parseYMD(bizDate.value); d.setDate(d.getDate() + delta); bizDate.value = toYMD(d)
-}
-function setToday(){ bizDate.value = toYMD(new Date()) }
-
-/** Fetchers */
-async function fetchKpi() {
-  const qs = new URLSearchParams({ date: bizDate.value, property_code: propertyCode.value })
-  const res = await fetch(`/api/reports/dashboard-kpi?${qs}`, {
-    headers: { 'X-Internal-Token': localStorage.getItem('__token') || '' }
-  })
-  const data = await res.json()
-  const cards: Array<{ key: string; value: any }> = data.cards || []
-  // Rooms
-  const rc = cards.find(c => c.key === 'rooms')
-  let occ=0, sold=0, stay=0, arr=0, dep=0
-  if (rc) {
-    if (rc.value && typeof rc.value === 'object') {
-      occ  = Number(rc.value.occ || 0)
-      sold = Number(rc.value.sold ?? occ)
-      stay = Number(rc.value.stay || 0)
-      arr  = Number(rc.value.arrivals || 0)
-      dep  = Number(rc.value.departures || 0)
-    } else if (typeof rc?.value === 'string') {
-      const nums = (rc.value as string).match(/\d+/g)?.map(Number) || []
-      occ = nums[0] || 0; sold = nums[0] || 0
-    }
+/** SmartFilterBar "리셋" → 서버 기준일로 동기화 */
+async function resetToServerBizDate() {
+  try {
+    await fetchServerBizDate()
+    await fetchAll()
+  } catch (e) {
+    console.error('[Dashboard] resetToServerBizDate failed:', e)
   }
-  rooms.occ = occ; rooms.sold = sold; rooms.stay = stay; rooms.arrivals = arr; rooms.departures = dep
-  // 숫자 카드
-  const getNum = (k: string) => Number(cards.find(c => c.key===k)?.value ?? 0)
-  front.v = getNum('front'); fnb.v = getNum('fnb'); exp.v = getNum('exp'); pay.v = getNum('pay')
 }
 
+// ────────────────────────────── 데이터 로드 ──────────────────────────────
+/**
+ * KPI 조회
+ *  - 서버에서 받은 bizDate를 그대로 전달
+ *  - 백엔드 스키마: business_date 파라미터 사용
+ */
+async function fetchKpi() {
+  if (!bizDate.value) return
+  try {
+    const url =
+      `/reports/dashboard-kpi?property_code=${encodeURIComponent(propertyCode.value)}` +
+      `&business_date=${encodeURIComponent(bizDate.value)}`
+    const data = await http.get(url)
+    kpi.value = data
+  } catch (e: any) {
+    console.error('[Dashboard] fetchKpi failed (likely invalid param):', e?.response || e)
+    kpi.value = null
+  }
+}
+
+/**
+ * 마감 상태 조회
+ *  - 원칙: 서버 기본 사업일과 동기화를 위해 가능하면 date 없이 호출(최초/리셋)
+ *  - 이미 bizDate가 확보된 이후엔 그 날짜로 조회하여 일관성 유지
+ */
 async function fetchClosing() {
-  const qs = new URLSearchParams({ date: bizDate.value, property_code: propertyCode.value })
-  const res = await fetch(`/api/closing/day?${qs}`, {
-    headers: { 'X-Internal-Token': localStorage.getItem('__token') || '' }
+  try {
+    const pc = propertyCode.value || 'MOP'
+    let result: any
+
+    if (!bizDate.value) {
+      result = await http.get(`/closing/day?property_code=${encodeURIComponent(pc)}`)
+    } else {
+      const url =
+        `/closing/day?date=${encodeURIComponent(bizDate.value)}` +
+        `&property_code=${encodeURIComponent(pc)}`
+      result = await http.get(url)
+    }
+
+    if (result && typeof result === 'object') {
+      // 서버가 최신 business_date를 재반환할 수 있으니 싱크
+      const d = result?.business_date || result?.date
+      if (d && d !== bizDate.value) bizDate.value = d
+
+      const status = String(result.status || 'OPEN').toUpperCase()
+      const done = Number(result.done ?? 0)
+      const total = Number(result.total ?? 0)
+      closing.value = { status: status === 'CLOSED' ? 'CLOSED' : 'OPEN', done, total }
+    } else {
+      closing.value = { status: 'OPEN', done: 0, total: 0 }
+    }
+  } catch (e) {
+    console.error('[Dashboard] fetchClosing failed:', e)
+    closing.value = { status: 'OPEN', done: 0, total: 0 }
+  }
+}
+
+// ────────────────────────────── 종합 로더 ──────────────────────────────
+/**
+ * 주의: bizDate가 비어 있으면 먼저 서버에서 확보 후 병렬 호출
+ */
+const fetchAll = debounce(async () => {
+  try {
+    if (!propertyCode.value?.trim()) return
+    if (!bizDate.value?.trim()) await fetchServerBizDate()
+    await Promise.allSettled([fetchKpi(), fetchClosing()])
+  } catch (e) {
+    console.error('[Dashboard] fetchAll bootstrap failed:', e)
+  }
+}, 200)
+
+// ────────────────────────────── 라이프사이클 ──────────────────────────────
+onMounted(async () => {
+  await nextTick()
+  // 최초 진입: 서버 기준일 확보 후 전체 로드
+  try {
+    await fetchServerBizDate()
+  } catch (e) {
+    console.error('[Dashboard] initial business_date fetch failed:', e)
+  }
+  fetchAll()
+
+  // Watch: propertyCode 변경 시 서버 기준일로 리셋 + 재조회
+  watch(propertyCode, async (p, op) => {
+    if (p && p !== op) {
+      await resetToServerBizDate()
+    }
   })
-  const data = await res.json().catch(()=> ({}))
-  closing.status = (data.status || 'OPEN').toUpperCase()
-  closing.done = Number(data.done ?? 0)
-  closing.total = Number(data.total ?? 5)
-  closing.complete = Boolean(data.complete)
-}
 
-async function fetchAll() {
-  await Promise.all([fetchKpi(), fetchClosing()])
-}
-
-onMounted(() => { syncUrl(); fetchAll() })
+  // Watch: BizDatePicker로 날짜를 바꾸면 그대로 재조회(연산 없이 서버 값만 사용)
+  watch(bizDate, (d, od) => {
+    if (d && d !== od) fetchAll()
+  })
+})
 </script>
 
 <style scoped>
-/* Dashboard.vue <style scoped> 교체 */
-.dash-wrap{ display:flex; flex-direction:column; gap:16px; padding:8px }
-.toolbar.panel{ padding:12px 14px; display:flex; align-items:center; gap:12px; }
-.left .lbl{ font-size:.92rem; color:var(--ink-3) }
-.sep{ display:inline-block; width:10px }
-.progress-wrap{ width:140px }
+/* ============================================================
+   Dashboard Local Style
+=========================================================== */
+.progress-wrap {
+  width: 120px;
+  margin-left: 8px;
+}
 
-.top-grid{ display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr; gap:16px }
-@media (max-width:1200px){ .top-grid{ grid-template-columns:repeat(3,minmax(0,1fr)) } }
-@media (max-width:800px){ .top-grid{ grid-template-columns:1fr } }
+.top-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
 
-.rooms-row{ display:flex; align-items:center; gap:16px }
-.chips{ display:flex; gap:8px; flex-wrap:wrap }
-.tag{ padding:.2rem .55rem; border-radius:999px; background:#f3f4f6; font-size:.8rem; color:#374151 }
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+.panel {
+  border: 1px solid var(--surface-3, #e8e8e8);
+  border-radius: 12px;
+  background: var(--surface-1, #fff);
+  padding: 12px;
+}
 </style>

@@ -1,29 +1,69 @@
-# app/datasets/adapters/bank_ledger.py
 # -*- coding: utf-8 -*-
-# version: 2025-10-11 Phase 2 (bank_ledger adapter)
-
-from io import StringIO
+# ============================================================================
+# File      : app/datasets/adapters/bank_ledger.py
+# Version   : 2025.10-30 · v3.0 (SSOT Stable · Bank/Property Sync)
+# Purpose   : Hotel Admin — Bank Ledger Adapter
+# ----------------------------------------------------------------------------
+# 목적:
+#   • 은행 입출금 내역 CSV 업로드를 Canon 표준 포맷으로 정규화
+#   • property_code + bank_code + txn_id 기준 병합 (append 모드)
+#   • MasterBank / BankAccount 와 연동 가능한 구조 유지
+# ----------------------------------------------------------------------------
+# 특징:
+#   • direction → "IN"/"OUT" 으로 정규화 (국문/영문 혼합 지원)
+#   • 금액(amount)은 문자열 → 정수형 변환 전 CSV 저장
+#   • 누락 txn_id 자동 생성 ("{date}-{property}-{seq}")
+#   • merge_mode = append / missing_policy = ignore
+# ----------------------------------------------------------------------------
+# 연계:
+#   • models/canon.py → BankLedgerCanon / BankLedgerHistory (추가 예정)
+#   • merge_engine/engine.py / repository.py → 병합 처리
+#   • upload 엔드포인트: /api/upload/bank_ledger
+# ============================================================================
 import csv
-from typing import Dict, Any, Iterable, List
+from io import StringIO
+from typing import Dict, Any, Iterable, List, Tuple
+from pydantic import BaseModel, ValidationError
 
-from .base import DatasetAdapter, CanonRecord
+from app.datasets.adapters.base import DatasetAdapter, CanonRecord
 
 
+# ============================================================================
+# 1️⃣ 내부 검증 스키마
+# ----------------------------------------------------------------------------
+class BankLedgerSchema(BaseModel):
+    business_date: str
+    property_code: str
+    txn_id: str
+    bank_code: str = ""          # ex) KB, NH, WR
+    account_no: str = ""
+    direction: str = ""          # IN / OUT
+    amount: str = "0"
+    memo: str = ""
+    txn_ref: str = ""            # 거래참조번호 (optional)
+
+    class Config:
+        from_attributes = True
+
+
+# ============================================================================
+# 2️⃣ 어댑터 본체
+# ----------------------------------------------------------------------------
 class BankLedgerAdapter(DatasetAdapter):
     """
-    Bank Ledger (입출금 장부) 업로드 어댑터
-    - key: (business_date, property_code, txn_id)
-      txn_id 없을 경우 행 번호 기반 surrogate ID 생성
-    - values: account_no, direction(in/out), amount, memo
-    - merge mode: append (기본)
+    Bank Ledger Adapter
+    - dataset : bank_ledger
+    - key_fields : (business_date, property_code, txn_id)
+    - hash_fields : (bank_code, account_no, direction, amount, memo)
+    - merge_mode : append
+    - missing_policy : ignore
     """
     dataset = "bank_ledger"
-    key_fields = ["business_date", "property_code", "txn_id"]
-    hash_fields = ["account_no", "direction", "amount", "memo"]
-    default_missing_policy = "ignore"  # append 데이터는 기본 ignore
+    schema_model = BankLedgerSchema
+    key_fields: Tuple[str, ...] = ("business_date", "property_code", "txn_id")
+    hash_fields: Tuple[str, ...] = ("bank_code", "account_no", "direction", "amount", "memo")
+    default_missing_policy: str = "ignore"
 
-    # ─────────────────────────────────────────────
-    # 업로드 파일 → Canon CSV 문자열
     # ─────────────────────────────────────────────
     def normalize(
         self,
@@ -32,22 +72,17 @@ class BankLedgerAdapter(DatasetAdapter):
         property_code: str = "MOP",
     ) -> str:
         """
-        입력 CSV를 표준 컬럼으로 정규화:
-          business_date, property_code, txn_id, account_no, direction, amount, memo
-        - txn_id가 없으면 행번호 기반 생성
-        - direction은 in/out으로 정규화
+        원본 CSV를 Canon 표준 헤더로 정규화.
+        필수 컬럼: business_date, property_code, txn_id, bank_code, account_no,
+                   direction, amount, memo, txn_ref
         """
         required = [
-            "business_date",
-            "property_code",
-            "txn_id",
-            "account_no",
-            "direction",
-            "amount",
-            "memo",
+            "business_date", "property_code", "txn_id",
+            "bank_code", "account_no", "direction",
+            "amount", "memo", "txn_ref",
         ]
 
-        src = StringIO(raw_csv_text or "")
+        src = StringIO(raw_csv_text.strip().lstrip("\ufeff"))
         reader = csv.DictReader(src)
         rows: List[Dict[str, Any]] = []
 
@@ -58,104 +93,74 @@ class BankLedgerAdapter(DatasetAdapter):
         lower_map = {h.lower(): h for h in headers}
 
         def pick(row: Dict[str, Any], key: str, default: Any = "") -> Any:
-            """대소문자 무시 안전 추출"""
-            if key in row:
-                return row[key]
             lk = key.lower()
             src_key = lower_map.get(lk)
-            if src_key and src_key in row:
-                return row[src_key]
-            return default
+            return (row.get(src_key or key, default) or "").strip()
 
         line_no = 1
         for r in reader:
-            bd = str(pick(r, "business_date", fallback_business_date)).strip()
-            pc = str(pick(r, "property_code", property_code)).strip()
-            txn_id = str(pick(r, "txn_id", "")).strip()
-            account_no = str(pick(r, "account_no", "")).strip()
-            direction = str(pick(r, "direction", "")).strip().lower()
-            amount = str(pick(r, "amount", "0")).strip()
-            memo = str(pick(r, "memo", "")).strip()
+            bd = pick(r, "business_date", fallback_business_date)
+            pc = pick(r, "property_code", property_code)
+            txn_id = pick(r, "txn_id", "")
+            bank_code = pick(r, "bank_code", "")
+            account_no = pick(r, "account_no", "")
+            direction = pick(r, "direction", "").lower()
+            amount = pick(r, "amount", "0").replace(",", "").strip()
+            memo = pick(r, "memo", "")
+            txn_ref = pick(r, "txn_ref", "")
 
             if not bd or not pc:
                 continue
 
-            # txn_id 대체 생성
+            # txn_id 자동 생성
             if not txn_id:
-                txn_id = f"{bd}-{pc}-L{line_no}"
+                txn_id = f"{bd}-{pc}-TX{line_no:04d}"
             line_no += 1
 
-            # direction 정규화
+            # 방향 정규화
             if direction in ("in", "deposit", "credit", "cr", "+", "입금", "유입"):
-                direction = "in"
+                direction = "IN"
             elif direction in ("out", "withdraw", "debit", "dr", "-", "출금", "지출"):
-                direction = "out"
+                direction = "OUT"
             else:
-                direction = "out" if amount.startswith("-") else "in"
-
-            # 금액 정규화
-            amount = amount.replace(",", "").strip()
-            if amount == "":
-                amount = "0"
+                direction = "OUT" if amount.startswith("-") else "IN"
 
             rows.append({
                 "business_date": bd,
-                "property_code": pc,
+                "property_code": pc.upper(),
                 "txn_id": txn_id,
+                "bank_code": bank_code.upper(),
                 "account_no": account_no,
                 "direction": direction,
-                "amount": amount,
+                "amount": amount or "0",
                 "memo": memo,
+                "txn_ref": txn_ref,
             })
 
         return self._to_csv(required, rows)
 
     # ─────────────────────────────────────────────
-    # Canon CSV → CanonRecord generator
-    # ─────────────────────────────────────────────
     def parse(self, canon_csv_text: str) -> Iterable[CanonRecord]:
-        """정규화된 CSV를 CanonRecord 시퀀스로 변환"""
+        """Canon CSV → CanonRecord 시퀀스 변환"""
         reader = csv.DictReader(StringIO(canon_csv_text or ""))
         for r in reader:
-            bd = (r.get("business_date") or "").strip()
-            pc = (r.get("property_code") or "").strip()
-            txn_id = (r.get("txn_id") or "").strip()
-            account_no = (r.get("account_no") or "").strip()
-            direction = (r.get("direction") or "").strip()
-            amount = (r.get("amount") or "0").replace(",", "").strip()
-            memo = (r.get("memo") or "").strip()
+            if not any((v or "").strip() for v in r.values()):
+                continue
+            try:
+                data = self.schema_model(**r).dict()
+            except ValidationError as e:
+                raise ValueError(f"Invalid row: {r} ({e})")
 
-            payload = {
-                "business_date": bd,
-                "property_code": pc,
-                "txn_id": txn_id,
-                "account_no": account_no,
-                "direction": direction,
-                "amount": amount,
-                "memo": memo,
-            }
-            key_tuple = (bd, pc, txn_id)
-            yield CanonRecord(key_tuple=key_tuple, payload=payload)
+            key_tuple = tuple(data[k] for k in self.key_fields)
+            yield CanonRecord.from_parsed(data, key_tuple)
 
-    # ─────────────────────────────────────────────
-    # 병합 모드 결정
     # ─────────────────────────────────────────────
     def merge_mode(self, form: Dict[str, Any]) -> str:
-        """입출금 장부는 append 기본, 필요시 form에서 snapshot 지정"""
-        mode = str(form.get("mode", "append")).strip().lower()
-        if mode not in ("append", "snapshot"):
-            mode = "append"
-        return mode
+        """Bank Ledger 는 append 모드 고정"""
+        return "append"
 
-    # ─────────────────────────────────────────────
-    # 내부 유틸: CSV writer
-    # ─────────────────────────────────────────────
-    @staticmethod
-    def _to_csv(headers: List[str], rows: List[Dict[str, Any]]) -> str:
-        """Dict 리스트를 CSV 문자열로 변환"""
-        buf = StringIO()
-        writer = csv.DictWriter(buf, fieldnames=headers)
-        writer.writeheader()
-        for r in rows:
-            writer.writerow({h: r.get(h, "") for h in headers})
-        return buf.getvalue()
+
+# ============================================================================
+# 3️⃣ Export
+# ============================================================================
+__all__ = ["BankLedgerAdapter", "BankLedgerSchema"]

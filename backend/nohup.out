@@ -1,0 +1,388 @@
+INFO:     Started server process [22198]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [22198]
+INFO:     Started server process [22224]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [22224]
+2025-10-14 05:30:49,152 - merge_settings - INFO - [MERGE_SETTINGS] file logging initialized → /volume1/web/hotel-system/logs/merge_engine.log
+2025-10-14 05:30:49,152 - merge_settings - INFO - [MERGE_POLICY] rooms_status → {'merge_mode': 'append', 'missing_policy': 'soft_delete'}
+2025-10-14 05:30:49,152 - merge_settings - INFO - [MERGE_POLICY] sales_front → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:30:49,152 - merge_settings - INFO - [MERGE_POLICY] fnb_items → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:30:49,152 - merge_settings - INFO - [MERGE_POLICY] fnb_tenders → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:30:49,152 - merge_settings - INFO - [MERGE_POLICY] expenses → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:30:49,152 - merge_settings - INFO - [MERGE_POLICY] bank_ledger → {'merge_mode': 'append', 'missing_policy': 'ignore'}
+2025-10-14 05:30:49,153 - merge_settings - INFO - [MERGE_SETTINGS] default: {'dry_run': False, 'merge_mode': 'snapshot', 'missing_policy': 'soft_delete', 'conflict_policy': 'upsert', 'audit_enabled': True, 'audit_log_to_file': True, 'log_level': 'INFO', 'audit_log_path': '/volume1/web/hotel-system/logs/merge_engine.log', 'default_missing_policy': 'soft_delete', 'default_conflict_policy': 'upsert', 'encoding': 'utf-8', 'max_preview_rows': 1000}
+2025-10-14 05:30:49,153 - merge_settings - INFO - [MERGE_SETTINGS] merge settings initialized successfully.
+[schemas:init] skip hr: No module named 'app.schemas.hr'
+[schemas:init] skip contracts: No module named 'app.schemas.contracts'
+[schemas:init] skip bank: No module named 'app.schemas.bank'
+[schemas:init] skip audit: No module named 'app.schemas.audit'
+[schemas:auto] skip role_access: `regex` is removed. use `pattern` instead
+
+For further information visit https://errors.pydantic.dev/2.9/u/removed-kwargs
+/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/pydantic/_internal/_config.py:341: UserWarning: Valid config keys have changed in V2:
+* 'orm_mode' has been renamed to 'from_attributes'
+  warnings.warn(message, UserWarning)
+2025-10-14 05:30:50,074 - merge_settings - INFO - [MERGE_SETTINGS] file logging initialized → /volume1/web/hotel-system/logs/merge_engine.log
+2025-10-14 05:30:50,074 - merge_settings - INFO - [MERGE_POLICY] rooms_status → {'merge_mode': 'append', 'missing_policy': 'soft_delete'}
+2025-10-14 05:30:50,075 - merge_settings - INFO - [MERGE_POLICY] sales_front → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:30:50,075 - merge_settings - INFO - [MERGE_POLICY] fnb_items → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:30:50,075 - merge_settings - INFO - [MERGE_POLICY] fnb_tenders → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:30:50,075 - merge_settings - INFO - [MERGE_POLICY] expenses → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:30:50,075 - merge_settings - INFO - [MERGE_POLICY] bank_ledger → {'merge_mode': 'append', 'missing_policy': 'ignore'}
+2025-10-14 05:30:50,075 - merge_settings - INFO - [MERGE_SETTINGS] default: {'dry_run': False, 'merge_mode': 'snapshot', 'missing_policy': 'soft_delete', 'conflict_policy': 'upsert', 'audit_enabled': True, 'audit_log_to_file': True, 'log_level': 'INFO', 'audit_log_path': '/volume1/web/hotel-system/logs/merge_engine.log', 'default_missing_policy': 'soft_delete', 'default_conflict_policy': 'upsert', 'encoding': 'utf-8', 'max_preview_rows': 1000}
+2025-10-14 05:30:50,091 - app.routers - INFO - [routers] include: audit (prefix=/api/audit)
+2025-10-14 05:30:50,111 - app.routers - INFO - [routers] include: bank (prefix=/api)
+2025-10-14 05:30:50,119 - app.routers - INFO - [routers] include: board (prefix=/api)
+2025-10-14 05:30:50,138 - app.routers - INFO - [routers] include: closing (prefix=/api)
+2025-10-14 05:30:50,150 - app.routers - INFO - [routers] include: contracts (prefix=/api/contracts)
+2025-10-14 05:30:50,152 - app.routers - INFO - [routers] include: debug (prefix=/api/_debug)
+2025-10-14 05:30:50,162 - app.routers - INFO - [routers] include: employee_files (prefix=/api/employee-files)
+2025-10-14 05:30:50,190 - app.routers - INFO - [routers] include: employees (prefix=/api/employees)
+2025-10-14 05:30:50,190 - app.routers - INFO - [routers] include: health (prefix=)
+2025-10-14 05:30:50,208 - app.routers - INFO - [routers] include: keywords (prefix=/api/keywords)
+2025-10-14 05:30:50,212 - app.routers - INFO - [routers] include: menu (prefix=/api)
+2025-10-14 05:30:50,224 - app.routers - INFO - [routers] include: merge (prefix=/api/merge)
+2025-10-14 05:30:50,258 - app.routers - INFO - [routers] include: ota (prefix=/api/ota)
+2025-10-14 05:30:50,283 - app.routers - INFO - [routers] include: reports (prefix=/api/reports)
+2025-10-14 05:30:50,289 - app.routers - INFO - [routers] include: reports_bank (prefix=/api)
+2025-10-14 05:30:50,296 - app.routers - INFO - [routers] include: reports_sales (prefix=/api/reports/sales)
+2025-10-14 05:30:50,322 - app.routers - INFO - [routers] include: roles (prefix=/api/roles)
+2025-10-14 05:30:50,324 - app.routers - INFO - [routers] include: templates (prefix=/api/templates)
+2025-10-14 05:30:50,335 - app.routers - INFO - [routers] include: user_roles (prefix=/api/user-roles)
+2025-10-14 05:30:50,380 - app.routers - INFO - [routers] include: users (prefix=/api/users)
+2025-10-14 05:30:50,381 - app.routers - INFO - [routers] total included=20, failed=0
+INFO:     Started server process [22722]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+[models:auto] skip master: Table 'departments' is already defined for this MetaData instance.  Specify 'extend_existing=True' to redefine options and columns on an existing Table object.
+[startup:migrate] roles seed failed: Multiple classes found for path "MergeChangeLog" in the registry of this declarative base. Please use a fully module-qualified path.
+INFO:     127.0.0.1:54466 - "GET /api/master/departments HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:54468 - "GET /api/master/titles HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:54470 - "GET /api/master/empno-policy HTTP/1.1" 404 Not Found
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [22722]
+2025-10-14 05:42:20,669 - merge_settings - INFO - [MERGE_SETTINGS] file logging initialized → /volume1/web/hotel-system/logs/merge_engine.log
+2025-10-14 05:42:20,670 - merge_settings - INFO - [MERGE_POLICY] rooms_status → {'merge_mode': 'append', 'missing_policy': 'soft_delete'}
+2025-10-14 05:42:20,670 - merge_settings - INFO - [MERGE_POLICY] sales_front → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:42:20,670 - merge_settings - INFO - [MERGE_POLICY] fnb_items → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:42:20,670 - merge_settings - INFO - [MERGE_POLICY] fnb_tenders → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:42:20,670 - merge_settings - INFO - [MERGE_POLICY] expenses → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:42:20,670 - merge_settings - INFO - [MERGE_POLICY] bank_ledger → {'merge_mode': 'append', 'missing_policy': 'ignore'}
+2025-10-14 05:42:20,670 - merge_settings - INFO - [MERGE_SETTINGS] default: {'dry_run': False, 'merge_mode': 'snapshot', 'missing_policy': 'soft_delete', 'conflict_policy': 'upsert', 'audit_enabled': True, 'audit_log_to_file': True, 'log_level': 'INFO', 'audit_log_path': '/volume1/web/hotel-system/logs/merge_engine.log', 'default_missing_policy': 'soft_delete', 'default_conflict_policy': 'upsert', 'encoding': 'utf-8', 'max_preview_rows': 1000}
+2025-10-14 05:42:20,670 - merge_settings - INFO - [MERGE_SETTINGS] merge settings initialized successfully.
+[schemas:init] skip hr: No module named 'app.schemas.hr'
+[schemas:init] skip contracts: No module named 'app.schemas.contracts'
+[schemas:init] skip bank: No module named 'app.schemas.bank'
+[schemas:init] skip audit: No module named 'app.schemas.audit'
+[schemas:auto] skip role_access: `regex` is removed. use `pattern` instead
+
+For further information visit https://errors.pydantic.dev/2.9/u/removed-kwargs
+/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/pydantic/_internal/_config.py:341: UserWarning: Valid config keys have changed in V2:
+* 'orm_mode' has been renamed to 'from_attributes'
+  warnings.warn(message, UserWarning)
+2025-10-14 05:42:21,643 - merge_settings - INFO - [MERGE_SETTINGS] file logging initialized → /volume1/web/hotel-system/logs/merge_engine.log
+2025-10-14 05:42:21,644 - merge_settings - INFO - [MERGE_POLICY] rooms_status → {'merge_mode': 'append', 'missing_policy': 'soft_delete'}
+2025-10-14 05:42:21,644 - merge_settings - INFO - [MERGE_POLICY] sales_front → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:42:21,644 - merge_settings - INFO - [MERGE_POLICY] fnb_items → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:42:21,644 - merge_settings - INFO - [MERGE_POLICY] fnb_tenders → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:42:21,644 - merge_settings - INFO - [MERGE_POLICY] expenses → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:42:21,644 - merge_settings - INFO - [MERGE_POLICY] bank_ledger → {'merge_mode': 'append', 'missing_policy': 'ignore'}
+2025-10-14 05:42:21,644 - merge_settings - INFO - [MERGE_SETTINGS] default: {'dry_run': False, 'merge_mode': 'snapshot', 'missing_policy': 'soft_delete', 'conflict_policy': 'upsert', 'audit_enabled': True, 'audit_log_to_file': True, 'log_level': 'INFO', 'audit_log_path': '/volume1/web/hotel-system/logs/merge_engine.log', 'default_missing_policy': 'soft_delete', 'default_conflict_policy': 'upsert', 'encoding': 'utf-8', 'max_preview_rows': 1000}
+2025-10-14 05:42:21,661 - app.routers - INFO - [routers] include: audit (prefix=/api/audit)
+2025-10-14 05:42:21,682 - app.routers - INFO - [routers] include: bank (prefix=/api)
+2025-10-14 05:42:21,690 - app.routers - INFO - [routers] include: board (prefix=/api)
+2025-10-14 05:42:21,708 - app.routers - INFO - [routers] include: closing (prefix=/api)
+2025-10-14 05:42:21,721 - app.routers - INFO - [routers] include: contracts (prefix=/api/contracts)
+2025-10-14 05:42:21,723 - app.routers - INFO - [routers] include: debug (prefix=/api/_debug)
+2025-10-14 05:42:21,732 - app.routers - INFO - [routers] include: employee_files (prefix=/api/employee-files)
+2025-10-14 05:42:21,761 - app.routers - INFO - [routers] include: employees (prefix=/api/employees)
+2025-10-14 05:42:21,761 - app.routers - INFO - [routers] include: health (prefix=)
+2025-10-14 05:42:21,780 - app.routers - INFO - [routers] include: keywords (prefix=/api/keywords)
+2025-10-14 05:42:21,818 - app.routers - INFO - [routers] include: master (prefix=/api/master)
+2025-10-14 05:42:21,822 - app.routers - INFO - [routers] include: menu (prefix=/api)
+2025-10-14 05:42:21,835 - app.routers - INFO - [routers] include: merge (prefix=/api/merge)
+2025-10-14 05:42:21,869 - app.routers - INFO - [routers] include: ota (prefix=/api/ota)
+2025-10-14 05:42:21,896 - app.routers - INFO - [routers] include: reports (prefix=/api/reports)
+2025-10-14 05:42:21,902 - app.routers - INFO - [routers] include: reports_bank (prefix=/api)
+2025-10-14 05:42:21,909 - app.routers - INFO - [routers] include: reports_sales (prefix=/api/reports/sales)
+2025-10-14 05:42:21,934 - app.routers - INFO - [routers] include: roles (prefix=/api/roles)
+2025-10-14 05:42:21,936 - app.routers - INFO - [routers] include: templates (prefix=/api/templates)
+2025-10-14 05:42:21,947 - app.routers - INFO - [routers] include: user_roles (prefix=/api/user-roles)
+2025-10-14 05:42:21,993 - app.routers - INFO - [routers] include: users (prefix=/api/users)
+2025-10-14 05:42:21,993 - app.routers - INFO - [routers] total included=21, failed=0
+Traceback (most recent call last):
+  File "/var/packages/Python3.9/target/usr/lib/python3.9/runpy.py", line 197, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/var/packages/Python3.9/target/usr/lib/python3.9/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/click/core.py", line 1161, in __call__
+    return self.main(*args, **kwargs)
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/main.py", line 415, in main
+    run(
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/main.py", line 582, in run
+    server.run()
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/server.py", line 67, in run
+    return asyncio_run(self.serve(sockets=sockets), loop_factory=self.config.get_loop_factory())
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/_compat.py", line 53, in asyncio_run
+    return loop.run_until_complete(main)
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/server.py", line 71, in serve
+    await self._serve(sockets)
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/server.py", line 78, in _serve
+    config.load()
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/config.py", line 436, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/importer.py", line 19, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/var/packages/Python3.9/target/usr/lib/python3.9/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1030, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1007, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 986, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 680, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 850, in exec_module
+  File "<frozen importlib._bootstrap>", line 228, in _call_with_frames_removed
+  File "/volume1/web/hotel-system/backend/app/main.py", line 136, in <module>
+    app.include_router(master.router)
+AttributeError: 'APIRouter' object has no attribute 'router'
+2025-10-14 05:51:58,512 - merge_settings - INFO - [MERGE_SETTINGS] file logging initialized → /volume1/web/hotel-system/logs/merge_engine.log
+2025-10-14 05:51:58,512 - merge_settings - INFO - [MERGE_POLICY] rooms_status → {'merge_mode': 'append', 'missing_policy': 'soft_delete'}
+2025-10-14 05:51:58,512 - merge_settings - INFO - [MERGE_POLICY] sales_front → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:51:58,512 - merge_settings - INFO - [MERGE_POLICY] fnb_items → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:51:58,513 - merge_settings - INFO - [MERGE_POLICY] fnb_tenders → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:51:58,513 - merge_settings - INFO - [MERGE_POLICY] expenses → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:51:58,513 - merge_settings - INFO - [MERGE_POLICY] bank_ledger → {'merge_mode': 'append', 'missing_policy': 'ignore'}
+2025-10-14 05:51:58,513 - merge_settings - INFO - [MERGE_SETTINGS] default: {'dry_run': False, 'merge_mode': 'snapshot', 'missing_policy': 'soft_delete', 'conflict_policy': 'upsert', 'audit_enabled': True, 'audit_log_to_file': True, 'log_level': 'INFO', 'audit_log_path': '/volume1/web/hotel-system/logs/merge_engine.log', 'default_missing_policy': 'soft_delete', 'default_conflict_policy': 'upsert', 'encoding': 'utf-8', 'max_preview_rows': 1000}
+2025-10-14 05:51:58,513 - merge_settings - INFO - [MERGE_SETTINGS] merge settings initialized successfully.
+[schemas:init] skip hr: No module named 'app.schemas.hr'
+[schemas:init] skip contracts: No module named 'app.schemas.contracts'
+[schemas:init] skip bank: No module named 'app.schemas.bank'
+[schemas:init] skip audit: No module named 'app.schemas.audit'
+[schemas:auto] skip role_access: `regex` is removed. use `pattern` instead
+
+For further information visit https://errors.pydantic.dev/2.9/u/removed-kwargs
+/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/pydantic/_internal/_config.py:341: UserWarning: Valid config keys have changed in V2:
+* 'orm_mode' has been renamed to 'from_attributes'
+  warnings.warn(message, UserWarning)
+Traceback (most recent call last):
+  File "/var/packages/Python3.9/target/usr/lib/python3.9/runpy.py", line 197, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/var/packages/Python3.9/target/usr/lib/python3.9/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/click/core.py", line 1161, in __call__
+    return self.main(*args, **kwargs)
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/main.py", line 415, in main
+    run(
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/main.py", line 582, in run
+    server.run()
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/server.py", line 67, in run
+    return asyncio_run(self.serve(sockets=sockets), loop_factory=self.config.get_loop_factory())
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/_compat.py", line 53, in asyncio_run
+    return loop.run_until_complete(main)
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/server.py", line 71, in serve
+    await self._serve(sockets)
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/server.py", line 78, in _serve
+    config.load()
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/config.py", line 436, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/importer.py", line 19, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/var/packages/Python3.9/target/usr/lib/python3.9/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1030, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1007, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 986, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 680, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 850, in exec_module
+  File "<frozen importlib._bootstrap>", line 228, in _call_with_frames_removed
+  File "/volume1/web/hotel-system/backend/app/main.py", line 35, in <module>
+    from app.routers import master as master_router
+  File "/volume1/web/hotel-system/backend/app/routers/master.py", line 4
+    from __future__ import annotations
+    ^
+SyntaxError: from __future__ imports must occur at the beginning of the file
+2025-10-14 05:56:58,674 - merge_settings - INFO - [MERGE_SETTINGS] file logging initialized → /volume1/web/hotel-system/logs/merge_engine.log
+2025-10-14 05:56:58,675 - merge_settings - INFO - [MERGE_POLICY] rooms_status → {'merge_mode': 'append', 'missing_policy': 'soft_delete'}
+2025-10-14 05:56:58,675 - merge_settings - INFO - [MERGE_POLICY] sales_front → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:56:58,675 - merge_settings - INFO - [MERGE_POLICY] fnb_items → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:56:58,675 - merge_settings - INFO - [MERGE_POLICY] fnb_tenders → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:56:58,675 - merge_settings - INFO - [MERGE_POLICY] expenses → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:56:58,675 - merge_settings - INFO - [MERGE_POLICY] bank_ledger → {'merge_mode': 'append', 'missing_policy': 'ignore'}
+2025-10-14 05:56:58,675 - merge_settings - INFO - [MERGE_SETTINGS] default: {'dry_run': False, 'merge_mode': 'snapshot', 'missing_policy': 'soft_delete', 'conflict_policy': 'upsert', 'audit_enabled': True, 'audit_log_to_file': True, 'log_level': 'INFO', 'audit_log_path': '/volume1/web/hotel-system/logs/merge_engine.log', 'default_missing_policy': 'soft_delete', 'default_conflict_policy': 'upsert', 'encoding': 'utf-8', 'max_preview_rows': 1000}
+2025-10-14 05:56:58,675 - merge_settings - INFO - [MERGE_SETTINGS] merge settings initialized successfully.
+[schemas:init] skip hr: No module named 'app.schemas.hr'
+[schemas:init] skip contracts: No module named 'app.schemas.contracts'
+[schemas:init] skip bank: No module named 'app.schemas.bank'
+[schemas:init] skip audit: No module named 'app.schemas.audit'
+[schemas:auto] skip role_access: `regex` is removed. use `pattern` instead
+
+For further information visit https://errors.pydantic.dev/2.9/u/removed-kwargs
+/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/pydantic/_internal/_config.py:341: UserWarning: Valid config keys have changed in V2:
+* 'orm_mode' has been renamed to 'from_attributes'
+  warnings.warn(message, UserWarning)
+2025-10-14 05:56:59,636 - merge_settings - INFO - [MERGE_SETTINGS] file logging initialized → /volume1/web/hotel-system/logs/merge_engine.log
+2025-10-14 05:56:59,636 - merge_settings - INFO - [MERGE_POLICY] rooms_status → {'merge_mode': 'append', 'missing_policy': 'soft_delete'}
+2025-10-14 05:56:59,636 - merge_settings - INFO - [MERGE_POLICY] sales_front → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:56:59,636 - merge_settings - INFO - [MERGE_POLICY] fnb_items → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:56:59,636 - merge_settings - INFO - [MERGE_POLICY] fnb_tenders → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:56:59,636 - merge_settings - INFO - [MERGE_POLICY] expenses → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 05:56:59,636 - merge_settings - INFO - [MERGE_POLICY] bank_ledger → {'merge_mode': 'append', 'missing_policy': 'ignore'}
+2025-10-14 05:56:59,636 - merge_settings - INFO - [MERGE_SETTINGS] default: {'dry_run': False, 'merge_mode': 'snapshot', 'missing_policy': 'soft_delete', 'conflict_policy': 'upsert', 'audit_enabled': True, 'audit_log_to_file': True, 'log_level': 'INFO', 'audit_log_path': '/volume1/web/hotel-system/logs/merge_engine.log', 'default_missing_policy': 'soft_delete', 'default_conflict_policy': 'upsert', 'encoding': 'utf-8', 'max_preview_rows': 1000}
+2025-10-14 05:56:59,653 - app.routers - INFO - [routers] include: audit (prefix=/api/audit)
+2025-10-14 05:56:59,674 - app.routers - INFO - [routers] include: bank (prefix=/api)
+2025-10-14 05:56:59,682 - app.routers - INFO - [routers] include: board (prefix=/api)
+2025-10-14 05:56:59,700 - app.routers - INFO - [routers] include: closing (prefix=/api)
+2025-10-14 05:56:59,712 - app.routers - INFO - [routers] include: contracts (prefix=/api/contracts)
+2025-10-14 05:56:59,714 - app.routers - INFO - [routers] include: debug (prefix=/api/_debug)
+2025-10-14 05:56:59,723 - app.routers - INFO - [routers] include: employee_files (prefix=/api/employee-files)
+2025-10-14 05:56:59,752 - app.routers - INFO - [routers] include: employees (prefix=/api/employees)
+2025-10-14 05:56:59,753 - app.routers - INFO - [routers] include: health (prefix=)
+2025-10-14 05:56:59,771 - app.routers - INFO - [routers] include: keywords (prefix=/api/keywords)
+2025-10-14 05:56:59,809 - app.routers - INFO - [routers] include: master (prefix=/api/master)
+2025-10-14 05:56:59,812 - app.routers - INFO - [routers] include: menu (prefix=/api)
+2025-10-14 05:56:59,826 - app.routers - INFO - [routers] include: merge (prefix=/api/merge)
+2025-10-14 05:56:59,859 - app.routers - INFO - [routers] include: ota (prefix=/api/ota)
+2025-10-14 05:56:59,885 - app.routers - INFO - [routers] include: reports (prefix=/api/reports)
+2025-10-14 05:56:59,891 - app.routers - INFO - [routers] include: reports_bank (prefix=/api)
+2025-10-14 05:56:59,897 - app.routers - INFO - [routers] include: reports_sales (prefix=/api/reports/sales)
+2025-10-14 05:56:59,923 - app.routers - INFO - [routers] include: roles (prefix=/api/roles)
+2025-10-14 05:56:59,925 - app.routers - INFO - [routers] include: templates (prefix=/api/templates)
+2025-10-14 05:56:59,936 - app.routers - INFO - [routers] include: user_roles (prefix=/api/user-roles)
+2025-10-14 05:56:59,982 - app.routers - INFO - [routers] include: users (prefix=/api/users)
+2025-10-14 05:56:59,982 - app.routers - INFO - [routers] total included=21, failed=0
+Traceback (most recent call last):
+  File "/var/packages/Python3.9/target/usr/lib/python3.9/runpy.py", line 197, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/var/packages/Python3.9/target/usr/lib/python3.9/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/click/core.py", line 1161, in __call__
+    return self.main(*args, **kwargs)
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/main.py", line 415, in main
+    run(
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/main.py", line 582, in run
+    server.run()
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/server.py", line 67, in run
+    return asyncio_run(self.serve(sockets=sockets), loop_factory=self.config.get_loop_factory())
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/_compat.py", line 53, in asyncio_run
+    return loop.run_until_complete(main)
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/server.py", line 71, in serve
+    await self._serve(sockets)
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/server.py", line 78, in _serve
+    config.load()
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/config.py", line 436, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/uvicorn/importer.py", line 19, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/var/packages/Python3.9/target/usr/lib/python3.9/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1030, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1007, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 986, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 680, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 850, in exec_module
+  File "<frozen importlib._bootstrap>", line 228, in _call_with_frames_removed
+  File "/volume1/web/hotel-system/backend/app/main.py", line 123, in <module>
+    app.include_router(master_router.router, prefix="/api/master", tags=["master"])
+AttributeError: 'APIRouter' object has no attribute 'router'
+2025-10-14 08:42:12,038 - merge_settings - INFO - [MERGE_SETTINGS] file logging initialized → /volume1/web/hotel-system/logs/merge_engine.log
+2025-10-14 08:42:12,039 - merge_settings - INFO - [MERGE_POLICY] rooms_status → {'merge_mode': 'append', 'missing_policy': 'soft_delete'}
+2025-10-14 08:42:12,039 - merge_settings - INFO - [MERGE_POLICY] sales_front → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 08:42:12,039 - merge_settings - INFO - [MERGE_POLICY] fnb_items → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 08:42:12,039 - merge_settings - INFO - [MERGE_POLICY] fnb_tenders → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 08:42:12,039 - merge_settings - INFO - [MERGE_POLICY] expenses → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 08:42:12,039 - merge_settings - INFO - [MERGE_POLICY] bank_ledger → {'merge_mode': 'append', 'missing_policy': 'ignore'}
+2025-10-14 08:42:12,039 - merge_settings - INFO - [MERGE_SETTINGS] default: {'dry_run': False, 'merge_mode': 'snapshot', 'missing_policy': 'soft_delete', 'conflict_policy': 'upsert', 'audit_enabled': True, 'audit_log_to_file': True, 'log_level': 'INFO', 'audit_log_path': '/volume1/web/hotel-system/logs/merge_engine.log', 'default_missing_policy': 'soft_delete', 'default_conflict_policy': 'upsert', 'encoding': 'utf-8', 'max_preview_rows': 1000}
+2025-10-14 08:42:12,039 - merge_settings - INFO - [MERGE_SETTINGS] merge settings initialized successfully.
+[schemas:init] skip hr: No module named 'app.schemas.hr'
+[schemas:init] skip contracts: No module named 'app.schemas.contracts'
+[schemas:init] skip bank: No module named 'app.schemas.bank'
+[schemas:init] skip audit: No module named 'app.schemas.audit'
+[schemas:auto] skip role_access: `regex` is removed. use `pattern` instead
+
+For further information visit https://errors.pydantic.dev/2.9/u/removed-kwargs
+/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/pydantic/_internal/_config.py:341: UserWarning: Valid config keys have changed in V2:
+* 'orm_mode' has been renamed to 'from_attributes'
+  warnings.warn(message, UserWarning)
+2025-10-14 08:42:12,976 - merge_settings - INFO - [MERGE_SETTINGS] file logging initialized → /volume1/web/hotel-system/logs/merge_engine.log
+2025-10-14 08:42:12,976 - merge_settings - INFO - [MERGE_POLICY] rooms_status → {'merge_mode': 'append', 'missing_policy': 'soft_delete'}
+2025-10-14 08:42:12,976 - merge_settings - INFO - [MERGE_POLICY] sales_front → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 08:42:12,977 - merge_settings - INFO - [MERGE_POLICY] fnb_items → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 08:42:12,977 - merge_settings - INFO - [MERGE_POLICY] fnb_tenders → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 08:42:12,977 - merge_settings - INFO - [MERGE_POLICY] expenses → {'merge_mode': 'snapshot', 'missing_policy': 'soft_delete'}
+2025-10-14 08:42:12,977 - merge_settings - INFO - [MERGE_POLICY] bank_ledger → {'merge_mode': 'append', 'missing_policy': 'ignore'}
+2025-10-14 08:42:12,977 - merge_settings - INFO - [MERGE_SETTINGS] default: {'dry_run': False, 'merge_mode': 'snapshot', 'missing_policy': 'soft_delete', 'conflict_policy': 'upsert', 'audit_enabled': True, 'audit_log_to_file': True, 'log_level': 'INFO', 'audit_log_path': '/volume1/web/hotel-system/logs/merge_engine.log', 'default_missing_policy': 'soft_delete', 'default_conflict_policy': 'upsert', 'encoding': 'utf-8', 'max_preview_rows': 1000}
+2025-10-14 08:42:12,993 - app.routers - INFO - [routers] include: audit (prefix=/api/audit)
+2025-10-14 08:42:13,014 - app.routers - INFO - [routers] include: bank (prefix=/api)
+2025-10-14 08:42:13,022 - app.routers - INFO - [routers] include: board (prefix=/api)
+2025-10-14 08:42:13,040 - app.routers - INFO - [routers] include: closing (prefix=/api)
+2025-10-14 08:42:13,052 - app.routers - INFO - [routers] include: contracts (prefix=/api/contracts)
+2025-10-14 08:42:13,054 - app.routers - INFO - [routers] include: debug (prefix=/api/_debug)
+2025-10-14 08:42:13,063 - app.routers - INFO - [routers] include: employee_files (prefix=/api/employee-files)
+2025-10-14 08:42:13,091 - app.routers - INFO - [routers] include: employees (prefix=/api/employees)
+2025-10-14 08:42:13,091 - app.routers - INFO - [routers] include: health (prefix=)
+2025-10-14 08:42:13,110 - app.routers - INFO - [routers] include: keywords (prefix=/api/keywords)
+2025-10-14 08:42:13,148 - app.routers - INFO - [routers] include: master (prefix=/api/master)
+2025-10-14 08:42:13,152 - app.routers - INFO - [routers] include: menu (prefix=/api)
+2025-10-14 08:42:13,186 - app.routers - INFO - [routers] include: ota (prefix=/api/ota)
+2025-10-14 08:42:13,212 - app.routers - INFO - [routers] include: reports (prefix=/api/reports)
+2025-10-14 08:42:13,218 - app.routers - INFO - [routers] include: reports_bank (prefix=/api)
+2025-10-14 08:42:13,225 - app.routers - INFO - [routers] include: reports_sales (prefix=/api/reports/sales)
+2025-10-14 08:42:13,250 - app.routers - INFO - [routers] include: roles (prefix=/api/roles)
+2025-10-14 08:42:13,252 - app.routers - INFO - [routers] include: templates (prefix=/api/templates)
+2025-10-14 08:42:13,263 - app.routers - INFO - [routers] include: user_roles (prefix=/api/user-roles)
+2025-10-14 08:42:13,309 - app.routers - INFO - [routers] include: users (prefix=/api/users)
+2025-10-14 08:42:13,309 - app.routers - INFO - [routers] total included=20, failed=0
+INFO:     Started server process [28040]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [28040]
+/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/pydantic/_internal/_config.py:341: UserWarning: Valid config keys have changed in V2:
+* 'orm_mode' has been renamed to 'from_attributes'
+  warnings.warn(message, UserWarning)
+/volume1/web/hotel-system/venv39_py39/lib/python3.9/site-packages/pydantic/_internal/_config.py:341: UserWarning: Valid config keys have changed in V2:
+* 'orm_mode' has been renamed to 'from_attributes'
+  warnings.warn(message, UserWarning)

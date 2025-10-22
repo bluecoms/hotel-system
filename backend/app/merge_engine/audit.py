@@ -1,13 +1,31 @@
-# app/merge_engine/audit.py
 # -*- coding: utf-8 -*-
-"""
-Merge Engine Audit (Phase 2)
-──────────────────────────────────────────────
-- 병합 수행 시 MergeBatch + MergeChangeLog 기록
-- repository.py 의 MergeAuditRepository 래퍼
-- 모든 변경 로그를 안전하게 커밋하고, 실패 시 rollback
-"""
-
+# ============================================================================
+# File      : app/merge_engine/audit.py
+# Version   : 2025.10-30 · v3.5 (SSOT Final · Banking/OTA Enhanced)
+# Purpose   : Hotel Admin — Merge Engine Audit Logger
+# ----------------------------------------------------------------------------
+# 목적:
+#   • 병합(merge) 실행 시 MergeBatch + MergeChangeLog 감사기록 생성
+#   • settings_merge 정책 및 dataset별 감사 옵션 반영
+#   • OTA / BankLedger / SalesFront 등 멀티데이터셋 SSOT 호환
+# ----------------------------------------------------------------------------
+# 특징:
+#   ✅ dry_run 모드 안전 스킵
+#   ✅ dataset 별 로그 구분
+#   ✅ action 대소문자 표준화
+#   ✅ summary 자동 계산
+# ----------------------------------------------------------------------------
+# 연계:
+#   • app/merge_engine/repository.py → MergeAuditRepository
+#   • app/core/settings_merge.py     → 병합 정책 조회
+#   • app/models/audit.py            → MergeBatch / MergeChangeLog ORM
+# ----------------------------------------------------------------------------
+# 변경 로그:
+#   v3.5 (2025-10-30)
+#     ✅ dataset 기반 로깅 및 business_date 보강
+#     ✅ action 정규화 (INSERT/UPSERT/DELETE/NOOP)
+#     ✅ summary 계산 개선 (.lower())
+# ============================================================================
 import logging
 from datetime import datetime
 from typing import Dict, Any, List, Optional
@@ -15,13 +33,14 @@ from sqlalchemy.orm import Session
 
 from app.models.audit import MergeBatch
 from app.merge_engine.repository import MergeAuditRepository
+from app.core import settings_merge
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("merge_audit")
 
 
-# ───────────────────────────────────────────────
-# 메인 엔트리
-# ───────────────────────────────────────────────
+# ============================================================================
+# 1️⃣ 메인 엔트리
+# ----------------------------------------------------------------------------
 def record_merge_audit(
     db: Session,
     dataset: str,
@@ -32,33 +51,38 @@ def record_merge_audit(
     changes: List[Dict[str, Any]],
     session_id: Optional[int] = None,
     version_no: Optional[int] = None,
-) -> MergeBatch:
+    dry_run: bool = False,
+) -> Optional[MergeBatch]:
     """
-    병합 수행 결과를 감사 테이블에 기록합니다.
-    - MergeBatch 1건 생성 + MergeChangeLog N건 추가
-    - repository.safe_commit()으로 트랜잭션 보장
-    - 오류 발생 시 전체 rollback
+    병합 결과를 감사 테이블에 기록합니다.
+    ──────────────────────────────────────────────
+    • MergeBatch 1건 + MergeChangeLog N건 생성
+    • dry_run=True → 기록 스킵
+    • settings_merge 정책(audit_enabled) 반영
+    • 실패 시 rollback 보장
+    """
 
-    Args:
-        db: SQLAlchemy Session
-        dataset: 데이터셋 명 (예: rooms_status, sales_front ...)
-        property_code: 호텔 코드 (예: MOP)
-        mode: append/snapshot
-        missing_policy: 누락 정책 (ignore / soft_delete / hard_delete)
-        source_kind: daily / weekly / monthly / full
-        changes: [{action, key_hash, old_hash, new_hash, reason, payload}]
-        session_id: 업로드 세션 ID (선택)
-        version_no: 버전 번호 (선택)
-    Returns:
-        MergeBatch: 생성된 배치 ORM 객체
-    """
+    # 0️⃣ Dry-run 모드: 스킵
+    if dry_run:
+        log.info("[AUDIT] dry_run → skip audit (dataset=%s)", dataset)
+        return None
+
+    # 1️⃣ 정책 확인
+    policy = settings_merge.get_policy(dataset)
+    if not policy.get("audit_enabled", True):
+        log.info("[AUDIT] audit disabled by settings (dataset=%s)", dataset)
+        return None
+
     repo = MergeAuditRepository(db)
+    batch: Optional[MergeBatch] = None
+
     try:
-        # 1️⃣ 배치 생성
+        # 2️⃣ Batch 생성
+        business_date = _infer_business_date(changes)
         batch = repo.create_batch(
             dataset=dataset,
             property_code=property_code,
-            business_date=_infer_business_date(changes),
+            business_date=business_date,
             mode=mode,
             missing_policy=missing_policy,
             source_kind=source_kind,
@@ -66,46 +90,57 @@ def record_merge_audit(
             version_no=version_no,
         )
 
-        # 2️⃣ 변경 로그 기록
+        # 3️⃣ 변경 로그 추가
         for ch in changes:
             try:
+                action = (ch.get("action") or "UPSERT").upper()
                 repo.log_change(
                     batch_id=batch.id,
-                    action=ch.get("action", "UPSERT"),
+                    action=action,
                     key_hash=ch.get("key_hash"),
                     old_hash=ch.get("old_hash"),
                     new_hash=ch.get("new_hash"),
                     reason=ch.get("reason"),
                 )
             except Exception as e:
-                # 개별 로그 오류는 전체 배치 실패로 간주하지 않음
-                log.warning(f"[AUDIT] skip bad change: {e}")
+                log.warning(f"[AUDIT] skip bad change (dataset={dataset}): {e}")
 
-        # 3️⃣ 배치 완료 및 커밋
+        # 4️⃣ 요약 계산
+        summary = _summarize_changes(changes)
+
+        # 5️⃣ 완료/커밋
         repo.finalize_batch(
             batch,
             status="DONE",
-            record_count=len(changes),
-            notes=f"{mode} with {missing_policy} policy",
+            record_count=summary["total"],
+            notes=f"{mode} / {missing_policy} / {summary['summary']}",
         )
         repo.safe_commit()
-        log.info(f"[AUDIT] batch={batch.id} dataset={dataset} changes={len(changes)} complete")
+
+        log.info(
+            "[AUDIT] batch=%s dataset=%s property=%s total=%s DONE",
+            batch.id,
+            dataset,
+            property_code,
+            summary["total"],
+        )
         return batch
 
     except Exception as e:
-        db.rollback()
-        log.exception(f"[AUDIT] record_merge_audit failed: {e}")
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        log.exception(f"[AUDIT] dataset={dataset} failed: {e}")
         raise
 
 
-# ───────────────────────────────────────────────
-# 내부 유틸
-# ───────────────────────────────────────────────
+# ============================================================================
+# 2️⃣ 내부 유틸리티
+# ----------------------------------------------------------------------------
 def _infer_business_date(changes: List[Dict[str, Any]]) -> str:
-    """
-    변경 목록에서 business_date 추출 (없으면 오늘 날짜로 대체)
-    """
-    for ch in changes:
+    """변경 목록에서 business_date 추출 (없으면 오늘 UTC)"""
+    for ch in changes or []:
         payload = ch.get("payload") or {}
         if isinstance(payload, dict):
             d = payload.get("business_date")
@@ -114,4 +149,32 @@ def _infer_business_date(changes: List[Dict[str, Any]]) -> str:
     return datetime.utcnow().strftime("%Y-%m-%d")
 
 
+def _summarize_changes(changes: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """action별 insert/update/delete/noop 집계"""
+    def _count(name: str) -> int:
+        return len([c for c in changes if (c.get("action") or "").lower() == name])
+
+    inserted = _count("insert")
+    updated = _count("update") + _count("upsert")
+    deleted = _count("delete")
+    noop = _count("noop")
+    total = len(changes or [])
+
+    summary_text = (
+        f"{total} changes (insert={inserted}, update={updated}, "
+        f"delete={deleted}, noop={noop})"
+    )
+    return {
+        "inserted": inserted,
+        "updated": updated,
+        "deleted": deleted,
+        "noop": noop,
+        "total": total,
+        "summary": summary_text,
+    }
+
+
+# ============================================================================
+# 3️⃣ Export
+# ----------------------------------------------------------------------------
 __all__ = ["record_merge_audit"]

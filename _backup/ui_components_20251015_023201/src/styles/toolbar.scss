@@ -1,0 +1,125 @@
+/* src/styles/toolbar.scss */
+/* ---------------------------------------
+   Hotel Admin — Unified Toolbar (2025, Light-only)
+   SSOT for toolbars (Board / Closing / Reports)
+---------------------------------------- */
+
+:root { --appbar-height: 56px; }
+
+.bar {
+  position: sticky;
+  top: var(--appbar-height);
+  z-index: 5;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  padding-right: 14px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+  min-height: 60px;
+  box-sizing: border-box;
+}
+
+.bar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap; /* 좁을 때만 줄바꿈 */
+}
+
+.bar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+/* 라벨 기본 톤 */
+.bar label {
+  font-weight: 600;
+  color: var(--color-muted);
+  margin-right: 4px;
+}
+
+/* 칩 공통 */
+.bar :deep(.v-chip) {
+  font-weight: 600;
+  letter-spacing: .2px;
+  height: 28px;
+  border-radius: 999px;
+}
+
+/* 플랫 칩 */
+.bar :deep(.v-chip.v-chip--flat[color="primary"]) {
+  background: var(--brand-primary) !important;
+  color: #fff !important;
+}
+.bar :deep(.v-chip.v-chip--flat[color="error"]) {
+  background: var(--color-error) !important;
+  color: #fff !important;
+}
+
+/* Outlined/Tonal 칩 (Closing 좌측 정보칩 등) */
+.bar :deep(.v-chip.v-chip--outlined) {
+  border-color: var(--color-line) !important;
+  color: var(--color-text) !important;
+}
+.bar :deep(.v-chip.v-chip--variant-tonal) {
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--brand-primary);
+}
+
+/* 입력 필드 높이 및 정렬 통일 */
+.bar :deep(.v-field) {
+  --v-field-padding-top: 0 !important;
+  --v-field-padding-bottom: 0 !important;
+  min-height: 40px !important;
+  align-items: center;
+}
+.bar :deep(.v-field__field),
+.bar :deep(.v-field__input) {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  height: 40px !important;
+  line-height: 1 !important;
+}
+
+/* 날짜/월 입력 크기 */
+.date-input, .month-input {
+  width: 260px;
+  --ctl-h: 40px;
+}
+.date-input :deep(.v-field),
+.month-input :deep(.v-field) {
+  height: var(--ctl-h);
+}
+.date-input :deep(input),
+.month-input :deep(input) {
+  text-align: center;
+}
+
+/* 버튼 통일 */
+.btn-40 {
+  height: 40px;
+  width: 40px;
+  min-width: 40px;
+  padding: 0;
+}
+.btn-action {
+  height: 40px;
+  min-width: 88px;
+  font-weight: 600;
+  border-radius: var(--radius-xs);
+  text-transform: none;
+}
+
+/* 반응형 */
+@media (max-width: 960px) {
+  .date-input, .month-input { width: 200px; }
+}

@@ -1,0 +1,12 @@
+{
+  "tag": "ROOM_ONLY",
+  "amount": 210000
+}
+{
+  "tag": "BREAKFAST",
+  "amount": 80000
+}
+{
+  "tag": "ROOM",
+  "amount": 30000
+}

@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>목포오션호텔 계약서 통합 관리 v1.5</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        html { font-size: 15px; }
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        .contract-section { border: 1px solid #e2e8f0; padding: 1.25rem; border-radius: 0.5rem; background-color: #ffffff; }
+        .input-field { border: 1px solid #cbd5e1; padding: 0.5rem 0.75rem; border-radius: 0.375rem; width: 100%; transition: border-color 0.2s; }
+        .input-field:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 1px #2563eb; }
+        .input-label { font-weight: 500; color: #4a5568; margin-bottom: 0.25rem; display: block; }
+        .tab-btn.active { border-color: #2563eb; color: #1d4ed8; font-weight: 600; }
+        .clause-section { margin-top: 1rem; padding-top: 1rem; }
+        .clause-title { font-size: 1.1rem; font-weight: 700; color: #1e3a8a; margin-bottom: 0.75rem; }
+        .clause-content { padding-left: 1rem; color: #374151; line-height: 1.6; }
+        .clause-content ol { list-style-type: decimal; padding-left: 1.25rem; }
+        .checklist-table th, .checklist-table td { border: 1px solid #e2e8f0; padding: 0.75rem; text-align: center; }
+        .checklist-table th { background-color: #f8fafc; font-weight: 600; }
+        .checklist-table td:nth-child(2), .checklist-table td:nth-child(4) { text-align: left; }
+        
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+
+        @media print {
+            html { font-size: 13.5px; }
+            body { 
+                background-color: #fff !important; 
+                -webkit-print-color-adjust: exact; 
+                print-color-adjust: exact; 
+                padding: 1cm; 
+                margin: 0;
+                color: #000 !important;
+                text-rendering: optimizeLegibility;
+                border: 4px double #000;
+            }
+            .no-print { display: none !important; }
+            .print-block { display: block !important; }
+            .print-header-logo { display: flex !important; }
+            .max-w-4xl { box-shadow: none; width: 100%; max-width: 100%; }
+            .contract-section { border: none; padding: 0.5rem 0; box-shadow: none; }
+            .clause-section, .signature-block, .checklist-table { page-break-inside: avoid; }
+            .reference-page { 
+                page-break-before: always;
+                min-height: 22cm; 
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+            .bg-gray-50, .bg-blue-50, .bg-gray-100, .bg-blue-100, .bg-green-50, .bg-yellow-100 { 
+                background-color: transparent !important; 
+                border: 1px solid #ccc;
+            }
+            .input-field {
+                border: none !important;
+                padding: 0 2px !important;
+                background-color: transparent !important;
+                box-shadow: none !important;
+                text-align: center;
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                appearance: none;
+            }
+            input::-webkit-calendar-picker-indicator,
+            input::-webkit-inner-spin-button,
+            input::-webkit-clear-button {
+                display: none;
+            }
+            .input-field::placeholder { color: transparent; }
+            input[type="checkbox"] {
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                appearance: none;
+                width: 1em;
+                height: 1em;
+                border: 1px solid #333;
+                vertical-align: middle;
+                position: relative;
+                top: -1px;
+            }
+            input[type="checkbox"]:checked::before {
+                content: '✔';
+                font-size: 0.9em;
+                position: absolute;
+                top: -3px;
+                left: 1px;
+                color: #000;
+            }
+             .info-table th, .info-table td {
+                padding: 0.5rem;
+                border: 1px solid #ccc;
+             }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4">
+    <div class="max-w-4xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
+        <header class="bg-blue-800 text-white p-5 no-print">
+            <div class="flex justify-between items-center">
+                <h1 class="text-2xl sm:text-3xl font-bold">목포오션호텔 계약서 통합 관리</h1>
+                <span class="bg-blue-600 text-xs font-bold px-2 py-1 rounded-full">v1.5</span>
+            </div>
+            <p class="mt-1 text-blue-100">아래 탭에서 필요한 계약서 종류를 선택하여 작성하세요.</p>
+        </header>
+
+        <div class="border-b border-gray-200 px-5 no-print">
+            <nav class="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
+                <button id="tab-monthly-btn" class="tab-btn active whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">월급 계약서</button>
+                <button id="tab-long-term-btn" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">아르바이트 계약서</button>
+                <button id="tab-daily-btn" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">일일 근로 계약서</button>
+                <button id="tab-checklist-btn" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">신규 입사자 서류 안내</button>
+                <button id="tab-appointment-btn" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">인사발령장</button>
+            </nav>
+        </div>
+        
+        <main class="p-4 space-y-6">
+             <!-- 월급 계약서 패널 -->
+            <div id="panel-monthly" class="tab-panel">
+                 <!-- 인쇄용 계약서 제목 -->
+                <div class="hidden print-header-logo justify-between items-center mb-8">
+                    <h1 class="text-2xl font-bold">목포오션호텔</h1>
+                    <h2 class="text-sm">주식회사 블루컴(지점)</h2>
+                </div>
+                 <div class="contract-section space-y-4">
+                    <div class="flex flex-wrap justify-between items-center pb-4 border-b">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-2 sm:mb-0">월급 근로계약서</h2>
+                        <div class="flex items-center space-x-2">
+                             <div class="flex items-center border border-gray-300 rounded-md bg-gray-50">
+                                 <span class="px-2 text-gray-500 text-sm">관리번호</span>
+                                 <span id="monthly-prefix" class="pl-1 pr-2 py-2 text-gray-600 text-sm font-mono"></span>
+                                 <input type="text" id="contract-no-monthly-seq" class="input-field w-16 border-0 rounded-l-none bg-white" placeholder="01">
+                             </div>
+                            <button onclick="window.print()" class="no-print self-end bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 text-sm"><i class="fas fa-print mr-1"></i>인쇄</button>
+                        </div>
+                    </div>
+                    <p class="pt-4">본 계약서는 사업주 **주식회사 블루컴(지점)** (이하 "사업주")와(과) 근로자 **[근로자 성명]** (이하 "근로자") 간의 근로 조건을 정함을 목적으로 다음과 같이 근로계약을 체결한다.</p>
+                    <table class="w-full border-collapse mt-4 info-table">
+                        <thead>
+                            <tr>
+                                <th class="w-1/2 p-2 text-left bg-gray-100 font-bold text-gray-700">사업주 정보</th>
+                                <th class="w-1/2 p-2 text-left bg-gray-100 font-bold text-gray-700">근로자 정보</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="p-2"><strong>상호명:</strong> 목포오션호텔</td>
+                                <td class="p-2"><strong>성명:</strong> <input type="text" class="input-field" placeholder="근로자 성명"></td>
+                            </tr>
+                            <tr>
+                                <td class="p-2"><strong>회사명:</strong> 주식회사 블루컴(지점)</td>
+                                <td class="p-2"><strong>생년월일:</strong> <input type="date" class="input-field"></td>
+                            </tr>
+                             <tr>
+                                <td class="p-2"><strong>대표자:</strong> 기창민</td>
+                                <td class="p-2"><strong>연락처:</strong> <input type="tel" class="input-field" placeholder="근로자 연락처"></td>
+                            </tr>
+                            <tr>
+                                <td class="p-2" colspan="2"><strong>사업장 주소:</strong> 전라남도 목포시 해안로270번길 3</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2" colspan="2"><strong>근로자 주소:</strong> <input type="text" class="input-field" placeholder="근로자 주소"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="clause-section"><h3 class="clause-title">제1조 (계약기간)</h3><p class="clause-content">2025년 <input type="number" class="w-20 input-field inline" placeholder="월">월 <input type="number" class="w-20 input-field inline" placeholder="일">일 부터 (기간의 정함이 없는 경우 시작일만 기재). 단, "근로자"의 정년은 만 60세가 되는 해의 말일로 하며, 회사의 취업규칙에 따른다.</p></div>
+                    <div class="clause-section"><h3 class="clause-title">제2조 (수습기간)</h3><p class="clause-content">1. "근로자"의 채용일로부터 3개월간을 수습기간으로 한다.<br>2. 수습기간 중 또는 기간 만료 시, "사업주"가 "근로자"의 업무 능력, 근무 태도, 조직 적합성 등을 평가하여 본 채용이 부적합하다고 판단할 경우 본 계약을 해지할 수 있다.</p></div>
+                    <div class="clause-section"><h3 class="clause-title">제3조 (근무장소)</h3><p class="clause-content">목포오션호텔 내 "사업주"가 지정하는 모든 영업장 및 관련 시설</p></div>
+                    <div class="clause-section"><h3 class="clause-title">제4조 (업무 내용)</h3>
+                        <div class="clause-content">
+                            <div class="flex flex-wrap items-start gap-x-8 gap-y-4">
+                                <div class="w-full sm:w-auto">
+                                    <label class="input-label font-semibold">직책:</label>
+                                    <input type="text" class="input-field sm:w-56" placeholder="예: 지배인, 실장">
+                                </div>
+                                <div class="flex-grow">
+                                    <p class="font-semibold">담당 업무 (복수 선택 가능):</p>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 mt-2">
+                                        <label class="flex items-center"><input type="checkbox" class="h-4 w-4 mr-2">객실 관리</label>
+                                        <label class="flex items-center"><input type="checkbox" class="h-4 w-4 mr-2">식음료 서비스</label>
+                                        <label class="flex items-center"><input type="checkbox" class="h-4 w-4 mr-2">프런트 오피스</label>
+                                        <label class="flex items-center"><input type="checkbox" class="h-4 w-4 mr-2">시설 관리 및 기타</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-2">※ "사업주"는 경영상의 필요 또는 "근로자"의 업무수행 능력 등을 고려하여 "근로자"의 동의 하에 근무장소 및 업무 내용을 변경할 수 있다.</p>
+                        </div>
+                    </div>
+                    <div class="clause-section"><h3 class="clause-title">제5조 (서류제출 및 인사평가)</h3>
+                        <div class="clause-content"><ol>
+                            <li>"근로자"는 채용 시 회사가 요구하는 제반 서류(주민등록등본, 최종학력증명서, 자격증 사본 등)를 제출하여야 하며, 기재 내용에 허위가 없음을 보증한다.</li>
+                            <li>"사업주"는 "근로자"의 업무수행능력, 근무태도, 성과 등을 공정하게 평가(인사평가)하여 승진, 급여 조정, 업무 재배치 등의 인사관리에 반영할 수 있으며, "근로자"는 정당한 사유 없이 이를 거부할 수 없다.</li>
+                        </ol></div>
+                    </div>
+                    <div class="clause-section"><h3 class="clause-title">제6조 (근로시간 및 휴게)</h3>
+                        <div class="clause-content space-y-2">
+                        <p>1. **근무형태**: 교대근무 (스케줄 근무)</p>
+                        <p>2. "근로자"의 소정근로시간은 1일 8시간, 1주 40시간을 기준으로 하되, 근무일 및 근무시간은 "사업주"가 작성하는 근무 스케줄에 따른다.</p>
+                        <p>3. 휴게시간은 1일 근로시간 중 1시간으로 부여하며, 구체적인 시간은 근무 스케줄에 따른다.</p>
+                        </div>
+                    </div>
+                    <div class="clause-section"><h3 class="clause-title">제7조 (임금)</h3>
+                        <div class="clause-content space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                                <div>
+                                    <label for="salaryTableSelect" class="input-label">직급 선택:</label>
+                                    <select id="salaryTableSelect" class="input-field">
+                                        <option value="custom">직접 입력</option>
+                                        <option value="25155240">신입사원 (최저연봉)</option>
+                                        <option value="27000000">사원 (2,700만원)</option>
+                                        <option value="30000000">주임 (3,000만원)</option>
+                                        <option value="32000000">대리 (3,200만원)</option>
+                                        <option value="36000000">과장 (3,600만원)</option>
+                                        <option value="40000000">부장 (4,000만원)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="input-label">월 급여총액 (포괄임금):</label>
+                                    <input type="number" id="monthlyTotalSalaryInput" class="input-field" placeholder="2300000">
+                                </div>
+                            </div>
+                             <div class="mt-2 flex items-center">
+                                <input type="checkbox" id="is52HourContract" class="h-4 w-4 mr-2">
+                                <label for="is52HourContract" class="text-sm font-medium text-gray-700">팀장 직책 (주 52시간 포괄임금 적용)</label>
+                            </div>
+                            <div id="minWageWarning" class="text-sm text-red-600 mt-1 hidden"></div>
+                            <div class="p-4 border rounded-md bg-gray-50 space-y-3">
+                                <p class="font-semibold">가. 임금 구성항목</p>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div><label class="input-label text-sm">기본급 (과세)</label><input type="number" id="baseSalaryInput" class="input-field bg-gray-200" readonly></div>
+                                </div>
+                                <p class="font-semibold mt-2">나. 비과세 항목</p>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div><label class="input-label text-sm">식대</label><input type="number" id="nonTaxableMeal" class="input-field" value="200000"></div>
+                                    <div><label class="input-label text-sm">차량유지비</label><input type="number" id="nonTaxableCar" class="input-field" placeholder="0"></div>
+                                    <div><label class="input-label text-sm">육아수당</label><input type="number" id="nonTaxableChild" class="input-field" placeholder="0"></div>
+                                </div>
+                            </div>
+                            <p id="pogal-clause" class="text-sm text-gray-600">2. 상기 월 급여총액은 기본근로(주 40시간)에 대한 임금과 주휴수당, 그리고 월 10시간의 연장근로 및 월 8시간의 야간근로에 대한 제수당이 포함된 포괄임금이다. 약정된 시간을 초과하는 근로 발생 시, 관련 법령에 따라 추가 수당을 산정하여 지급한다.</p>
+                            <div>3. **임금지급일**: <input type="text" class="input-field inline w-40" value="익월 15일"></div>
+                            <div>4. **지급방법**: <input type="text" class="input-field" placeholder="[은행명], [계좌번호]"></div>
+                        </div>
+                    </div>
+                    <div class="clause-section"><h3 class="clause-title">제8조 (준수 의무 및 손해배상)</h3><div class="clause-content"><ol><li>"근로자"는 "사업주"가 정한 취업규칙, 서비스 표준, 안전보건 수칙 등 제반 규정을 성실히 준수하여야 한다.</li><li>"근로자"는 호텔의 품격을 유지하기 위해 용모와 복장을 단정히 하고, 고객에게 최상의 서비스를 제공해야 한다.</li><li>"근로자"가 고의 또는 중대한 과실로 "사업주"의 시설, 비품, 기타 재산에 손해를 입힌 경우, 그 손해액을 배상하여야 한다.</li></ol></div></div>
+                    <div class="clause-section"><h3 class="clause-title">제9조 (비밀유지 의무)</h3><div class="clause-content"><ol><li>"근로자"는 근로기간 중은 물론 퇴직 후에도 업무상 알게 된 "사업주"의 영업비밀(고객 정보, 재무 정보, 영업 노하우, 관리 시스템 등)을 제3자에게 누설하여서는 아니 된다.</li><li>제1항의 의무를 위반하여 "사업주"에게 손해를 입힌 경우, "근로자"는 관련 법령에 따른 민·형사상의 모든 책임을 진다.</li></ol></div></div>
+                    <div class="clause-section"><h3 class="clause-title">제10조 (업무추진비)</h3>
+                        <div class="clause-content">
+                            <p>"사업주"는 "근로자"의 원활한 업무 수행을 지원하기 위해 월 <input type="text" id="businessExpenseContractInput" class="w-32 input-field inline" placeholder="금액"> 원 한도 내에서 업무추진비를 실비 지원할 수 있다. 이는 급여에 포함되지 않으며, 반드시 대표이사의 사전 승인을 받고 적격 증빙(영수증)을 제출하는 경우에 한하여 지급된다.</p>
+                            <div class="text-right mt-4 pr-8"><strong>대표이사 승인: _________________ (인)</strong></div>
+                        </div>
+                    </div>
+                    <div class="clause-section"><h3 class="clause-title">제11조 (계약의 해지)</h3>
+                        <div class="clause-content">
+                            <p>"사업주"는 "근로자"가 다음 각 호의 어느 하나에 해당하는 경우, 징계위원회의 심의를 거쳐 본 계약을 해지(징계해고)할 수 있다.</p>
+                            <ol>
+                                <li>채용 시 제출한 이력서 및 관련 서류에 중대한 허위 사실이 발견된 경우</li>
+                                <li>"사업주"의 주요 영업비밀이나 고객 정보를 정당한 사유 없이 외부에 누설하여 손해를 끼친 경우</li>
+                                <li>직장 내 괴롭힘, 성희롱 등 불미스러운 행위로 직장 질서를 심각하게 문란하게 한 경우</li>
+                                <li>형사상 범죄행위로 금고 이상의 유죄 판결이 확정된 경우</li>
+                                <li>고의 또는 중대한 과실로 회사에 심각한 재산상 손해를 입힌 경우</li>
+                                <li>정당한 업무 지시나 인사명령을 명백한 사유 없이 상습적으로 거부하는 경우</li>
+                                <li>월 3회 이상 또는 연간 5회 이상 무단결근하거나, 정당한 사유 없이 5일 이상 연속으로 무단결근한 경우</li>
+                                <li>기타 위 각호에 준하는 사유로서, 사회통념상 더 이상 근로관계를 유지할 수 없다고 인정될 만한 중대한 귀책사유가 있는 경우</li>
+                            </ol>
+                            <p class="mt-2">또한, 객관적이고 합리적인 기준에 따라 평가된 업무수행능력이 현저히 부족하여 개선의 여지가 없다고 판단되는 경우 등 사회통념상 근로계약을 유지하기 어려운 경우에도 본 계약을 해지할 수 있다.</p>
+                        </div>
+                    </div>
+                    <div class="clause-section"><h3 class="clause-title">제12조 (기타)</h3><p class="clause-content">본 계약서에 명시되지 않은 사항은 근로기준법 등 관련 노동법령과 "사업주"의 취업규칙에 따른다.</p></div>
+                </div>
+                
+                <div class="signature-block text-center mt-8 pt-6 border-t"><p>본 계약을 증명하기 위하여 계약서 2부를 작성하여 "사업주"와 "근로자"가 서명 또는 날인한 후 각각 1부씩 보관한다.</p><p class="mt-4 font-bold">20<input type="text" class="input-field inline w-16">년 <input type="text" class="input-field inline w-16">월 <input type="text" class="input-field inline w-16">일</p><div class="grid grid-cols-1 sm:grid-cols-2 gap-8 mt-8"><div class="font-semibold">사업주: 주식회사 블루컴(지점) 대표이사 기창민 (서명/인)</div><div class="font-semibold">근로자: ____________________ (서명/인)</div></div></div>
+
+                <div class="no-print">
+                    <div class="contract-section mt-6 space-y-6">
+                        <h2 class="text-xl sm:text-2xl font-bold text-blue-800">📊 급여 상세 분석기</h2>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                            <div class="space-y-4">
+                                <div><label class="input-label">월 급여총액 (세전)</label><input type="number" id="monthlySalaryInputCalc" class="input-field text-lg" placeholder="2300000"></div>
+                                <div class="p-4 rounded-md border bg-gray-50">
+                                    <label class="input-label">비과세 항목 입력</label>
+                                    <div class="grid grid-cols-3 gap-2 mt-2">
+                                        <div><label class="text-sm font-medium">식대</label><input type="number" id="nonTaxableMealCalc" class="input-field mt-1" value="200000"></div>
+                                        <div><label class="text-sm font-medium">차량유지비</label><input type="number" id="nonTaxableCarCalc" class="input-field mt-1" placeholder="0"></div>
+                                        <div><label class="text-sm font-medium">육아수당</label><input type="number" id="nonTaxableChildCalc" class="input-field mt-1" placeholder="0"></div>
+                                    </div>
+                                </div>
+                                <div><label class="input-label">약정 외 추가 주간 연장근로 시간</label><input type="number" id="overtimeHoursInput" class="input-field text-lg" placeholder="예: 8"></div>
+                                <div><label class="input-label">월 업무추진비 한도 (실비정산)</label><input type="number" id="businessExpenseInputCalc" class="input-field text-lg" placeholder="100000"></div>
+                            </div>
+                            <div class="bg-blue-50 p-5 rounded-lg space-y-4">
+                                <div>
+                                    <h3 class="font-bold text-lg mb-2 text-gray-800">급여 명세 (예상 월)</h3>
+                                    <div class="space-y-2 text-sm">
+                                        <div class="flex justify-between"><span>과세 대상 급여</span><span id="taxableBaseOutput" class="font-mono font-semibold">0 원</span></div>
+                                        <div class="flex justify-between"><span>비과세 급여</span><span id="nonTaxableTotalOutput" class="font-mono font-semibold">0 원</span></div>
+                                        <div class="flex justify-between"><span>추가 연장수당</span><span id="overtimePayOutput" class="font-mono font-semibold">0 원</span></div>
+                                        <hr><div class="flex justify-between font-bold"><span>총 급여 (세전)</span><span id="totalGrossPayOutput" class="text-blue-600">0 원</span></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-lg mb-2 mt-4 text-gray-800">공제 항목 (예상)</h3>
+                                    <div class="space-y-2 text-sm">
+                                        <div class="flex justify-between"><span>국민연금 (4.5%)</span><span id="nationalPensionOutput" class="font-mono font-semibold">0 원</span></div>
+                                        <div class="flex justify-between"><span>건강보험 (~3.545%)</span><span id="healthInsuranceOutput" class="font-mono font-semibold">0 원</span></div>
+                                        <div class="flex justify-between"><span>고용보험 (0.9%)</span><span id="employmentInsuranceOutput" class="font-mono font-semibold">0 원</span></div>
+                                        <div class="flex justify-between"><span>소득세 (간이세액)</span><span id="incomeTaxOutput" class="font-mono font-semibold">0 원</span></div>
+                                        <hr><div class="flex justify-between font-bold"><span>총 공제액</span><span id="totalDeductionsOutput" class="text-red-600">0 원</span></div>
+                                    </div>
+                                </div>
+                                <hr class="my-3">
+                                <div class="flex justify-between items-center font-bold text-xl"><span>세후 예상 실수령액</span><span id="netPayOutput" class="text-blue-700">0 원</span></div>
+                                 <div class="mt-4 p-3 bg-green-50 rounded-lg text-center shadow-inner">
+                                    <p class="text-sm font-semibold text-green-800">업무추진비 포함 실질 총 수령액 (예상)</p>
+                                    <p id="totalTakeHomeOutput" class="text-2xl font-bold text-green-700 mt-1">0 원</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="contract-section mt-6">
+                         <h2 class="text-2xl font-bold text-center text-blue-800 mb-2">🏢 근로자 1인 채용에 따른 회사의 연간 총 예상비용</h2>
+                         <p class="text-center text-gray-600 mb-6">회사는 근로자의 급여 외에도 아래와 같은 법적, 행정적 비용을 추가로 부담하고 있습니다.</p>
+                         <div class="bg-gray-100 p-6 rounded-lg space-y-4">
+                            <div class="space-y-3 text-lg">
+                                <div class="flex justify-between items-baseline">
+                                    <span class="font-semibold text-gray-700">① 근로자 연봉 (세전)</span>
+                                    <span id="annualGrossSalaryOutput" class="font-mono font-bold">0 원</span>
+                                </div>
+                                <div class="flex justify-between items-baseline">
+                                    <span class="font-semibold text-gray-700">② 법정 의무 부담금 (4대보험 + 퇴직금)</span>
+                                    <span id="totalStatutoryCostOutput" class="font-mono font-bold">0 원</span>
+                                </div>
+                                <div class="flex justify-between items-baseline">
+                                    <span class="font-semibold text-gray-700">③ 기타 관리 비용 (노무비 등)</span>
+                                    <span id="otherCostsOutput" class="font-mono font-bold">0 원</span>
+                                </div>
+                            </div>
+                            <hr class="border-gray-300 border-dashed">
+                            <div class="flex justify-between items-center bg-blue-100 p-4 rounded-md">
+                                <h4 class="text-xl font-bold text-blue-800">연간 총 집행비용 ( ① + ② + ③ )</h4>
+                                <span id="totalCompanyCostOutput" class="font-mono text-3xl font-extrabold text-blue-700">0 원</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="reference-page hidden print-block">
+                     <div class="text-center mb-6">
+                        <h1 class="text-2xl font-bold">참고 자료: 급여 상세 내역 및 회사 부담 비용 안내</h1>
+                    </div>
+                    <p class="text-sm text-center text-red-600 mt-2 mb-6 border border-red-500 p-2 rounded-md">
+                        ※ 본 자료는 입력된 값을 바탕으로 한 예상치이며, 실제 지급액은 근무 상황 및 세법 개정 등에 따라 달라질 수 있습니다. 법적 효력을 갖는 최종 급여 명세는 급여 지급일에 별도로 교부됩니다.
+                    </p>
+                    <div class="space-y-6">
+                         <div class="bg-blue-50 p-5 rounded-lg space-y-4 border">
+                                <div>
+                                    <h3 class="font-bold text-lg mb-2 text-gray-800">급여 명세 (예상 월)</h3>
+                                    <div class="space-y-2 text-sm">
+                                        <div class="flex justify-between"><span>과세 대상 급여</span><span id="ref_taxableBaseOutput" class="font-mono font-semibold">0 원</span></div>
+                                        <div class="flex justify-between"><span>비과세 급여</span><span id="ref_nonTaxableTotalOutput" class="font-mono font-semibold">0 원</span></div>
+                                        <div class="flex justify-between"><span>추가 연장수당</span><span id="ref_overtimePayOutput" class="font-mono font-semibold">0 원</span></div>
+                                        <hr><div class="flex justify-between font-bold"><span>총 급여 (세전)</span><span id="ref_totalGrossPayOutput" class="text-blue-600">0 원</span></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-lg mb-2 mt-4 text-gray-800">공제 항목 (예상)</h3>
+                                    <div class="space-y-2 text-sm">
+                                        <div class="flex justify-between"><span>국민연금 (4.5%)</span><span id="ref_nationalPensionOutput" class="font-mono font-semibold">0 원</span></div>
+                                        <div class="flex justify-between"><span>건강보험 (~3.545%)</span><span id="ref_healthInsuranceOutput" class="font-mono font-semibold">0 원</span></div>
+                                        <div class="flex justify-between"><span>고용보험 (0.9%)</span><span id="ref_employmentInsuranceOutput" class="font-mono font-semibold">0 원</span></div>
+                                        <div class="flex justify-between"><span>소득세 (간이세액)</span><span id="ref_incomeTaxOutput" class="font-mono font-semibold">0 원</span></div>
+                                        <hr><div class="flex justify-between font-bold"><span>총 공제액</span><span id="ref_totalDeductionsOutput" class="text-red-600">0 원</span></div>
+                                    </div>
+                                </div>
+                                <hr class="my-3">
+                                <div class="flex justify-between items-center font-bold text-xl"><span>세후 예상 실수령액</span><span id="ref_netPayOutput" class="text-blue-700">0 원</span></div>
+                                 <div class="mt-4 p-3 bg-green-50 rounded-lg text-center shadow-inner">
+                                    <p class="text-sm font-semibold text-green-800">업무추진비 포함 실질 총 수령액 (예상)</p>
+                                    <p id="ref_totalTakeHomeOutput" class="text-2xl font-bold text-green-700 mt-1">0 원</p>
+                                </div>
+                            </div>
+                        <div class="contract-section mt-6">
+                             <h2 class="text-2xl font-bold text-center text-blue-800 mb-2">🏢 근로자 1인 채용에 따른 회사의 연간 총 예상비용</h2>
+                             <p class="text-center text-gray-600 mb-6">회사는 근로자의 급여 외에도 아래와 같은 법적, 행정적 비용을 추가로 부담하고 있습니다.</p>
+                             <div class="bg-gray-100 p-6 rounded-lg space-y-4">
+                                <div class="space-y-3 text-lg">
+                                    <div class="flex justify-between items-baseline">
+                                        <span class="font-semibold text-gray-700">① 근로자 연봉 (세전)</span>
+                                        <span id="ref_annualGrossSalaryOutput" class="font-mono font-bold">0 원</span>
+                                    </div>
+                                    <div class="flex justify-between items-baseline">
+                                        <span class="font-semibold text-gray-700">② 법정 의무 부담금 (4대보험 + 퇴직금)</span>
+                                        <span id="ref_totalStatutoryCostOutput" class="font-mono font-bold">0 원</span>
+                                    </div>
+                                    <div class="flex justify-between items-baseline">
+                                        <span class="font-semibold text-gray-700">③ 기타 관리 비용 (노무비 등)</span>
+                                        <span id="ref_otherCostsOutput" class="font-mono font-bold">0 원</span>
+                                    </div>
+                                </div>
+                                <hr class="border-gray-300 border-dashed">
+                                <div class="flex justify-between items-center bg-blue-100 p-4 rounded-md">
+                                    <h4 class="text-xl font-bold text-blue-800">연간 총 집행비용 ( ① + ② + ③ )</h4>
+                                    <span id="ref_totalCompanyCostOutput" class="font-mono text-3xl font-extrabold text-blue-700">0 원</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 아르바이트 계약서 패널 -->
+            <div id="panel-long-term" class="tab-panel hidden">
+                 <!-- 인쇄용 계약서 제목 -->
+                 <div class="hidden print-header-logo justify-between items-center mb-8">
+                    <h1 class="text-2xl font-bold">목포오션호텔</h1>
+                    <h2 class="text-sm">주식회사 블루컴(지점)</h2>
+                 </div>
+                 <div class="contract-section space-y-4">
+                    <div class="flex flex-wrap justify-between items-center pb-4 border-b">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-2 sm:mb-0">아르바이트 근로계약서</h2>
+                         <div class="flex items-center space-x-2">
+                            <div class="flex items-center border border-gray-300 rounded-md bg-gray-50">
+                                <span class="px-2 text-gray-500 text-sm">관리번호</span>
+                                <span id="long-term-prefix" class="pl-1 pr-2 py-2 text-gray-600 text-sm font-mono"></span>
+                                <input type="text" id="contract-no-long-seq" class="input-field w-16 border-0 rounded-l-none bg-white" placeholder="01">
+                            </div>
+                            <button onclick="window.print()" class="no-print self-end bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 text-sm"><i class="fas fa-print mr-1"></i>인쇄</button>
+                        </div>
+                    </div>
+
+                    <p class="pt-4">본 계약서는 사업주 **주식회사 블루컴(지점)** (이하 "사업주")와(과) 근로자 **[근로자 성명]** (이하 "근로자") 간의 근로 조건을 정함을 목적으로 다음과 같이 근로계약을 체결한다.</p>
+                    
+                    <table class="w-full border-collapse mt-4 info-table">
+                         <thead>
+                            <tr>
+                                <th class="w-1/2 p-2 text-left bg-gray-100 font-bold text-gray-700">사업주 정보</th>
+                                <th class="w-1/2 p-2 text-left bg-gray-100 font-bold text-gray-700">근로자 정보</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="p-2"><strong>상호명:</strong> 목포오션호텔</td>
+                                <td class="p-2"><strong>성명:</strong> <input type="text" class="input-field" placeholder="근로자 성명"></td>
+                            </tr>
+                            <tr>
+                                <td class="p-2"><strong>회사명:</strong> 주식회사 블루컴(지점)</td>
+                                <td class="p-2"><strong>생년월일:</strong> <input type="date" class="input-field"></td>
+                            </tr>
+                             <tr>
+                                <td class="p-2"><strong>대표자:</strong> 기창민</td>
+                                <td class="p-2"><strong>연락처:</strong> <input type="tel" class="input-field" placeholder="근로자 연락처"></td>
+                            </tr>
+                            <tr>
+                                <td class="p-2" colspan="2"><strong>사업장 주소:</strong> 전라남도 목포시 해안로270번길 3</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2" colspan="2"><strong>근로자 주소:</strong> <input type="text" class="input-field" placeholder="근로자 주소"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="clause-section"><h3 class="clause-title">제1조 (계약기간)</h3><p class="clause-content">2025년 <input type="number" class="w-20 input-field inline" placeholder="월">월 <input type="number" class="w-20 input-field inline" placeholder="일">일 부터 20<input type="number" class="w-20 input-field inline" placeholder="년">년 <input type="number" class="w-20 input-field inline" placeholder="월">월 <input type="number" class="w-20 input-field inline" placeholder="일">일까지로 한다.</p></div>
+                    <div class="clause-section"><h3 class="clause-title">제2조 (근무장소 및 업무)</h3><p class="clause-content">목포오션호텔 내 "사업주"가 지정하는 장소에서 호텔 운영 관련 제반 업무를 수행한다.</p></div>
+                    <div class="clause-section"><h3 class="clause-title">제3조 (근로시간 및 휴게)</h3><div class="clause-content space-y-2"><p>1. **근무일**: 주 <input type="number" id="workDaysPerWeek" class="w-20 input-field inline" placeholder="일수">일 (매주: <input type="text" class="w-48 input-field inline" placeholder="요일 명시, 예: 월,화,수">)</p><p>2. **근로시간**: <input type="time" id="startTime" class="input-field inline w-32"> 부터 <input type="time" id="endTime" class="input-field inline w-32"> 까지 (1일 <input type="number" id="dailyHours" class="w-24 input-field inline bg-gray-200" placeholder="자동계산" readonly>시간)</p><p>3. **휴게시간**: 총 <input type="number" id="breakHours" class="w-24 input-field inline" placeholder="예: 1" step="0.5"> 시간 <span class="text-sm text-gray-500">(30분은 0.5)</span></p></div></div>
+                    <div class="clause-section"><h3 class="clause-title">제4조 (임금)</h3><div class="clause-content space-y-2"><p>1. **시급**: 금 10,030 원정 (※ 2025년 최저시급)</p><p>2. **주휴수당**: 1주 소정근로시간이 15시간 이상이고, 해당 주에 개근한 경우 유급 주휴수당을 지급한다.</p><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2"><div><label class="input-label">임금지급일:</label><input type="text" class="input-field" value="익월 15일"></div><div><label class="input-label">지급방법:</label><input type="text" class="input-field" placeholder="[은행명], [계좌번호]"></div></div></div></div>
+                    <div class="clause-section"><h3 class="clause-title">제5조 (기타)</h3><p class="clause-content">본 계약서에 명시되지 않은 사항은 근로기준법 등 관련 노동법령에 따른다.</p></div>
+                </div>
+                <div class="contract-section mt-6 no-print"><h2 class="text-xl sm:text-2xl font-bold mb-4 text-blue-800">📋 주휴수당 및 예상 주급 계산기</h2><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="space-y-4"><div><label for="hourlyWage" class="input-label">시급 (원)</label><input type="number" id="hourlyWage" class="input-field text-lg" value="10030"></div><div><label for="scheduledHours" class="input-label">1주 소정근로시간 (자동계산)</label><input type="number" id="scheduledHours" class="input-field text-lg bg-gray-200" placeholder="위에 근무시간 입력" readonly></div><div class="flex items-center pt-2"><input type="checkbox" id="perfectAttendance" class="h-5 w-5 rounded mr-3"><label for="perfectAttendance" class="font-medium text-gray-700">해당 주에 결근 없이 개근했나요?</label></div></div><div class="bg-blue-50 p-6 rounded-lg flex flex-col justify-center"><div class="space-y-4"><div><p class="text-sm font-medium text-gray-600">주휴수당</p><p id="holidayAllowance" class="text-2xl font-bold text-blue-700">0 원</p></div><hr><div><p class="text-sm font-medium text-gray-600">예상 주급 (세전)</p><p id="weeklyPay" class="text-3xl font-bold text-gray-900">0 원</p><p class="text-xs text-gray-500 mt-1">(기본급 + 주휴수당)</p></div></div></div></div><div id="conditionMessage" class="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded-md text-sm hidden">주휴수당은 1주 소정근로시간이 15시간 이상이고, 해당 주에 개근해야 발생합니다.</div></div>
+                <div class="signature-block text-center mt-8 pt-6 border-t"><p>본 계약을 증명하기 위하여 계약서 2부를 작성하여 "사업주"와 "근로자"가 서명 또는 날인한 후 각각 1부씩 보관한다.</p><p class="mt-4 font-bold">20<input type="text" class="input-field inline w-16">년 <input type="text" class="input-field inline w-16">월 <input type="text" class="input-field inline w-16">일</p><div class="grid grid-cols-1 sm:grid-cols-2 gap-8 mt-8"><div class="font-semibold">사업주: 주식회사 블루컴(지점) 대표이사 기창민 (서명/인)</div><div class="font-semibold">근로자: ____________________ (서명/인)</div></div></div>
+            </div>
+
+            <!-- 일일 근로 계약서 패널 -->
+            <div id="panel-daily" class="tab-panel hidden">
+                <!-- 인쇄용 계약서 제목 -->
+                <div class="hidden print-header-logo justify-between items-center mb-8">
+                    <h1 class="text-2xl font-bold">목포오션호텔</h1>
+                    <h2 class="text-sm">주식회사 블루컴(지점)</h2>
+                </div>
+                <div class="contract-section space-y-4">
+                    <div class="flex flex-wrap justify-between items-center pb-4 border-b">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-2 sm:mb-0">일일 근로계약서</h2>
+                        <div class="flex items-center space-x-2">
+                             <div class="flex items-center border border-gray-300 rounded-md bg-gray-50">
+                                <span class="px-2 text-gray-500 text-sm">관리번호</span>
+                                <span id="daily-prefix" class="pl-1 pr-2 py-2 text-gray-600 text-sm font-mono"></span>
+                                <input type="text" id="contract-no-daily-seq" class="input-field w-16 border-0 rounded-l-none bg-white" placeholder="01">
+                             </div>
+                            <button onclick="window.print()" class="no-print self-end bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 text-sm"><i class="fas fa-print mr-1"></i>인쇄</button>
+                        </div>
+                    </div>
+                     <p class="pt-4">본 계약서는 사업주 **주식회사 블루컴(지점)** (이하 "사업주")와(과) 근로자 **[근로자 성명]** (이하 "근로자") 간의 일일 단위 근로계약을 체결하고 상호 성실히 이행할 것을 약정한다.</p>
+                     <table class="w-full border-collapse mt-4 info-table">
+                         <thead>
+                            <tr>
+                                <th class="w-1/2 p-2 text-left bg-gray-100 font-bold text-gray-700">사업주 정보</th>
+                                <th class="w-1/2 p-2 text-left bg-gray-100 font-bold text-gray-700">근로자 정보</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="p-2"><strong>상호명:</strong> 목포오션호텔</td>
+                                <td class="p-2"><strong>성명:</strong> <input type="text" class="input-field" placeholder="근로자 성명"></td>
+                            </tr>
+                            <tr>
+                                <td class="p-2"><strong>연락처:</strong> 061-286-9000</td>
+                                <td class="p-2"><strong>연락처:</strong> <input type="tel" class="input-field" placeholder="근로자 연락처"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="clause-section"><h3 class="clause-title">제1조 (계약 내용)</h3><div class="clause-content space-y-2"><p>1. **근로일**: <input type="date" id="dailyWorkDate" class="input-field"></p><p>2. **근무장소**: 목포오션호텔 내 "사업주"가 지정하는 장소</p><p>3. **업무내용**: <textarea class="input-field" rows="2" placeholder="예: 연회장 서빙 보조, 주방 정리"></textarea></p></div></div>
+                    <div class="clause-section"><h3 class="clause-title">제2조 (근로시간 및 휴게)</h3><div class="clause-content space-y-2"><p>1. **근로시간**: <input type="time" id="dailyStartTime" class="input-field inline w-32"> 부터 <input type="time" id="dailyEndTime" class="input-field inline w-32"> 까지</p><p>2. **휴게시간**: 총 <input type="number" id="dailyBreakHours" class="w-24 input-field inline" placeholder="예: 1" step="0.5"> 시간 <span class="text-sm text-gray-500">(30분은 0.5)</span></p></div></div>
+                    <div class="clause-section"><h3 class="clause-title">제3조 (임금)</h3><div class="clause-content space-y-2"><p>1. **시급**: 금 <input type="number" id="dailyHourlyWage" class="w-32 input-field inline" value="10030"> 원</p><p>2. **총 지급액**: 금 <input type="text" id="totalDailyPay" class="w-40 input-field inline bg-gray-200" readonly placeholder="자동계산"> 원정 (세전)</p><p>3. **지급방법**: <input type="text" class="input-field" value="업무 종료 후 즉시 현금 지급"></p></div></div>
+                    <div class="clause-section"><h3 class="clause-title">제4조 (의무사항)</h3><p class="clause-content">"근로자"는 업무 중 알게 된 고객 정보 및 호텔의 영업 정보를 외부에 누설하지 않으며, 호텔 내 안전 수칙과 서비스 지침을 성실히 준수한다.</p></div>
+                </div>
+                <div class="signature-block text-center mt-8 pt-6 border-t"><p>본 계약을 증명하기 위하여 계약서 2부를 작성하여 서명 또는 날인한 후 각각 1부씩 보관한다.</p><p class="mt-4 font-bold" id="dailyContractDateDisplay">2025년 00월 00일</p><div class="grid grid-cols-1 sm:grid-cols-2 gap-8 mt-8"><div class="font-semibold">사업주: 주식회사 블루컴(지점) 대표이사 기창민 (서명/인)</div><div class="font-semibold">근로자: ____________________ (서명/인)</div></div></div>
+            </div>
+
+            <!-- 신규 입사자 서류 안내 패널 -->
+            <div id="panel-checklist" class="tab-panel hidden">
+                 <!-- 인쇄용 계약서 제목 -->
+                <div class="hidden print-header-logo justify-between items-center mb-8">
+                    <h1 class="text-2xl font-bold">목포오션호텔</h1>
+                    <h2 class="text-sm">주식회사 블루컴(지점)</h2>
+                </div>
+                 <div class="contract-section space-y-4">
+                    <div class="flex flex-wrap justify-between items-center pb-4 border-b">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-2 sm:mb-0">신규 입사자 제출 서류 안내</h2>
+                        <button onclick="window.print()" class="no-print self-end bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 text-sm"><i class="fas fa-print mr-1"></i>인쇄</button>
+                    </div>
+                    <div class="pt-4">
+                        <p class="font-bold text-lg">목포오션호텔의 새로운 가족이 되신 것을 진심으로 환영합니다!</p>
+                        <p class="mt-2 text-gray-700">원활한 입사 절차(급여 등록, 4대 보험 가입 등)를 위해 아래 서류를 준비하여 제출해 주시기 바랍니다. 각 서류의 필요성을 확인하신 후, 체크리스트를 활용하여 누락 없이 준비해 주시면 감사하겠습니다.</p>
+                    </div>
+
+                    <div class="clause-section">
+                        <h3 class="clause-title">1. 제출 기한 및 방법</h3>
+                        <div class="clause-content">
+                            <p><strong>- 제출 기한:</strong> 입사일로부터 3일 이내</p>
+                            <p><strong>- 제출 방법:</strong> 인사관리팀 담당자에게 직접 제출</p>
+                            <p><strong>- 문 의 처:</strong> 인사관리팀 (☎ 061-286-9000)</p>
+                        </div>
+                    </div>
+
+                    <div class="clause-section">
+                        <h3 class="clause-title">2. 제출 서류 체크리스트</h3>
+                        <div class="clause-content">
+                            <p class="text-sm mb-2">아래 목록을 확인하며 준비된 서류의 □ 에 체크(✔)하여 제출해 주시기 바랍니다.</p>
+                            <table class="w-full text-sm checklist-table">
+                                <thead>
+                                    <tr>
+                                        <th>구분</th>
+                                        <th>서류명</th>
+                                        <th>수량</th>
+                                        <th>발급 및 참고사항</th>
+                                        <th>제출</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>필수</td><td>신분증 사본</td><td>1부</td><td>주민등록번호 뒷자리가 모두 보이도록 복사/스캔</td><td><input type="checkbox"></td></tr>
+                                    <tr><td>필수</td><td>주민등록등본</td><td>1부</td><td>3개월 이내 발급본, 주민등록번호 13자리 모두 표기</td><td><input type="checkbox"></td></tr>
+                                    <tr><td>필수</td><td>급여이체용 통장 사본</td><td>1부</td><td>반드시 본인 명의의 통장 (은행, 계좌번호, 예금주 명확히)</td><td><input type="checkbox"></td></tr>
+                                    <tr><td>필수</td><td>증명사진</td><td>1매</td><td>3개월 이내 촬영 (사원증 및 내부 시스템 등록용, 파일 제출 가능)</td><td><input type="checkbox"></td></tr>
+                                    <tr><td>해당 시</td><td>가족관계증명서</td><td>1부</td><td>부양가족 등록으로 연말정산 소득공제 희망 시</td><td><input type="checkbox"></td></tr>
+                                    <tr><td>해당 시</td><td>최종학력 졸업증명서</td><td>1부</td><td>학력 증빙이 필요한 경우</td><td><input type="checkbox"></td></tr>
+                                    <tr><td>해당 시</td><td>경력증명서 (이전 직장)</td><td>1부</td><td>경력 인정을 위해 필요한 경우</td><td><input type="checkbox"></td></tr>
+                                    <tr><td>해당 시</td><td>자격증 및 면허증 사본</td><td>1부</td><td>직무와 관련된 자격/면허 보유 시</td><td><input type="checkbox"></td></tr>
+                                    <tr><td>해당 시</td><td>채용 건강검진 결과서</td><td>1부</td><td>관련 법규에 따라 건강검진이 필수인 직무의 경우</td><td><input type="checkbox"></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="clause-section">
+                        <h3 class="clause-title">※ 중요 안내사항</h3>
+                        <div class="clause-content text-sm bg-yellow-50 p-3 rounded-md">
+                            <p>• 제출하신 모든 서류는 입사 관련 업무 외 다른 목적으로 사용되지 않으며, 관련 법규에 따라 안전하게 관리 및 파기됩니다.</p>
+                            <p>• 특정 서류를 기한 내 제출하기 어려운 경우, 반드시 사전에 인사관리팀에 연락하여 사유를 설명하고 제출 가능 일자나 대체 방안에 대해 협의해 주시기 바랍니다. 사전 협의 없이 서류 제출이 지연될 경우, 급여 지급이나 4대 보험 취득이 늦어질 수 있습니다.</p>
+                        </div>
+                    </div>
+                 </div>
+            </div>
+             <!-- 인사발령장 패널 -->
+            <div id="panel-appointment" class="tab-panel hidden">
+                 <!-- 인쇄용 계약서 제목 -->
+                <div class="hidden print-header-logo justify-between items-center mb-8">
+                    <h1 class="text-2xl font-bold">목포오션호텔</h1>
+                    <h2 class="text-sm">주식회사 블루컴(지점)</h2>
+                </div>
+                 <div class="contract-section space-y-4">
+                    <div class="flex flex-wrap justify-between items-center pb-4 border-b">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-2 sm:mb-0">인사발령장</h2>
+                        <button onclick="window.print()" class="no-print self-end bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 text-sm"><i class="fas fa-print mr-1"></i>인쇄</button>
+                    </div>
+                    <div class="pt-8 space-y-6">
+                        <div class="grid grid-cols-4 gap-4 items-center">
+                            <label class="font-bold text-right">성 명 :</label>
+                            <div class="col-span-3"><input type="text" class="input-field" placeholder="홍길동"></div>
+                        </div>
+                        <div class="grid grid-cols-4 gap-4 items-center">
+                            <label class="font-bold text-right">소 속 :</label>
+                             <div class="col-span-3"><input type="text" class="input-field" placeholder="객실팀"></div>
+                        </div>
+                        <div class="grid grid-cols-4 gap-4 items-center">
+                            <label class="font-bold text-right">현 직급 :</label>
+                             <div class="col-span-3"><input type="text" class="input-field" placeholder="사원"></div>
+                        </div>
+                         <div class="border-t my-8"></div>
+                        <div class="grid grid-cols-4 gap-4 items-center">
+                            <label class="font-bold text-right">발령 후 직급 :</label>
+                             <div class="col-span-3"><input type="text" class="input-field" placeholder="주임"></div>
+                        </div>
+                         <div class="grid grid-cols-4 gap-4 items-center">
+                            <label class="font-bold text-right">발령 내용 :</label>
+                             <div class="col-span-3"><input type="text" class="input-field" value="주임으로 승진 발령함."></div>
+                        </div>
+                         <div class="grid grid-cols-4 gap-4 items-center">
+                            <label class="font-bold text-right">발령 일자 :</label>
+                             <div class="col-span-3"><input type="date" id="appointmentDate" class="input-field"></div>
+                        </div>
+                    </div>
+                    <div class="text-center mt-12 pt-8">
+                        <p id="appointmentDateDisplay" class="text-lg font-bold">2025년 00월 00일</p>
+                        <p class="mt-8 text-xl font-bold">주식회사 블루컴(지점) 대표이사 기창민 (직인)</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- 탭 기능 구현 ---
+        const tabMonthlyBtn = document.getElementById('tab-monthly-btn');
+        const tabLongTermBtn = document.getElementById('tab-long-term-btn');
+        const tabDailyBtn = document.getElementById('tab-daily-btn');
+        const tabChecklistBtn = document.getElementById('tab-checklist-btn');
+        const tabAppointmentBtn = document.getElementById('tab-appointment-btn');
+        const panelMonthly = document.getElementById('panel-monthly');
+        const panelLongTerm = document.getElementById('panel-long-term');
+        const panelDaily = document.getElementById('panel-daily');
+        const panelChecklist = document.getElementById('panel-checklist');
+        const panelAppointment = document.getElementById('panel-appointment');
+        
+        const allTabs = [tabMonthlyBtn, tabLongTermBtn, tabDailyBtn, tabChecklistBtn, tabAppointmentBtn];
+        const allPanels = [panelMonthly, panelLongTerm, panelDaily, panelChecklist, panelAppointment];
+
+        function activateTab(activeBtn, activePanel) {
+            allTabs.forEach(btn => btn.classList.remove('active'));
+            allPanels.forEach(panel => panel.classList.add('hidden'));
+            activeBtn.classList.add('active');
+            activePanel.classList.remove('hidden');
+        }
+
+        tabMonthlyBtn.addEventListener('click', () => activateTab(tabMonthlyBtn, panelMonthly));
+        tabLongTermBtn.addEventListener('click', () => activateTab(tabLongTermBtn, panelLongTerm));
+        tabDailyBtn.addEventListener('click', () => activateTab(tabDailyBtn, panelDaily));
+        tabChecklistBtn.addEventListener('click', () => activateTab(tabChecklistBtn, panelChecklist));
+        tabAppointmentBtn.addEventListener('click', () => activateTab(tabAppointmentBtn, panelAppointment));
+
+        // --- 관리번호 자동 생성 ---
+        function setContractNumbers() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const dateString = `${year}${month}${day}`;
+            document.getElementById('monthly-prefix').textContent = `M-${dateString}-`;
+            document.getElementById('long-term-prefix').textContent = `P-${dateString}-`;
+            document.getElementById('daily-prefix').textContent = `D-${dateString}-`;
+        }
+        
+        // --- 월급 계약서 스크립트 (개선) ---
+        const monthlyTotalSalaryInput = document.getElementById('monthlyTotalSalaryInput');
+        const baseSalaryInput = document.getElementById('baseSalaryInput');
+        const nonTaxableMeal = document.getElementById('nonTaxableMeal');
+        const nonTaxableCar = document.getElementById('nonTaxableCar');
+        const nonTaxableChild = document.getElementById('nonTaxableChild');
+        const businessExpenseContractInput = document.getElementById('businessExpenseContractInput');
+
+        const monthlySalaryInputCalc = document.getElementById('monthlySalaryInputCalc');
+        const nonTaxableMealCalc = document.getElementById('nonTaxableMealCalc');
+        const nonTaxableCarCalc = document.getElementById('nonTaxableCarCalc');
+        const nonTaxableChildCalc = document.getElementById('nonTaxableChildCalc');
+        const overtimeHoursInput = document.getElementById('overtimeHoursInput');
+        const businessExpenseInputCalc = document.getElementById('businessExpenseInputCalc');
+        const salaryTableSelect = document.getElementById('salaryTableSelect');
+        const is52HourContractCheckbox = document.getElementById('is52HourContract');
+
+
+        const MONTHLY_WORK_HOURS = 209;
+        const FIXED_LABOR_COST_MONTHLY = 200000; // 노무관리비 20만원 고정
+        const MINIMUM_WAGE_2025 = 10030;
+
+        // 동기화 함수
+        function syncInputs(source, targets) {
+            targets.forEach(target => {
+                if(target) target.value = source.value;
+            });
+        }
+        
+        // 입력 동기화 이벤트 리스너
+        monthlyTotalSalaryInput.addEventListener('input', () => {
+            syncInputs(monthlyTotalSalaryInput, [monthlySalaryInputCalc]);
+            salaryTableSelect.value = 'custom';
+        });
+        monthlySalaryInputCalc.addEventListener('input', () => {
+            syncInputs(monthlySalaryInputCalc, [monthlyTotalSalaryInput]);
+            salaryTableSelect.value = 'custom';
+        });
+        nonTaxableMeal.addEventListener('input', () => syncInputs(nonTaxableMeal, [nonTaxableMealCalc]));
+        nonTaxableMealCalc.addEventListener('input', () => syncInputs(nonTaxableMealCalc, [nonTaxableMeal]));
+        nonTaxableCar.addEventListener('input', () => syncInputs(nonTaxableCar, [nonTaxableCarCalc]));
+        nonTaxableCarCalc.addEventListener('input', () => syncInputs(nonTaxableCarCalc, [nonTaxableCar]));
+        nonTaxableChild.addEventListener('input', () => syncInputs(nonTaxableChild, [nonTaxableChildCalc]));
+        nonTaxableChildCalc.addEventListener('input', () => syncInputs(nonTaxableChildCalc, [nonTaxableChild]));
+        businessExpenseContractInput.addEventListener('input', () => syncInputs(businessExpenseContractInput, [businessExpenseInputCalc]));
+        businessExpenseInputCalc.addEventListener('input', () => syncInputs(businessExpenseInputCalc, [businessExpenseContractInput]));
+
+        salaryTableSelect.addEventListener('change', (e) => {
+            const value = e.target.value;
+            if (value !== 'custom') {
+                const annualSalary = parseInt(value);
+                const monthlySalary = Math.round(annualSalary / 12);
+                monthlyTotalSalaryInput.value = monthlySalary;
+                monthlySalaryInputCalc.value = monthlySalary;
+            }
+            calculateMonthlyPay();
+        });
+        is52HourContractCheckbox.addEventListener('change', calculateMonthlyPay);
+
+
+        // 모든 관련 입력 필드에 이벤트 리스너 추가
+        [monthlyTotalSalaryInput, nonTaxableMeal, nonTaxableCar, nonTaxableChild, overtimeHoursInput, businessExpenseContractInput, monthlySalaryInputCalc, nonTaxableMealCalc, nonTaxableCarCalc, nonTaxableChildCalc, businessExpenseInputCalc].forEach(input => {
+            if(input) input.addEventListener('input', calculateMonthlyPay);
+        });
+
+        function calculateMonthlyPay() {
+            const totalMonthlySalary = parseFloat(monthlyTotalSalaryInput.value) || 0;
+            const meal = parseFloat(nonTaxableMeal.value) || 0;
+            const car = parseFloat(nonTaxableCar.value) || 0;
+            const child = parseFloat(nonTaxableChild.value) || 0;
+            let weeklyOvertimeHours = parseFloat(overtimeHoursInput.value) || 0;
+            const businessExpense = parseFloat(businessExpenseInputCalc.value) || 0;
+            
+            const is52HourContract = is52HourContractCheckbox.checked;
+            const pogalClause = document.getElementById('pogal-clause');
+            const minWageWarning = document.getElementById('minWageWarning');
+            let includedOvertime = 0;
+            
+            if (is52HourContract) {
+                pogalClause.innerHTML = `2. 상기 월 급여총액은 기본근로(주 40시간)에 대한 임금과 주휴수당, 그리고 <strong>월 52.14시간(주 12시간)의 연장근로</strong> 및 월 <input type="text" class="w-16 input-field inline" value="0">시간의 야간근로에 대한 제수당이 포함된 포괄임금이다. 약정된 시간을 초과하는 근로 발생 시, 관련 법령에 따라 추가 수당을 산정하여 지급한다.`;
+                includedOvertime = 52.14;
+            } else {
+                 pogalClause.innerHTML = `2. 상기 월 급여총액은 기본근로(주 40시간)에 대한 임금과 주휴수당, 그리고 월 <input type="text" class="w-16 input-field inline" value="10">시간의 연장근로 및 월 <input type="text" class="w-16 input-field inline" value="8">시간의 야간근로에 대한 제수당이 포함된 포괄임금이다. 약정된 시간을 초과하는 근로 발생 시, 관련 법령에 따라 추가 수당을 산정하여 지급한다.`;
+                 const overtimeInput = pogalClause.querySelector('input:nth-child(1)');
+                 includedOvertime = overtimeInput ? parseFloat(overtimeInput.value) || 0 : 0;
+            }
+
+            const baseMinSalary = MONTHLY_WORK_HOURS * MINIMUM_WAGE_2025;
+            const overtimeMinSalary = includedOvertime * MINIMUM_WAGE_2025 * 1.5;
+            const legalMinSalary = Math.round(baseMinSalary + overtimeMinSalary);
+
+            if (totalMonthlySalary < legalMinSalary && totalMonthlySalary > 0) {
+                minWageWarning.classList.remove('hidden');
+                minWageWarning.textContent = `※ 경고: 포괄된 연장근로시간을 고려한 법정 최저월급은 약 ${legalMinSalary.toLocaleString()}원 입니다.`;
+            } else {
+                minWageWarning.classList.add('hidden');
+            }
+
+            const nonTaxableTotal = meal + car + child;
+            const baseSalary = totalMonthlySalary - nonTaxableTotal;
+            if(baseSalaryInput) baseSalaryInput.value = baseSalary > 0 ? baseSalary : 0;
+            
+            // 통상시급은 '월 급여 총액' 기준으로 산정
+            const ordinaryHourlyWage = totalMonthlySalary > 0 ? totalMonthlySalary / (MONTHLY_WORK_HOURS + (includedOvertime * 1.5)) : 0;
+            const extraOvertimePay = weeklyOvertimeHours * 4.345 * ordinaryHourlyWage * 1.5;
+            
+            const taxableIncome = baseSalary + extraOvertimePay;
+            const totalGrossPay = totalMonthlySalary + extraOvertimePay;
+
+            const formatter = new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' });
+
+            const nationalPension = taxableIncome * 0.045;
+            const healthInsuranceRaw = taxableIncome * 0.03545;
+            const longTermCareInsurance = healthInsuranceRaw * 0.1295;
+            const healthInsurance = healthInsuranceRaw + longTermCareInsurance;
+            const employmentInsurance = taxableIncome * 0.009;
+            const incomeTax = calculateIncomeTax(taxableIncome);
+            const totalDeductions = nationalPension + healthInsurance + employmentInsurance + incomeTax;
+            const netPay = totalGrossPay - totalDeductions;
+            const totalTakeHome = netPay + businessExpense;
+
+            const annualGrossSalary = totalGrossPay * 12;
+            const annualTaxableIncome = taxableIncome * 12;
+
+            const empNationalPension = annualTaxableIncome * 0.045;
+            const empHealthInsurance = annualTaxableIncome * 0.03545 * (1 + 0.1295);
+            const empEmploymentInsurance = annualTaxableIncome * 0.0115;
+            const empAccidentInsurance = annualTaxableIncome * 0.007;
+            const totalInsuranceCost = empNationalPension + empHealthInsurance + empEmploymentInsurance + empAccidentInsurance;
+            
+            const severancePay = annualGrossSalary / 12;
+            const totalStatutoryCost = totalInsuranceCost + severancePay;
+            
+            const otherCosts = FIXED_LABOR_COST_MONTHLY * 12;
+            const totalCompanyCost = annualGrossSalary + totalStatutoryCost + otherCosts;
+            
+            // Helper to update elements safely
+            const updateElement = (id, value) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = value;
+            };
+
+            // Update On-screen calculator and Print reference page displays
+            const ids = [
+                'taxableBaseOutput', 'nonTaxableTotalOutput', 'overtimePayOutput', 'totalGrossPayOutput',
+                'nationalPensionOutput', 'healthInsuranceOutput', 'employmentInsuranceOutput', 'incomeTaxOutput',
+                'totalDeductionsOutput', 'netPayOutput', 'totalTakeHomeOutput', 'annualGrossSalaryOutput',
+                'totalStatutoryCostOutput', 'otherCostsOutput', 'totalCompanyCostOutput'
+            ];
+            const values = [
+                baseSalary, nonTaxableTotal, extraOvertimePay, totalGrossPay,
+                nationalPension, healthInsurance, employmentInsurance, incomeTax,
+                totalDeductions, netPay, totalTakeHome, annualGrossSalary,
+                totalStatutoryCost, otherCosts, totalCompanyCost
+            ];
+
+            ids.forEach((id, index) => {
+                const formattedValue = formatter.format(Math.floor(values[index]));
+                updateElement(id, formattedValue);
+                updateElement('ref_' + id, formattedValue);
+            });
+        }
+
+        function calculateIncomeTax(monthlyTaxable) {
+            // 2025년 국세청 근로소득 간이세액표 기준 (1인 가구, 공제대상 가족 없음)
+            if (monthlyTaxable <= 0) return 0;
+            
+            let tax = 0;
+            if (monthlyTaxable < 1260000) { // 126만원 미만은 세액 0
+                tax = 0;
+            } else if (monthlyTaxable < 2500000) {
+                 tax = (monthlyTaxable * 0.02275) - 38630;
+            } else if (monthlyTaxable < 3000000) {
+                 tax = (monthlyTaxable * 0.057) - 124250;
+            } else if (monthlyTaxable < 4200000) {
+                 tax = (monthlyTaxable * 0.1045) - 265750;
+            } else if (monthlyTaxable < 6500000) {
+                 tax = (monthlyTaxable * 0.152) - 465250;
+            } else if (monthlyTaxable < 10000000) {
+                 tax = (monthlyTaxable * 0.247) - 1082750;
+            } else {
+                 tax = (monthlyTaxable * 0.247) - 1082750; // 상위 구간은 예시
+            }
+
+            const finalTax = Math.max(0, tax); // 세액이 음수가 되지 않도록 조정
+            const localTax = finalTax * 0.1; // 지방소득세 10%
+
+            return finalTax + localTax;
+        }
+
+        // --- 아르바이트 계약서 스크립트 ---
+        const workDaysPerWeekInput = document.getElementById('workDaysPerWeek');
+        const startTimeInput = document.getElementById('startTime');
+        const endTimeInput = document.getElementById('endTime');
+        const dailyHoursInput = document.getElementById('dailyHours');
+        const breakHoursInput = document.getElementById('breakHours');
+        const hourlyWageInput = document.getElementById('hourlyWage');
+        const scheduledHoursInput = document.getElementById('scheduledHours');
+        const perfectAttendanceCheckbox = document.getElementById('perfectAttendance');
+        const holidayAllowanceOutput = document.getElementById('holidayAllowance');
+        const weeklyPayOutput = document.getElementById('weeklyPay');
+        const conditionMessage = document.getElementById('conditionMessage');
+
+        function calculateWeeklyPay() {
+            const hourlyWage = parseFloat(hourlyWageInput.value) || 0;
+            const scheduledHours = parseFloat(scheduledHoursInput.value) || 0;
+            const hasPerfectAttendance = perfectAttendanceCheckbox.checked;
+            let holidayAllowance = 0;
+            const meetsConditions = scheduledHours >= 15 && hasPerfectAttendance;
+            if (meetsConditions) {
+                holidayAllowance = (scheduledHours / 5) * hourlyWage; // 주 5일 근무 기준
+                conditionMessage.classList.add('hidden');
+            } else {
+                conditionMessage.classList.remove('hidden');
+            }
+            if (!hasPerfectAttendance || scheduledHours < 15) { holidayAllowance = 0; }
+            const basePay = scheduledHours * hourlyWage;
+            const totalWeeklyPay = basePay + holidayAllowance;
+            const formatter = new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' });
+            holidayAllowanceOutput.textContent = formatter.format(holidayAllowance);
+            weeklyPayOutput.textContent = formatter.format(totalWeeklyPay);
+        }
+
+        function updateHoursAndPay() {
+            const startTime = startTimeInput.value;
+            const endTime = endTimeInput.value;
+            const breakHours = parseFloat(breakHoursInput.value) || 0;
+            const breakMinutes = breakHours * 60;
+            const workDays = parseFloat(workDaysPerWeekInput.value) || 0;
+            let dailyWorkHours = 0;
+            if (startTime && endTime) {
+                const start = new Date(`1970-01-01T${startTime}:00`);
+                const end = new Date(`1970-01-01T${endTime}:00`);
+                let diffMilliseconds = end - start;
+                if (diffMilliseconds < 0) { diffMilliseconds += 24 * 60 * 60 * 1000; }
+                const totalMinutes = diffMilliseconds / (1000 * 60);
+                const netMinutes = totalMinutes - breakMinutes;
+                dailyWorkHours = Math.max(0, netMinutes / 60);
+            }
+            dailyHoursInput.value = dailyWorkHours > 0 ? dailyWorkHours.toFixed(2) : '';
+            const weeklyHours = dailyWorkHours * workDays;
+            scheduledHoursInput.value = weeklyHours > 0 ? weeklyHours.toFixed(1) : '';
+            calculateWeeklyPay();
+        }
+
+        hourlyWageInput.addEventListener('input', calculateWeeklyPay);
+        perfectAttendanceCheckbox.addEventListener('change', calculateWeeklyPay);
+        workDaysPerWeekInput.addEventListener('input', updateHoursAndPay);
+        startTimeInput.addEventListener('input', updateHoursAndPay);
+        endTimeInput.addEventListener('input', updateHoursAndPay);
+        breakHoursInput.addEventListener('input', updateHoursAndPay);
+        
+        // --- 일일 근로 계약서 스크립트 ---
+        const dailyStartTimeInput = document.getElementById('dailyStartTime');
+        const dailyEndTimeInput = document.getElementById('dailyEndTime');
+        const dailyBreakHoursInput = document.getElementById('dailyBreakHours');
+        const dailyHourlyWageInput = document.getElementById('dailyHourlyWage');
+        const totalDailyPayOutput = document.getElementById('totalDailyPay');
+        const dailyWorkDateInput = document.getElementById('dailyWorkDate');
+        const dailyContractDateDisplay = document.getElementById('dailyContractDateDisplay');
+
+        function calculateDailyPay() {
+            const startTime = dailyStartTimeInput.value;
+            const endTime = dailyEndTimeInput.value;
+            const breakHours = parseFloat(dailyBreakHoursInput.value) || 0;
+            const breakMinutes = breakHours * 60;
+            const hourlyWage = parseFloat(dailyHourlyWageInput.value) || 0;
+            
+            let workedHours = 0;
+            if (startTime && endTime) {
+                const start = new Date(`1970-01-01T${startTime}:00`);
+                const end = new Date(`1970-01-01T${endTime}:00`);
+                let diffMilliseconds = end - start;
+                if (diffMilliseconds < 0) { diffMilliseconds += 24 * 60 * 60 * 1000; }
+                const totalMinutes = diffMilliseconds / (1000 * 60);
+                const netMinutes = totalMinutes - breakMinutes;
+                workedHours = Math.max(0, netMinutes / 60);
+            }
+
+            const totalPay = workedHours * hourlyWage;
+            const formatter = new Intl.NumberFormat('ko-KR');
+            totalDailyPayOutput.value = formatter.format(Math.round(totalPay));
+        }
+
+        function updateContractDate(dateInputId, displayId) {
+             const dateInput = document.getElementById(dateInputId);
+             const display = document.getElementById(displayId);
+             const dateValue = dateInput.value;
+             if (dateValue) {
+                const date = new Date(dateValue);
+                display.textContent = `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+            } else {
+                 const today = new Date();
+                 display.textContent = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
+            }
+        }
+        
+        const appointmentDateInput = document.getElementById('appointmentDate');
+        appointmentDateInput.addEventListener('input', () => updateContractDate('appointmentDate', 'appointmentDateDisplay'));
+        dailyWorkDateInput.addEventListener('input', () => updateContractDate('dailyWorkDate', 'dailyContractDateDisplay'));
+
+        // --- 페이지 로드 시 모든 초기화 함수 실행 ---
+        window.addEventListener('DOMContentLoaded', () => {
+            setContractNumbers();
+            calculateMonthlyPay();
+            updateHoursAndPay(); // 아르바이트 계산기 초기화
+            calculateDailyPay();
+            updateContractDate('dailyWorkDate', 'dailyContractDateDisplay');
+            updateContractDate('appointmentDate', 'appointmentDateDisplay');
+            activateTab(tabMonthlyBtn, panelMonthly);
+        });
+    </script>
+
+    <script>
+      /* ============================================================
+         IFRAME ↔ PARENT BRIDGE (postMessage)
+         - parent → { type:'getSnapshot', wanted:'MONTHLY|PARTTIME|DAILY' }
+         - parent → { type:'switchTab', target:'MONTHLY|PARTTIME|DAILY' }
+         - child  → { type:'contractSnapshotResult', data:{ ... } }
+         ------------------------------------------------------------
+         이 블록만 원본 파일 마지막에 추가하세요.
+      ============================================================ */
+
+      function _activeType() {
+        // 현재 보이는 탭을 타입으로 매핑
+        if (!document.getElementById('panel-monthly').classList.contains('hidden')) return 'MONTHLY'
+        if (!document.getElementById('panel-long-term').classList.contains('hidden')) return 'PARTTIME'
+        if (!document.getElementById('panel-daily').classList.contains('hidden'))   return 'DAILY'
+        return 'MONTHLY'
+      }
+
+      function _switchTo(kind) {
+        // 기존 activateTab 재활용
+        if (kind === 'MONTHLY') activateTab(tabMonthlyBtn, panelMonthly)
+        else if (kind === 'PARTTIME') activateTab(tabLongTermBtn, panelLongTerm)
+        else if (kind === 'DAILY') activateTab(tabDailyBtn, panelDaily)
+      }
+
+      function _valById(id) {
+        const el = document.getElementById(id)
+        if (!el) return null
+        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT') {
+          return el.value ?? ''
+        }
+        return (el.textContent || '').trim()
+      }
+
+      function _safeISO(y, m, d) {
+        // 숫자(또는 비어있음) → YYYY-MM-DD 또는 null
+        if (!y || !m || !d) return null
+        const Y = String(y).padStart(4,'0')
+        const M = String(m).padStart(2,'0')
+        const D = String(d).padStart(2,'0')
+        return `${Y}-${M}-${D}`
+      }
+
+      function gatherMonthly() {
+        // 관리번호: "M-YYYYMMDD-" + seq
+        const prefix = _valById('monthly-prefix') || ''
+        const seq    = _valById('contract-no-monthly-seq') || ''
+        // 제1조(계약기간) 입력란: 년/월/일 세 칸
+        // 현재 템플릿은 "2025년 [월][일]" 형태라 시작일만 확정 → end_date=null
+        const y = new Date().getFullYear()
+        const m = (document.querySelector('#panel-monthly .clause-section input[placeholder="월"]')?.value)||''
+        const d = (document.querySelector('#panel-monthly .clause-section input[placeholder="일"]')?.value)||''
+        const start = _safeISO(y, m, d)
+
+        const salaryMonthly = parseFloat(_valById('monthlyTotalSalaryInput')) || 0
+        const hourlyWageDaily = null
+
+        return {
+          type: 'MONTHLY',
+          contract_no: prefix + (seq || ''),
+          start_date: start,
+          end_date: null,
+          salary_monthly: salaryMonthly,
+          hourly_wage: hourlyWageDaily,
+          // 필요시 추가로 저장해둘 수 있는 값들:
+          non_tax_meal: parseFloat(_valById('nonTaxableMeal')) || 0,
+          non_tax_car: parseFloat(_valById('nonTaxableCar')) || 0,
+          non_tax_child: parseFloat(_valById('nonTaxableChild')) || 0,
+          // 원본 화면 값 일부 메모
+          notes: '월급 계약서 v1.5 스냅샷',
+        }
+      }
+
+      function gatherParttime() {
+        const prefix = _valById('long-term-prefix') || ''
+        const seq    = _valById('contract-no-long-seq') || ''
+        // 제1조(계약기간): 2025년 [월][일] ~ 20[년][월][일]
+        // 시작일은 올해 기준으로 만들고, 종료일은 입력칸에서 가져옴
+        const y1 = new Date().getFullYear()
+        const m1 = (document.querySelector('#panel-long-term .clause-section input[placeholder="월"]')?.value)||''
+        const d1 = (document.querySelector('#panel-long-term .clause-section input[placeholder="일"]')?.value)||''
+        const start = _safeISO(y1, m1, d1)
+
+        const y2 = (document.querySelector('#panel-long-term .clause-section input[placeholder="년"]')?.value)||''
+        const m2 = (document.querySelectorAll('#panel-long-term .clause-section input[placeholder="월"]')[1]?.value)||''
+        const d2 = (document.querySelectorAll('#panel-long-term .clause-section input[placeholder="일"]')[1]?.value)||''
+        const end  = _safeISO(y2 ? '20'+String(y2).padStart(2,'0') : '', m2, d2)
+
+        const wage = parseFloat(_valById('hourlyWage')) || 0
+
+        return {
+          type: 'PARTTIME',
+          contract_no: prefix + (seq || ''),
+          start_date: start,
+          end_date: end,
+          salary_monthly: null,
+          hourly_wage: wage,
+          notes: '아르바이트 계약서 v1.5 스냅샷',
+        }
+      }
+
+      function gatherDaily() {
+        const prefix = _valById('daily-prefix') || ''
+        const seq    = _valById('contract-no-daily-seq') || ''
+        const start  = _valById('dailyWorkDate') || null
+        const wage   = parseFloat(_valById('dailyHourlyWage')) || 0
+
+        return {
+          type: 'DAILY',
+          contract_no: prefix + (seq || ''),
+          start_date: start,
+          end_date: start, // 일일 계약은 시작=종료로 저장
+          salary_monthly: null,
+          hourly_wage: wage,
+          notes: '일일 계약서 v1.5 스냅샷',
+        }
+      }
+
+      function gatherSnapshot(wanted) {
+        const kind = wanted || _activeType()
+        if (kind === 'MONTHLY') return gatherMonthly()
+        if (kind === 'PARTTIME') return gatherParttime()
+        if (kind === 'DAILY')   return gatherDaily()
+        return gatherMonthly()
+      }
+
+      window.addEventListener('message', (ev) => {
+        const msg = ev.data
+        if (!msg || typeof msg !== 'object') return
+
+        if (msg.type === 'getSnapshot') {
+          const data = gatherSnapshot(msg.wanted)
+          window.parent.postMessage({ type:'contractSnapshotResult', data }, '*')
+        }
+
+        if (msg.type === 'switchTab') {
+          _switchTo(msg.target)
+        }
+      })
+    </script>
+
+
+</body>
+</html>
+

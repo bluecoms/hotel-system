@@ -1,0 +1,41 @@
+// ===============================================================
+// overlay.scss — 모달/오버레이/트랜지션 통합 토큰 (2025)
+// ===============================================================
+
+:root {
+  /* 레이어 우선순위 */
+  --z-toast: 3000;
+  --z-dialog: 2000;
+  --z-dropdown: 1500;
+  --z-drawer: 900;
+  --z-overlay: 1000;
+
+  /* 트랜지션 */
+  --ease-soft: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --fade-time: .18s;
+  --slide-time: .22s;
+
+  /* 배경 블러 */
+  --overlay-bg: rgba(0,0,0,.35);
+  --overlay-blur: blur(3px);
+}
+
+/* 모달 공통 백드롭 */
+.v-overlay__scrim {
+  backdrop-filter: var(--overlay-blur);
+  background: var(--overlay-bg) !important;
+  transition: opacity var(--fade-time) var(--ease-soft);
+}
+
+/* 페이드 인아웃 */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity var(--fade-time) var(--ease-soft);
+}
+.fade-enter-from, .fade-leave-to { opacity: 0 }
+
+/* 위/아래 슬라이드 */
+.slide-up-enter-active, .slide-up-leave-active {
+  transition: all var(--slide-time) var(--ease-soft);
+}
+.slide-up-enter-from { opacity: 0; transform: translateY(16px); }
+.slide-up-leave-to { opacity: 0; transform: translateY(16px); }

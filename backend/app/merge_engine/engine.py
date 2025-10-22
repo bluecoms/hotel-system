@@ -1,11 +1,13 @@
 # app/merge_engine/engine.py
 # -*- coding: utf-8 -*-
+# version: 2025-10-12 Phase 3 Final
 """
-SSOT Merge Engine (Phase 2 Final)
+SSOT Merge Engine (Phase 3 Final)
 ──────────────────────────────────────────────
 - CSV normalize → parse → hash → DB persist
 - Dry-run 및 실제 반영 통합
-- 감사 로그(record_merge_audit) 자동 기록 포함
+- settings_merge 정책 적용
+- 감사 로그(record_merge_audit) 연동
 """
 
 from typing import Dict, Any, List
@@ -15,7 +17,8 @@ from sqlalchemy.orm import Session
 from app.core.hashing import make_key_hash, make_record_hash
 from app.db.session import get_db
 from app.merge_engine.repository import persist_records, MergeAuditRepository
-from app.merge_engine.audit import record_merge_audit  # ✅ 신규 연결
+from app.merge_engine.audit import record_merge_audit
+from app.core import settings_merge
 
 log = logging.getLogger(__name__)
 
@@ -71,14 +74,18 @@ def _preview_rows(records: List[Any]) -> List[Dict[str, Any]]:
 def run_merge(adapter, form: Dict[str, Any], file_bytes: bytes) -> Dict[str, Any]:
     """
     SSOT Merge Engine
-    - normalize → parse → dry_run or persist
-    - Phase 2: persist_records() 통한 Canon/History 반영
+    - normalize → parse → (dry_run ? preview : persist)
+    - Phase 3: settings_merge 정책 반영 + 감사 로그 연동
     """
     if adapter is None:
         log.error("[MERGE_ENGINE] adapter is None")
         return {"ok": False, "error": "adapter not provided"}
 
-    # 1️⃣ CSV Normalize
+    # 정책 주입(서비스에서 넣어준 경우 우선), 없으면 settings에서 조회
+    dataset = getattr(adapter, "dataset", form.get("dataset") or "")
+    policy = form.get("_policy") or settings_merge.get_policy(dataset or "rooms_status")
+
+    # 1) CSV Normalize
     raw_text = _decode_bytes(file_bytes)
     try:
         canon_csv = adapter.normalize(
@@ -90,35 +97,38 @@ def run_merge(adapter, form: Dict[str, Any], file_bytes: bytes) -> Dict[str, Any
         log.exception(f"[MERGE_ENGINE] normalize error: {e}")
         return {"ok": False, "error": f"normalize error: {e}"}
 
-    # 2️⃣ Parse normalized CSV → record objects
+    # 2) Parse normalized CSV → record objects
     try:
         records = list(adapter.parse(canon_csv))
     except Exception as e:
         log.exception(f"[MERGE_ENGINE] parse error: {e}")
         return {"ok": False, "error": f"parse error: {e}"}
 
-    mode = adapter.merge_mode(form)
+    # 3) 실행 모드 결정
+    # - form.mode 우선 → adapter.merge_mode(form) → policy.merge_mode
+    mode = (str(form.get("mode") or "").strip().lower()) or adapter.merge_mode(form) or policy.get("merge_mode", "snapshot")
     is_dry_run = str(form.get("dry_run", "1")) == "1"
     property_code = form.get("property_code", "MOP")
-    dataset = adapter.dataset
+    dataset = dataset or adapter.dataset
     business_date = form.get("business_date")
 
+    # Dry-run: DB 반영 없이 미리보기
     if is_dry_run:
-        log.info(f"[MERGE_ENGINE] Dry-run ({len(records)} rows, mode={mode})")
+        log.info(f"[MERGE_ENGINE] Dry-run ({len(records)} rows, mode={mode}, dataset={dataset})")
         return {
             "ok": True,
             "dry_run": True,
             "dataset": dataset,
             "mode": mode,
+            "policy": {k: policy.get(k) for k in ("merge_mode", "missing_policy")},
             "counts": {"rows": len(records)},
             "preview": _preview_rows(records),
         }
 
-    # ───────────────────────────────────────────────
-    # 3️⃣ 실제 DB 반영 (Phase 2)
-    # ───────────────────────────────────────────────
+    # 4) 실제 DB 반영
+    db: Session = None
     try:
-        db: Session = next(get_db())
+        db = next(get_db())
     except Exception as e:
         log.exception(f"[MERGE_ENGINE] DB session acquire failed: {e}")
         return {"ok": False, "error": f"db-session error: {e}"}
@@ -130,13 +140,15 @@ def run_merge(adapter, form: Dict[str, Any], file_bytes: bytes) -> Dict[str, Any
             property_code=property_code,
             business_date=business_date,
             mode=mode,
-            missing_policy=getattr(adapter, "default_missing_policy", "soft_delete"),
+            missing_policy=policy.get("missing_policy", getattr(adapter, "default_missing_policy", "soft_delete")),
             source_kind=form.get("source_kind", "daily"),
             session_id=form.get("session_id"),
             version_no=form.get("version_no"),
         )
 
-        result = persist_records(db, batch.id, [r.payload for r in records])
+        # NOTE: Phase 3 시그니처 → persist_records(db, dataset, batch_id, records)
+        result = persist_records(db, dataset, batch.id, [r.payload for r in records])
+
         total_rows = (
             result.get("inserted", 0)
             + result.get("upserted", 0)
@@ -151,28 +163,34 @@ def run_merge(adapter, form: Dict[str, Any], file_bytes: bytes) -> Dict[str, Any
 
         audit_repo.finalize_batch(batch, status="DONE", record_count=total_rows, notes=notes)
 
-        # ✅ 감사 로그 기록
+        # 감사 로그 (변경 상세가 없는 경우 빈 리스트 전달)
         try:
             record_merge_audit(
                 db=db,
                 dataset=dataset,
                 property_code=property_code,
                 mode=mode,
-                missing_policy=getattr(adapter, "default_missing_policy", "soft_delete"),
+                missing_policy=policy.get("missing_policy", getattr(adapter, "default_missing_policy", "soft_delete")),
                 source_kind=form.get("source_kind", "daily"),
-                changes=result.get("changes", []),
+                changes=result.get("changes", []),  # persist_records에서 상세 제공 안하면 빈 리스트
                 session_id=form.get("session_id"),
                 version_no=form.get("version_no"),
+                dry_run=False,
             )
         except Exception as e:
+            # 감사 로깅 실패는 치명적 에러로 보지 않음
             log.warning(f"[MERGE_ENGINE] record_merge_audit failed: {e}")
 
         log.info(
-            "[MERGE_ENGINE] Applied dataset=%s, rows=%s, upserted=%s",
+            "[MERGE_ENGINE] Applied dataset=%s rows=%s (inserted=%s, upserted=%s, noop=%s) batch_id=%s",
             dataset,
+            total_rows,
             result.get("inserted", 0),
             result.get("upserted", 0),
+            result.get("noop", 0),
+            batch.id,
         )
+
         return {
             "ok": True,
             "dry_run": False,
@@ -186,3 +204,10 @@ def run_merge(adapter, form: Dict[str, Any], file_bytes: bytes) -> Dict[str, Any
     except Exception as e:
         log.exception(f"[MERGE_ENGINE] persist error: {e}")
         return {"ok": False, "error": f"persist error: {e}"}
+    finally:
+        # get_db() 제너레이터를 직접 사용했으므로 여기서 close 보장
+        try:
+            if db is not None:
+                db.close()
+        except Exception:
+            pass
