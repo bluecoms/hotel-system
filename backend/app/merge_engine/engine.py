@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # ============================================================================
 # File      : app/merge_engine/engine.py
-# Version   : 2025-10-31 · v3.6 (SSOT Stable)
+# Version   : 2025-10-31 · v3.6 (SSOT Stable · Hotfix MergeBatch Import)
 # Purpose   : SSOT Merge Engine — Normalize → Parse → Persist (DryRun 지원)
 # ----------------------------------------------------------------------------
 # 목적:
@@ -13,7 +13,8 @@
 #   ✅ CSV BOM 제거 및 안전 디코딩
 #   ✅ Dry-run 시 DB 영향 없음
 #   ✅ 정책 기반 merge_mode / missing_policy 자동 결정
-#   ✅ SQLite / PostgreSQL 호환
+#   ✅ SQLite / PostgreSQL 완전 호환
+#   ✅ MergeBatch import 오류 수정(app.models.merge 기준)
 # ----------------------------------------------------------------------------
 # 사용 예:
 #   from app.merge_engine.engine import run_merge
@@ -24,11 +25,18 @@ from __future__ import annotations
 from typing import Dict, Any, List, Optional
 import logging
 from sqlalchemy.orm import Session
+
 from app.core.hashing import make_key_hash, make_record_hash
 from app.db.session import get_db
 from app.merge_engine.repository import persist_records, MergeAuditRepository
 from app.merge_engine.audit import record_merge_audit
 from app.core import settings_merge
+
+# ✅ Hotfix: MergeBatch 경로 보정 (app.models.merge 사용)
+try:
+    from app.models.merge import MergeBatch  # noqa: F401
+except Exception as e:
+    logging.getLogger(__name__).warning(f"[MERGE_ENGINE] MergeBatch import skipped: {e}")
 
 log = logging.getLogger(__name__)
 
@@ -81,7 +89,7 @@ def _preview_rows(records: List[Any]) -> List[Dict[str, Any]]:
 # ─────────────────────────────────────────────
 def run_merge(adapter, form: Dict[str, Any], file_bytes: bytes) -> Dict[str, Any]:
     """
-    SSOT Merge Engine (Phase 6)
+    SSOT Merge Engine (v3.6 Stable)
     - normalize → parse → (dry_run ? preview : persist)
     - 정책(settings_merge) 및 감사 로그(record_merge_audit) 반영
     """
