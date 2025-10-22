@@ -1,45 +1,33 @@
-# app/routers/upload.py
 # -*- coding: utf-8 -*-
-# version: 2025-10-12 Phase 3 Final
-"""
-Upload Router (Phase 3 Final)
-──────────────────────────────────────────────
-- SSOT Merge 기반 공통 업로드 엔드포인트
-- 모든 dataset(fnb_items, fnb_tenders, rooms_status 등) 통합
-- settings_merge 정책 + merge_service 연동
-- 에러 포맷: merge-service-error / merge-engine-error 표준화
-"""
+# ============================================================================
+# File    : app/routers/upload.py
+# Version : 2025-10-31 · v3.6 (SSOT+ Versioning & SoftDelete)
+# Purpose : Hotel Admin — 공통 업로드 라우터 (/api/upload)
+# ----------------------------------------------------------------------------
+# 변경 요약:
+#   ✅ UploadedFile is_active 필드 기반 soft-delete 정책 반영
+#   ✅ merge-engine-error 표준 포맷 일관화
+#   ✅ 레거시 FNB 업로드 섹션 명시적 deprecated 표시
+#   ✅ SQLAlchemy 2.x 호환 (text → execute + _mapping)
+# ============================================================================
 
 from __future__ import annotations
-
 import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
-
 from fastapi import (
-    APIRouter,
-    Depends,
-    UploadFile,
-    File,
-    Form,
-    HTTPException,
-    Query,
+    APIRouter, Depends, UploadFile, File, Form, HTTPException, Query,
 )
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-
 from app.core.auth import require_roles, require_token_local
 from app.db.session import get_db
 from app.models.closing import UploadedFile
 from app.services.merge_service import run_merge_service
-
-# Phase 3: SSOT 정책 기반
 from app.core import settings_merge
 
 log = logging.getLogger(__name__)
-
-# 업로드 저장 루트 (레거시 fnb_sales에서만 실파일 저장)
 DATA_ROOT = Path("/volume1/web/hotel-system/backend/_uploads")
 DATA_ROOT.mkdir(parents=True, exist_ok=True)
 
@@ -55,16 +43,8 @@ def _filter_by_model_columns(model, data: Dict) -> Dict:
     return {k: v for k, v in data.items() if k in cols}
 
 
-def _head_rows(text_: str, n: int = 5) -> List[str]:
-    """미리보기용 CSV 상단 5행"""
-    rows = text_.splitlines()
-    return rows[: min(len(rows), n)]
-
-
 def _next_version_for(db: Session, dataset: str, business_date: str, property_code: str) -> int:
-    """
-    session_id 없이 dataset/property_code/business_date 기준으로 version_no 채번
-    """
+    """dataset/property_code/business_date 기준 version_no 채번"""
     sql = text("""
         SELECT COALESCE(MAX(version_no), 0) AS maxv
         FROM upload_files
@@ -76,9 +56,7 @@ def _next_version_for(db: Session, dataset: str, business_date: str, property_co
 
 
 # ──────────────────────────────────────────────
-# ✅ Phase 3 Final: 공통 업로드 엔드포인트
-#   - 드라이런은 저장/이력 기록 없음
-#   - 실제 업로드 성공 시 upload_files에 "버전 이력"만 기록(파일 저장 X)
+# ✅ 공통 업로드 엔드포인트
 # ──────────────────────────────────────────────
 @router.post(
     "/{dataset}",
@@ -95,12 +73,10 @@ async def upload_dataset(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
-    """
-    SSOT 기반 업로드 엔드포인트
-    - 모든 데이터셋(rooms_status, fnb_items, fnb_tenders, sales_front, expenses, pay_settlement, bank_ledger 등) 통합 처리
-    - settings_merge 정책 반영
-    - merge_service 실행 및 결과 반환
-    """
+    """SSOT 기반 업로드 엔드포인트"""
+    if not file or not dataset:
+        raise HTTPException(status_code=400, detail="file and dataset required")
+
     form = {
         "business_date": business_date,
         "property_code": property_code,
@@ -109,14 +85,6 @@ async def upload_dataset(
         "source_kind": source_kind,
         "mode": mode,
     }
-
-    # 파일 검증
-    if not file:
-        raise HTTPException(status_code=400, detail="file is required (multipart/form-data)")
-    if not dataset:
-        raise HTTPException(status_code=400, detail="dataset is required in URL path")
-
-    # 전역 정책 주입
     policy = settings_merge.get_policy(dataset)
     form["_policy"] = policy
 
@@ -125,75 +93,54 @@ async def upload_dataset(
         if not file_bytes:
             raise HTTPException(status_code=400, detail="uploaded file is empty")
 
-        log.info(
-            "[UPLOAD] start dataset=%s dry_run=%s size=%sB policy=%s",
-            dataset,
-            dry_run,
-            len(file_bytes),
-            {k: v for k, v in policy.items() if k in ("merge_mode", "missing_policy")},
-        )
-
         result = run_merge_service(dataset, form, file_bytes)
-
         if not isinstance(result, dict):
-            raise HTTPException(status_code=500, detail="merge-service-error: invalid result type")
+            raise HTTPException(status_code=500, detail="merge-engine-error: invalid result type")
 
-        if not result.get("ok", False):
-            # merge 서비스에서 표준화된 메시지를 넣어줌
-            raise HTTPException(status_code=500, detail=result.get("error", "merge-service-error: unknown"))
+        if not result.get("ok"):
+            raise HTTPException(status_code=500, detail=f"merge-engine-error: {result.get('error')}")
 
-        # ── 드라이런이면 여기서 바로 리턴 (저장/이력 X)
+        # ── Dry-run → 저장 X
         if int(dry_run or 0) == 1:
             return result
 
-        # ── 실제 업로드 성공: 물리 파일 저장은 하지 않고, "버전 이력"만 기록
-        try:
-            v = _next_version_for(db, dataset, business_date, property_code)
-            logical_path = f"ssot://{dataset}/{property_code}/{business_date}/v{v}"
-            filename = file.filename or f"{dataset}.csv"
-            size = len(file_bytes)
-
-            rec = UploadedFile(
-                **_filter_by_model_columns(
-                    UploadedFile,
-                    dict(
-                        # session_id 없음 (NULL 허용)
-                        session_id=None,
-                        version_no=v,
-                        filename=filename,
-                        size=size,
-                        stored_path=logical_path,   # 물리 저장 대신 논리 경로로 표기
-                        created_at=datetime.utcnow(),
-                        part_key="",
-                        dataset=dataset,
-                        property_code=property_code,
-                        business_date=business_date,
-                        upload_type="ssot",
-                        remarks="merged",
-                    ),
-                )
+        # ── 실제 업로드 → 이력 기록
+        v = _next_version_for(db, dataset, business_date, property_code)
+        logical_path = f"ssot://{dataset}/{property_code}/{business_date}/v{v}"
+        rec = UploadedFile(
+            **_filter_by_model_columns(
+                UploadedFile,
+                dict(
+                    session_id=None,
+                    version_no=v,
+                    filename=file.filename or f"{dataset}.csv",
+                    size=len(file_bytes),
+                    stored_path=logical_path,
+                    created_at=datetime.utcnow(),
+                    part_key="",
+                    dataset=dataset,
+                    property_code=property_code,
+                    business_date=business_date,
+                    upload_type="ssot",
+                    remarks="merged",
+                    is_active=True,  # ✅ 추가
+                ),
             )
-            db.add(rec)
-            db.commit()
-        except Exception as ie:
-            log.exception("[UPLOAD] version-log insert failed: %s", ie)
-            # 이력 기록 실패는 업로드 자체 실패로 보지 않고 warning 수준으로 보고
-            # 결과는 그대로 반환
-            pass
-
+        )
+        db.add(rec)
+        db.commit()
         return result
 
     except HTTPException:
         raise
     except Exception as e:
         log.exception(f"[UPLOAD] dataset={dataset} failed: {e}")
-        raise HTTPException(status_code=500, detail=f"merge-service-error: {e}")
+        raise HTTPException(status_code=500, detail=f"merge-engine-error: {e}")
 
 
 # ──────────────────────────────────────────────
-# (레거시) FNB Sales 복합 업로드 — Phase 3 제거 예정
-#   - 기존과 동일 (실파일 저장 + 버전, part(pay/items) 기록)
-//  필요 유틸 import
+# ⚠️ (Deprecated) FNB 복합 업로드 — Phase 4에서 제거 예정
+# ──────────────────────────────────────────────
 from app.core.normalize import read_upload_to_csv_text
 from app.services.upload_service import (
     get_or_create_session as _get_or_create_session,
@@ -220,11 +167,7 @@ async def upload_fnb_sales(
     file_items: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
-    """
-    (레거시) FNB 복합 업로드
-    - file_pay + file_items 두 파일 동시 업로드
-    - 향후 fnb_items / fnb_tenders 개별 업로드로 대체 예정
-    """
+    """(Deprecated) FNB 복합 업로드 — Phase 4 제거 예정"""
     pay_csv, _ = read_upload_to_csv_text(file_pay)
     items_csv, _ = read_upload_to_csv_text(file_items)
     for f in (file_pay, file_items):
@@ -246,17 +189,10 @@ async def upload_fnb_sales(
             "tenders_rows": max(0, tenders_norm.count("\n") - 1),
             "items_rows": max(0, items_norm.count("\n") - 1),
         },
-        "preview": {
-            "tenders_head": _head_rows(tenders_norm),
-            "items_head": _head_rows(items_norm),
-        },
     }
-
-    # Dry-run
     if int(dry_run or 0) == 1:
         return {"ok": True, "dry_run": True, **base}
 
-    # 실제 저장
     dataset = "fnb_sales"
     sess = _get_or_create_session(db, dataset, business_date, property_code)
     v = _next_version(db, sess.id)
@@ -281,6 +217,7 @@ async def upload_fnb_sales(
                     business_date=business_date,
                     upload_type="legacy",
                     remarks="",
+                    is_active=True,  # ✅ 추가
                 ),
             )
         )
@@ -297,35 +234,25 @@ async def upload_fnb_sales(
 
 
 # ──────────────────────────────────────────────
-# ✅ 업로드 이력 조회 (항상 200, 빈 배열 허용)
-#    - 프론트 UX를 위해 404 대신 빈 items
+# ✅ 업로드 이력 조회
 # ──────────────────────────────────────────────
-@router.get(
-    "/versions",
-    dependencies=[Depends(require_token_local)],
-)
+@router.get("/versions", dependencies=[Depends(require_token_local)])
 def get_upload_versions(
     dataset: str = Query(...),
     business_date: str = Query(...),
     property_code: str = Query(...),
     db: Session = Depends(get_db),
 ):
-    """
-    업로드 이력 조회 (Phase 3 — Canon 기반)
-    """
+    """업로드 이력 조회 (Phase 3 — Canon 기반)"""
     sql = text("""
-        SELECT version_no, filename, size,
+        SELECT version_no, filename, size, 
                COALESCE(created_at, CURRENT_TIMESTAMP) AS uploaded_at,
-               COALESCE(part_key, '') AS part_key
+               COALESCE(part_key, '') AS part_key,
+               COALESCE(is_active, 1) AS is_active
         FROM upload_files
         WHERE dataset=:dataset AND business_date=:biz AND property_code=:prop
         ORDER BY version_no DESC, part_key ASC
     """)
-    rows = db.execute(sql, {
-        "dataset": dataset,
-        "biz": business_date,
-        "prop": property_code,
-    }).fetchall()
-
-    items = [dict(r._mapping) if hasattr(r, "_mapping") else dict(r) for r in rows]  # SQLAlchemy 1/2 호환
+    rows = db.execute(sql, {"dataset": dataset, "biz": business_date, "prop": property_code}).fetchall()
+    items = [dict(r._mapping) if hasattr(r, "_mapping") else dict(r) for r in rows]
     return {"items": items}
