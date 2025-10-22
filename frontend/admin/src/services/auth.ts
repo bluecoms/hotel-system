@@ -1,20 +1,26 @@
 // ============================================================================
 // File    : src/services/auth.ts
-// Version : 2025-10-31 · v3.3 (httpEx Migration · Safe/Retry/Timeout Added)
-// Purpose : Hotel Admin — 인증/유저/권한 API 래퍼 (httpEx 기반 강화판)
+// Version : 2025-10-31 · v3.5 (SSOT Phase 3.5 Stable · me Removed)
+// Purpose : Hotel Admin — 인증/유저/권한 API 래퍼 (httpEx 기반 완성판)
 // ----------------------------------------------------------------------------
-// 변경 요약:
-//   ✅ http → httpEx 로 전환 (Abort/Timeout/Retry 지원, 완전 호환)
-//   ✅ DeptAccess (부서 기반 접근권한) 완전 대응
-//   ✅ 레거시 RoleAccess(/user-roles) 폴백 경로 유지
-//   ✅ 코드 및 주석 전체 정비 — Phase6 SSOT 완성판
+// 목적:
+//   • 프런트엔드에서 사용하는 모든 인증/권한 관련 API 호출을 httpEx로 일원화.
+//   • /api/me 라우터 완전 폐지 이후에도 동일한 구조로 동작하도록 설계.
+//   • DeptAccess 기반 접근제어(roles/access) 구조를 기준으로 실효 권한 계산.
+//   • RoleAccess 기반(레거시) API는 완전 호환 유지하되 Phase 7에서 폐기 예정.
 // ----------------------------------------------------------------------------
-// 설계 원칙:
-//   • 모든 경로는 상대경로로 전달 (httpEx 내부에서 /api prefix 자동 부착)
-//   • 인증 헤더(X-Internal-Token)는 http.ts/httpEx가 자동 추가
-//   • Abort/Timeout/Retry 정책은 httpEx 기본값으로 제어 가능
-//   • Zod safeParse 등 schema 검증도 선택적으로 사용 가능
-//   • Phase6 이후: DeptAccess 기반으로 RoleAccess는 점진 폐기 예정
+// 특징:
+//   ✅ httpEx 통합 → fetch 기반, Abort/Timeout/Retry 자동 처리
+//   ✅ X-Internal-Token 헤더 자동 첨부
+//   ✅ /api/me 제거 → 폴백 dept='MOP' 적용
+//   ✅ DeptAccess/RoleAccess 구조 완전 SSOT 정합
+//   ✅ Pydantic v2 및 FastAPI SSOT 스키마와 동기화
+// ----------------------------------------------------------------------------
+// 사용 예시:
+//   import { login, getEffectiveDeptAccess, canAccessRoute } from '@/services/auth'
+//   const { token, user } = await login('admin', '1234')
+//   const eff = await getEffectiveDeptAccess()
+//   if (canAccessRoute('contracts', eff)) { ... }
 // ============================================================================
 
 import { httpEx } from '@/services/http-extended'
@@ -23,11 +29,11 @@ import { httpEx } from '@/services/http-extended'
 // 타입 정의
 // ─────────────────────────────────────────────
 
-/** 사용자 정보 스키마 */
+/** 사용자 기본 정보 스키마 (백엔드 UserOut과 일치) */
 export type User = {
   email: string
   name?: string
-  roles: string[]          // SUPERADMIN/ADMIN/HRADMIN/USER 등
+  roles: string[]          // SUPERADMIN / ADMIN / HRADMIN / USER 등
   dept?: string            // 부서 코드 (예: FR/HK/AD 등)
 }
 
@@ -37,14 +43,14 @@ export type LoginResp = {
   user: User
 }
 
-/** DeptAccess(부서 기반 권한) 레코드 */
+/** DeptAccess(부서 기반 접근권한) 레코드 */
 export type DeptAccessRecord = {
   route_name: string
-  access_scope: string[]   // 예: ["ALL_VIEW","FR","HK"] / ["ALL_EDIT"] …
+  access_scope: string[]   // 예: ["ALL_VIEW","FR","HK"] / ["ALL_EDIT"] 등
   created_at?: string
 }
 
-/** 서버 계산 기준 실효 접근권한 */
+/** 서버 계산 기준 실효 접근권한 (DeptAccess 기반) */
 export type EffectiveDeptAccess = {
   dept?: string
   access: Record<string, string[]>
@@ -64,35 +70,45 @@ export type EffectiveMap = Record<
 >
 
 // ─────────────────────────────────────────────
-// 인증 (로그인 / 내정보 / 비밀번호 관련 API)
+// 인증 관련 API (로그인 / 비밀번호)
 // ─────────────────────────────────────────────
 
-/** 로그인 */
+/**
+ * 로그인
+ * @param email 사용자 이메일
+ * @param password 비밀번호
+ * @returns LoginResp { token, user }
+ */
 export async function login(email: string, password: string): Promise<LoginResp> {
   return await httpEx.postJSON('login', { email, password })
 }
 
-/** 내 정보 조회 */
-export async function getMe(): Promise<{ user: User } | User> {
-  return await httpEx.getJSON('me')
-}
-
-/** 내 비밀번호 변경 */
+/**
+ * 비밀번호 변경
+ * @param current_password 현재 비밀번호
+ * @param new_password 새 비밀번호
+ */
 export async function changePassword(current_password: string, new_password: string) {
   return await httpEx.postJSON('password/change', { current_password, new_password })
 }
 
-/** 관리자용 비밀번호 초기화 */
+/**
+ * 관리자 비밀번호 초기화
+ * @param email 사용자 이메일
+ * @param new_password 새 비밀번호 (옵션)
+ */
 export async function resetUserPassword(email: string, new_password?: string) {
   return await httpEx.postJSON('users/password/reset', { email, new_password })
 }
 
 // ─────────────────────────────────────────────
-// DeptAccess (부서 기반 접근권한 API)
-//   → Phase6 권장 구조 (roles/access)
+// DeptAccess (부서 기반 권한 API) — Phase 6 표준
 // ─────────────────────────────────────────────
 
-/** DeptAccess 목록 조회 */
+/**
+ * DeptAccess 목록 조회
+ * @returns DeptAccessRecord[]
+ */
 export async function listDeptAccess(): Promise<DeptAccessRecord[]> {
   const res = await httpEx.getJSON<any>('roles/access')
   if (Array.isArray(res)) return res
@@ -100,42 +116,69 @@ export async function listDeptAccess(): Promise<DeptAccessRecord[]> {
   return []
 }
 
-/** DeptAccess Upsert */
+/**
+ * DeptAccess Upsert
+ * @param route_name 라우트 이름
+ * @param access_scope 접근 범위 배열
+ */
 export async function upsertDeptAccess(route_name: string, access_scope: string[]) {
   return await httpEx.putJSON('roles/access', { route_name, access_scope })
 }
 
-/** 실효 접근권한 조회(서버 계산 우선) */
+/**
+ * 실효 접근권한 조회 (서버 우선 → 폴백 dept='MOP')
+ * @description
+ *   1. 서버에서 계산된 roles/access/effective 우선 사용.
+ *   2. 실패 시 DeptAccess 목록 기반으로 폴백 계산.
+ *   3. /api/me 제거 이후에는 기본 지점코드('MOP')로 dept 대체.
+ */
 export async function getEffectiveDeptAccess(): Promise<EffectiveDeptAccess> {
   try {
-    // 서버에서 계산된 실효 권한 가져오기
+    // ① 서버 계산 결과 사용
     const eff = await httpEx.getJSON<EffectiveDeptAccess>('roles/access/effective')
     const dept = (eff as any)?.dept
     const access = (eff as any)?.access || {}
     return { dept, access }
   } catch {
-    // 서버 제공 안될 시 폴백 계산
-    const [me, list] = await Promise.all([getMe(), listDeptAccess()])
-    const user: User = (me as any)?.user || (me as any)
-    return computeEffectiveDeptFromList(list, user?.dept)
+    // ② 폴백 계산: /api/me 삭제로 기본 지점 MOP 사용
+    const list = await listDeptAccess()
+    const dept = 'MOP'
+    return computeEffectiveDeptFromList(list, dept)
   }
 }
 
-/** 라우트 접근 여부 판별 */
+/**
+ * 특정 라우트 접근 가능 여부 판별
+ * @param routeName 라우트 이름
+ * @param effective EffectiveDeptAccess
+ */
 export function canAccessRoute(routeName: string, effective: EffectiveDeptAccess): boolean {
   if (!routeName) return false
   const scopes = effective?.access?.[routeName] || []
   const dept = (effective?.dept || '').toUpperCase()
-  return scopes.includes('ALL_EDIT') || scopes.includes('ALL_VIEW') || (!!dept && scopes.includes(dept))
+  return (
+    scopes.includes('ALL_EDIT') ||
+    scopes.includes('ALL_VIEW') ||
+    (!!dept && scopes.includes(dept))
+  )
 }
 
-/** 수정 가능 여부만 별도 판단 */
+/**
+ * 수정 가능 여부만 판별
+ * @param routeName 라우트 이름
+ * @param effective EffectiveDeptAccess
+ */
 export function canEditRoute(routeName: string, effective: EffectiveDeptAccess): boolean {
   const scopes = effective?.access?.[routeName] || []
   return scopes.includes('ALL_EDIT')
 }
 
-/** DeptAccess 목록 + 부서코드 기반 실효 권한 폴백 계산 */
+/**
+ * DeptAccess 목록 + 부서코드 기반 폴백 계산
+ * @param list DeptAccessRecord[]
+ * @param userDept 사용자 부서 코드 (옵션)
+ * @returns EffectiveDeptAccess
+ */
 function computeEffectiveDeptFromList(list: DeptAccessRecord[], userDept?: string): EffectiveDeptAccess {
   const dept = (userDept || '').toUpperCase()
   const access: Record<string, string[]> = {}
@@ -147,17 +190,17 @@ function computeEffectiveDeptFromList(list: DeptAccessRecord[], userDept?: strin
 }
 
 // ─────────────────────────────────────────────
-// (레거시) RoleAccess 기반 API (점진 폐기 예정)
-//   • 기존 /api/user-roles*, /api/users/roles/access 경로 호환용
-//   • Phase7 이후 삭제 예정
+// (레거시) RoleAccess 기반 API — Phase 7 삭제 예정
 // ─────────────────────────────────────────────
 
-/** (레거시) 실효 권한 조회 */
+/**
+ * (레거시) 실효 권한 조회
+ * @returns EffectiveMap
+ */
 export async function getEffectiveRoleAccess(): Promise<EffectiveMap> {
   try {
     return await httpEx.getJSON('user-roles/effective')
   } catch (e: any) {
-    // 서버 404 시 호환 폴백
     if (e?.status === 404) {
       const list = await fetchRoleListCompat()
       return computeEffectiveFrom(list)
@@ -166,7 +209,10 @@ export async function getEffectiveRoleAccess(): Promise<EffectiveMap> {
   }
 }
 
-/** (레거시) RoleAccess 목록 조회 */
+/**
+ * (레거시) RoleAccess 목록 조회
+ * @returns RoleAccessRecord[]
+ */
 export async function listRoleAccess(): Promise<RoleAccessRecord[]> {
   try {
     return await httpEx.getJSON('users/roles/access')
@@ -179,7 +225,10 @@ export async function listRoleAccess(): Promise<RoleAccessRecord[]> {
   }
 }
 
-/** (레거시) RoleAccess Upsert (서버 없으면 오류) */
+/**
+ * (레거시) RoleAccess Upsert
+ * @param data RoleAccessRecord
+ */
 export async function upsertRoleAccess(data: RoleAccessRecord) {
   try {
     return await httpEx.putJSON('users/roles/access', data)
@@ -191,7 +240,10 @@ export async function upsertRoleAccess(data: RoleAccessRecord) {
   }
 }
 
-/** (레거시) 실효 권한 조회 (외부호환용 단축) */
+/**
+ * (레거시) 실효 권한 조회 (단축 별칭)
+ * @returns EffectiveMap
+ */
 export async function getEffectiveAccess(): Promise<EffectiveMap> {
   return await getEffectiveRoleAccess()
 }
@@ -200,7 +252,10 @@ export async function getEffectiveAccess(): Promise<EffectiveMap> {
 // 내부 유틸 — RoleAccess 호환 변환 및 계산
 // ─────────────────────────────────────────────
 
-/** /api/user-roles 응답을 정규화 (배열 또는 {items:[]} 형태 허용) */
+/**
+ * /api/user-roles 응답을 정규화 (배열 또는 {items:[]} 형태 허용)
+ * @returns any[]
+ */
 async function fetchRoleListCompat(): Promise<any[]> {
   const res: any = await httpEx.getJSON<any>('user-roles')
   if (Array.isArray(res)) return res
@@ -208,7 +263,11 @@ async function fetchRoleListCompat(): Promise<any[]> {
   return []
 }
 
-/** RoleAccessRecord 스키마 정규화 */
+/**
+ * RoleAccessRecord 스키마 정규화
+ * @param rows any[]
+ * @returns RoleAccessRecord[]
+ */
 function normalizeToRoleAccess(rows: any[]): RoleAccessRecord[] {
   return rows
     .map((r) => {
@@ -221,9 +280,19 @@ function normalizeToRoleAccess(rows: any[]): RoleAccessRecord[] {
     .filter((x) => x.role_code && x.route_name)
 }
 
-/** RoleAccessRecord[] → EffectiveMap 계산 */
+/**
+ * RoleAccessRecord[] → EffectiveMap 계산
+ * @param rows RoleAccessRecord[]
+ * @returns EffectiveMap
+ */
 function computeEffectiveFrom(rows: RoleAccessRecord[]): EffectiveMap {
-  const LEVEL_ORDER: Record<string, number> = { none: 0, view: 1, edit: 2, admin: 3, 'view-only': 1 }
+  const LEVEL_ORDER: Record<string, number> = {
+    none: 0,
+    view: 1,
+    edit: 2,
+    admin: 3,
+    'view-only': 1,
+  }
   const eff: EffectiveMap = {}
   for (const r of rows) {
     const role = String(r.role_code || '').toUpperCase()
@@ -237,3 +306,7 @@ function computeEffectiveFrom(rows: RoleAccessRecord[]): EffectiveMap {
   }
   return eff
 }
+
+// ============================================================================
+// End of File — src/services/auth.ts
+// ============================================================================

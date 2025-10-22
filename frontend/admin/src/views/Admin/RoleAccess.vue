@@ -1,25 +1,24 @@
 <!-- ============================================================================
   File    : src/views/Admin/RoleAccess.vue
-  Version : v2025.10-FINAL (Dept Access + Matrix UI Polished · Shields Restored)
+  Version : 2025.10-31 · v3.6 (DeptAccess Unified · Property Header Sync)
   Purpose : Hotel Admin — 부서별 접근권한 + 팀장관리 통합 화면
   ------------------------------------------------------------------------------
-  • 개요
-      - SUPERADMIN 전용: 조직/업무 권한을 "부서" 단위로 직관 관리
-      - 탭1: 부서별 접근권한 (메뉴별 접근 부서/ALL 설정 + 색상 시각화)
-      - 탭2: 부서별 팀장 관리 (카드 → 직원 선택 → 팀장 지정)
-  • 정책
-      - SUPERADMIN: 별도 설정 불필요(항상 전체 접근)
-      - ADMIN/USER 역할은 계정 생성 시 고정, 이 화면은 "부서/범위"만 설정
-      - ALL(보기) / ALL(권한) 예외 경로 지원 (예: 내 정보/비밀번호 변경 등)
-  • 연동 백엔드
-      GET    /api/roles/access                     → [{ route_name, access_scope[] }, ...]
-      PUT    /api/roles/access                     → { route_name, access_scope[] }
-      GET    /api/master/departments               → 부서 목록
-      PUT    /api/master/departments/{id}/leader   → 팀장 지정
-      GET    /api/employees/by-department/{code}   → 부서별 직원
-  • 주의
-      - v-data-table headers에 access_scope 열이 반드시 존재해야 행 내 방패(4칸)가 렌더됨
-      - 행 색상은 access_scope의 우선순위(ALL_EDIT → ALL_VIEW → 첫 부서코드)로 적용
+  개요:
+    - SUPERADMIN 전용: 조직/업무 권한을 “부서 단위”로 직관 관리
+    - 탭1: 부서별 접근권한 (메뉴별 접근 부서/ALL 설정 + 색상 시각화)
+    - 탭2: 부서별 팀장 관리 (카드 → 직원 선택 → 팀장 지정)
+  ------------------------------------------------------------------------------
+  연동 백엔드:
+    • GET  /api/roles/access                     → [{ route_name, access_scope[] }]
+    • PUT  /api/roles/access                     → { route_name, access_scope[] }
+    • GET  /api/master/departments               → 부서 목록
+    • PUT  /api/master/departments/{id}/leader   → 팀장 지정
+    • GET  /api/employees/by-department/{code}   → 부서별 직원 (지점코드는 헤더로 전달)
+  ------------------------------------------------------------------------------
+  주의:
+    - property_code는 쿼리가 아닌 X-Property-Code 헤더로 자동 전달됨.
+    - DeptAccess API는 items 없이 단순 배열을 반환함.
+    - v-data-table headers에 access_scope 열 필수.
 ============================================================================ -->
 
 <template>
@@ -58,13 +57,13 @@
 
           <!-- 색상 식별 코드 -->
           <div class="d-flex align-center flex-wrap gap-3 mb-6">
-            <v-chip color="blue"   text-color="white" size="small" label>ALL 보기</v-chip>
-            <v-chip color="red"    text-color="white" size="small" label>ALL 권한</v-chip>
-            <v-chip color="teal"   text-color="white" size="small" label>FR (프런트)</v-chip>
+            <v-chip color="blue" text-color="white" size="small" label>ALL 보기</v-chip>
+            <v-chip color="red" text-color="white" size="small" label>ALL 권한</v-chip>
+            <v-chip color="teal" text-color="white" size="small" label>FR (프런트)</v-chip>
             <v-chip color="orange" text-color="white" size="small" label>HK (하우스키핑)</v-chip>
             <v-chip color="indigo" text-color="white" size="small" label>AD (경영지원)</v-chip>
             <v-chip color="purple" text-color="white" size="small" label>FM (시설관리)</v-chip>
-            <v-chip color="grey"   text-color="white" size="small" label>MG (관리)</v-chip>
+            <v-chip color="grey" text-color="white" size="small" label>MG (관리)</v-chip>
           </div>
 
           <!-- 메뉴 테이블 -->
@@ -78,7 +77,7 @@
             hover
             :item-class="rowColorClass"
           >
-            <!-- 방패 4칸: 부서/ALL 선택 -->
+            <!-- 방패 4칸 -->
             <template #item.access_scope="{ item }">
               <div class="d-flex flex-wrap align-center gap-3">
                 <template v-for="shield in 4" :key="shield">
@@ -206,8 +205,8 @@ const menuMatrix = ref<{ label: string; route: string }[]>([])
 const accessMatrix = reactive<Record<string, string[][]>>({})
 
 const deptOptions = [
-  { label: 'ALL (보기)',  value: 'ALL_VIEW' },
-  { label: 'ALL (권한)',  value: 'ALL_EDIT' },
+  { label: 'ALL (보기)', value: 'ALL_VIEW' },
+  { label: 'ALL (권한)', value: 'ALL_EDIT' },
   { label: 'FR (프런트)', value: 'FR' },
   { label: 'HK (하우스키핑)', value: 'HK' },
   { label: 'AD (경영지원)', value: 'AD' },
@@ -215,18 +214,8 @@ const deptOptions = [
   { label: 'MG (관리)', value: 'MG' },
 ]
 
-const colorMap: Record<string, string> = {
-  ALL_VIEW: 'blue-lighten-5',
-  ALL_EDIT: 'red-lighten-5',
-  FR: 'teal-lighten-5',
-  HK: 'orange-lighten-5',
-  AD: 'indigo-lighten-5',
-  FM: 'purple-lighten-5',
-  MG: 'grey-lighten-4',
-}
-
-function flattenMenu(list:any[]): any[] {
-  const result:any[] = []
+function flattenMenu(list: any[]): any[] {
+  const result: any[] = []
   for (const m of list) {
     if (m.children) result.push(...flattenMenu(m.children))
     else if (m.routeName) result.push({ label: m.label, route: m.routeName })
@@ -236,28 +225,24 @@ function flattenMenu(list:any[]): any[] {
 
 async function loadMenuMatrix() {
   menuMatrix.value = flattenMenu(menu)
-
-  // 초기 방패 4칸 배열 준비
   for (const m of menuMatrix.value) accessMatrix[m.route] = [[], [], [], []]
 
-  // 기존 저장된 scope 로드
-  const res:any = await http.get('/roles/access')
+  // DeptAccess 목록 로드
+  const res: any = await http.get('/roles/access')
   const existing = Array.isArray(res) ? res : (res.items ?? [])
   for (const r of existing) {
     if (!accessMatrix[r.route_name]) accessMatrix[r.route_name] = [[], [], [], []]
-    // 단일 리스트를 1번 방패에 기본 주입 (복수 방패 선택 시 updateAccess에서 병합 저장)
     accessMatrix[r.route_name][0] = (r.access_scope || []).slice(0)
   }
 }
 
-async function updateAccess(item:any) {
-  // 4칸 데이터 병합 → 중복 제거 → 저장
+async function updateAccess(item: any) {
   const merged = [...new Set(accessMatrix[item.route].flat().filter(Boolean))]
   await http.put('/roles/access', { route_name: item.route, access_scope: merged })
   toast.success(`${item.label} 저장됨 (${merged.join(', ')})`)
 }
 
-function rowColorClass(item:any) {
+function rowColorClass(item: any) {
   const scopes = [...new Set(accessMatrix[item.route].flat())]
   if (scopes.includes('ALL_EDIT')) return 'row-all-edit'
   if (scopes.includes('ALL_VIEW')) return 'row-all-view'
@@ -271,8 +256,8 @@ function rowColorClass(item:any) {
 const departments = ref<any[]>([])
 const employees = ref<any[]>([])
 const empLoading = ref(false)
-const selectedDept = ref<any|null>(null)
-const selectedLeaderId = ref<number|null>(null)
+const selectedDept = ref<any | null>(null)
+const selectedLeaderId = ref<number | null>(null)
 
 const empHeaders = [
   { title: '사번', key: 'emp_no', width: 100 },
@@ -283,29 +268,32 @@ const empHeaders = [
 ]
 
 async function loadDepartments() {
-  const r:any = await http.get('/master/departments')
+  const r: any = await http.get('/master/departments')
   departments.value = r?.items || []
 }
-function selectDept(dept:any) {
+
+function selectDept(dept: any) {
   selectedDept.value = dept
   selectedLeaderId.value = null
   loadEmployees(dept)
 }
-async function loadEmployees(dept:any) {
+
+async function loadEmployees(dept: any) {
   empLoading.value = true
-  const res:any = await http.get(`/employees/by-department/${dept.dept_code}?property_code=MOP`)
+  const res: any = await http.get(`/employees/by-department/${dept.dept_code}`)
   employees.value = res?.items || []
   empLoading.value = false
 }
+
 async function confirmLeader() {
-  const emp = employees.value.find(e => e.id === selectedLeaderId.value)
+  const emp = employees.value.find((e) => e.id === selectedLeaderId.value)
   if (!emp || !selectedDept.value) return
   const ok = await confirmApi.ask(`'${emp.name}' 직원을 ${selectedDept.value.dept_name} 팀장으로 지정할까요?`)
   if (!ok) return
   await http.put(`/master/departments/${selectedDept.value.id}/leader`, { leader_emp_id: emp.id })
   toast.success('팀장이 지정되었습니다.')
   await loadDepartments()
-  selectedDept.value = departments.value.find(d => d.id === selectedDept.value.id)
+  selectedDept.value = departments.value.find((d) => d.id === selectedDept.value.id)
 }
 
 /* ─────────────────────────────
