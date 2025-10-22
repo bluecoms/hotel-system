@@ -1,6 +1,6 @@
 # ============================================================================
 # File      : app/models/property.py
-# Version   : 2025.10-22 v1.0 (Stable / Property Master Model)
+# Version   : 2025.10-31 v1.1 (Stable · extend_existing Fix)
 # Purpose   : Hotel Admin — Property(지점) 마스터 모델 (SQLAlchemy ORM)
 # ----------------------------------------------------------------------------
 # 목적:
@@ -20,6 +20,11 @@
 # Note:
 #   • 기본 지점은 Mokpo Ocean Hotel (code='MOP')
 #   • 데이터는 마스터 테이블로 관리되며 프런트 Property Selector 에 노출됨
+# ----------------------------------------------------------------------------
+# 추가 설명 (v1.1):
+#   ✅ Alembic/AutoLoader 중복 로드 시 "Table 'properties' is already defined" 경고 방지
+#   ✅ __table_args__ = {'extend_existing': True} 지정 → 동일 Base.metadata 내 재등록 허용
+#   ✅ DB 스키마나 데이터에 영향 없음 (경고만 억제)
 # ============================================================================
 from __future__ import annotations
 from datetime import datetime
@@ -32,23 +37,47 @@ class Property(Base):
     """호텔 지점(Property) 마스터"""
 
     __tablename__ = "properties"
+    __table_args__ = {"extend_existing": True}  # ✅ 중복 테이블 정의 허용 (경고 억제)
 
     # ─────────────────────────────
     # 기본 컬럼
     # ─────────────────────────────
-    code: Mapped[str] = mapped_column(String(10), primary_key=True, doc="지점 코드 (예: MOP)")
-    name: Mapped[str] = mapped_column(String(120), nullable=False, doc="지점명 (예: Mokpo Ocean Hotel)")
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, doc="활성 여부")
+    code: Mapped[str] = mapped_column(
+        String(10),
+        primary_key=True,
+        doc="지점 코드 (예: MOP)",
+    )
+    name: Mapped[str] = mapped_column(
+        String(120),
+        nullable=False,
+        doc="지점명 (예: Mokpo Ocean Hotel)",
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        nullable=False,
+        doc="활성 여부",
+    )
 
     # ─────────────────────────────
     # 타임스탬프
     # ─────────────────────────────
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False, doc="생성일시(UTC)"
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+        doc="생성일시(UTC)",
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False, doc="수정일시(UTC)"
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+        doc="수정일시(UTC)",
     )
 
+    # ─────────────────────────────
+    # 표현식 (디버깅용)
+    # ─────────────────────────────
     def __repr__(self) -> str:
         return f"<Property(code='{self.code}', name='{self.name}', active={self.is_active})>"

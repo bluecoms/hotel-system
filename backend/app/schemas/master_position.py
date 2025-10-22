@@ -1,6 +1,6 @@
 # ============================================================================
 # File      : app/schemas/master_position.py
-# Version   : 2025.10-28 · v1.0 (Initial Create)
+# Version   : 2025.10-31 · v1.1 (Pydantic v2 Fix · orm_mode 제거)
 # Purpose   : Hotel Admin — Master Position Schema (직위 기준정보)
 # ----------------------------------------------------------------------------
 # 목적:
@@ -8,10 +8,10 @@
 #   • 기준정보(Master) 공통 CRUD 규격을 따름
 # ----------------------------------------------------------------------------
 # 구조:
-#   - MasterPositionBase : 공통 필드 정의
-#   - MasterPositionIn   : 생성/수정 입력용
-#   - MasterPositionOut  : 조회/출력용
-#   - MasterPositionOption : 프런트 v-select 옵션용(title/value)
+#   - MasterPositionBase     : 공통 필드 정의
+#   - MasterPositionIn       : 생성/수정 입력용
+#   - MasterPositionOut      : 조회/출력용
+#   - MasterPositionOption   : 프런트 v-select 옵션(title/value)
 # ----------------------------------------------------------------------------
 # 연계:
 #   • Model : app.models.master_position.MasterPosition
@@ -34,25 +34,27 @@ class MasterPositionBase(BaseModel):
 # 입력 (생성/수정용)
 # ─────────────────────────────────────────────
 class MasterPositionIn(MasterPositionBase):
+    """입력용 스키마"""
     pass
 
 # ─────────────────────────────────────────────
 # 출력 (조회용)
 # ─────────────────────────────────────────────
 class MasterPositionOut(MasterPositionBase):
+    """조회용 스키마"""
     id: int
     created_at: datetime
 
     class Config:
-        from_attributes = True
-        orm_mode = True
+        from_attributes = True  # ✅ Pydantic v2 호환 (orm_mode 대체)
 
 # ─────────────────────────────────────────────
 # v-select 옵션용
 # ─────────────────────────────────────────────
 class MasterPositionOption(BaseModel):
+    """프런트엔드 v-select 옵션용"""
     value: str
     title: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True  # ✅ orm_mode → from_attributes

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # ============================================================================
 # File      : app/routers/master_ota_channels.py
-# Version   : 2025.10-25 · v1.0 (Initial · SSOT Standard)
-# Purpose   : Hotel Admin — Master OTA Channel Router (/api/master/ota-channels)
+# Version   : 2025.10-31 · v1.2 (Prefix Final Fix · SSOT Stable)
+# Purpose   : Hotel Admin — Master OTA Channel Router (/api/master/ota-channel)
 # ----------------------------------------------------------------------------
 # 목적:
 #   • OTA 채널(Booking.com, Agoda, Expedia 등) 기준정보 관리
@@ -18,11 +18,10 @@
 #   • app/schemas/master_ota_channel.py  → MasterOtaChannelIn / MasterOtaChannelOut
 #   • app/routers/__init__.py            → include_all_routers(app)
 # ----------------------------------------------------------------------------
-# 백엔드 계약:
-#   - GET    /api/master/ota-channels
-#   - POST   /api/master/ota-channels
-#   - PUT    /api/master/ota-channels/{id}
-#   - DELETE /api/master/ota-channels/{id}
+# 변경 이력:
+#   v1.0 · 2025-10-25 : 최초 작성
+#   v1.1 · 2025-10-31 : '/api' 제거 (중복 방지)
+#   v1.2 · 2025-10-31 : ✅ prefix에서 'master/' 제거 (이중 prefix 완전 해소)
 # ============================================================================
 from fastapi import APIRouter, Depends, HTTPException, Path, Body
 from sqlalchemy.orm import Session
@@ -36,8 +35,8 @@ from app.core.auth import require_roles, require_token_local
 # Router 선언
 # ─────────────────────────────────────────────
 router = APIRouter(
-    prefix="/api/master/ota-channels",
-    tags=["master-ota-channels"],
+    prefix="/ota-channel",  # ✅ 'master/' 제거 → '/api/master/ota-channel' 로 정확히 매핑
+    tags=["master-ota-channel"],
     dependencies=[
         Depends(require_token_local),
         Depends(require_roles(["ADMIN", "SUPERADMIN"])),
@@ -56,7 +55,6 @@ router = APIRouter(
 def list_ota_channels(db: Session = Depends(get_db)):
     """OTA 채널 전체 목록 조회"""
     return db.query(MasterOtaChannel).order_by(MasterOtaChannel.code.asc()).all()
-
 
 # ─────────────────────────────────────────────
 # 2️⃣ 채널 등록
@@ -77,7 +75,6 @@ def create_ota_channel(body: MasterOtaChannelIn, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(row)
     return row
-
 
 # ─────────────────────────────────────────────
 # 3️⃣ 채널 수정
@@ -102,7 +99,6 @@ def update_ota_channel(
     db.commit()
     db.refresh(row)
     return row
-
 
 # ─────────────────────────────────────────────
 # 4️⃣ 채널 삭제

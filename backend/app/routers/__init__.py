@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
 # ============================================================================
 # File      : app/routers/__init__.py
-# Version   : 2025.10-30 · v4.0 (SSOT Final Stable · Positions & Titles Sync)
+# Version   : 2025.10-31 · v4.3 (OTA Dup Fix · SSOT Final Stable)
 # Purpose   : Hotel Admin — FastAPI Router Auto-Export (Unified Loader)
 # ----------------------------------------------------------------------------
 # 목적:
@@ -9,27 +8,11 @@
 #   • ImportError 발생 시 skip 처리로 안전 초기화 지원
 #   • FastAPI 앱에서 include_all_routers(app) 호출 시 전체 자동 include
 # ----------------------------------------------------------------------------
-# 설계 원칙:
-#   • 우선순위 로드 순서: auth → system → user/org → domain → reports → hr → master → etc
-#   • HR 모듈(hr.py) 및 hr_bridge.py 포함
-#   • Master 계열(10종) 라우터 통합 유지:
-#       departments, ranks, titles, positions, empno_policy, salary_grade,
-#       property, bank, hk_status, ota_channel
-#   • ✅ DeptAccess(RoleAccess) + EmployeeContract(직원 계약) 구조 반영
-# ----------------------------------------------------------------------------
-# 운영 방침:
-#   • OTA “수수료(commission)”는 운영 데이터로 분리됨 (/api/ota/commissions)
-#     → Master 계열(MasterOtaCommission)에서는 제외 (SSOT 원칙)
-#   • Base.metadata 및 router include 순서는 명시적 선언 우선
-# ----------------------------------------------------------------------------
-# 변경 로그:
-#   v3.4 (2025-10-23) ✅ MasterBank 라우터 추가 (7종 완성)
-#   v3.5 (2025-10-25) ✅ MasterHkStatus 추가 (8종 완성)
-#   v3.6 (2025-10-25) ✅ MasterOtaChannel 추가 (9종 완성)
-#   v3.9 (2025-10-28) ✅ MasterPosition 추가 (10종 완성)
-#   v4.0 (2025-10-30) ✅ MasterTitle/Position 정식 확정 + SSOT 최종 통합판
+# 개선 사항 (v4.3)
+#   ✅ me 라우터 완전 제거 (Phase 3 이후 불필요 기능)
+#   ✅ master_ota_channels 중복 로드 방지 (prefix 중복 근본 해결)
+#   ✅ 순환참조 및 로드 순서 안정화
 # ============================================================================
-
 import logging
 import pkgutil
 from importlib import import_module
@@ -39,24 +22,24 @@ __all__: List[str] = []
 log = logging.getLogger("app.routers")
 
 # ──────────────────────────────────────────────
-# 1️⃣ 우선순위 라우터 정의 (명시 순서 보장)
+# 1️⃣ 우선순위 라우터 정의 (필수 항목만 명시)
 # ──────────────────────────────────────────────
 _PREFERRED_MODULES: Dict[str, str] = {
     # 인증 / 시스템
     "auth": "auth",
     "health": "health",
     "menu": "menu",
-    "me": "me",
+    # "me": "me",   # ❌ 제거됨 (Phase 3 이후 폐기)
 
     # 사용자 / 조직 / 권한
     "users": "users",
     "employees": "employees",
     "user_roles": "user_roles",
-    "roles": "roles",                  # ✅ DeptAccess + Role 관리 라우터
+    "roles": "roles",
     "keywords": "keywords",
 
     # 인사 / HR / 계약
-    "contracts": "contracts",          # ✅ 직원 계약 관리
+    "contracts": "contracts",
     "employee_files": "employee_files",
     "hr_bridge": "hr_bridge",
 
@@ -64,25 +47,21 @@ _PREFERRED_MODULES: Dict[str, str] = {
     "upload": "upload",
     "closing": "closing",
     "ota": "ota",
+    # ⚠️ master_ota_channels 는 자동탐색 전용 (여기 명시 금지)
 
     # 리포트 계열
     "reports": "reports",
     "reports_sales": "reports_sales",
     "reports_bank": "reports_bank",
 
-    # ✅ 마스터 계열 (기준정보 10종 완성)
-    "master": "master",                         # 허브 라우터 (통합 include)
-    "master_departments": "master_departments", # 부서
-    "master_ranks": "master_ranks",             # 직급
-    "master_titles": "master_titles",           # 직책
-    "master_positions": "master_positions",     # 직위
+    # ✅ 마스터 핵심만 명시 (나머지는 자동탐색)
+    "master_departments": "master_departments",
+    "master_ranks": "master_ranks",
     "master_empno_policy": "master_empno_policy",
     "master_salary_grade": "master_salary_grade",
-    "master_property": "master_property",       # 지점(호텔)
-    "master_bank": "master_bank",               # 은행코드
-    "master_hk_status": "master_hk_status",     # 하우스키핑 상태 코드
-    "master_ota_channel": "master_ota_channel", # OTA 채널 기준정보
-    # NOTE: master_ota_commission 제거 — 운영 라우트(/api/ota/commissions)로 분리됨
+    "master_property": "master_property",
+    "master_bank": "master_bank",
+    "master_hk_status": "master_hk_status",
 
     # 감사 / 회계 / 병합엔진 / 기타
     "audit": "audit",
@@ -92,14 +71,17 @@ _PREFERRED_MODULES: Dict[str, str] = {
 }
 
 # ──────────────────────────────────────────────
-# 2️⃣ router 객체 안전 로드 함수
+# 2️⃣ router 안전 로드 함수
 # ──────────────────────────────────────────────
 def _load_router(modname: str) -> Optional[object]:
     """routers.<modname> 에서 router 객체를 안전하게 로드"""
     try:
         mod = import_module(f".{modname}", __name__)
     except Exception as e:
-        log.warning(f"[routers:init] skip {modname}: {e}")
+        if modname == "me":
+            log.debug(f"[routers:init] skip {modname}: intentionally removed")
+        else:
+            log.warning(f"[routers:init] skip {modname}: {e}")
         return None
     return getattr(mod, "router", None)
 
@@ -116,8 +98,10 @@ for _mod, _export_name in _PREFERRED_MODULES.items():
 # ──────────────────────────────────────────────
 # 4️⃣ 나머지 자동 탐색 (Base, 내부 제외)
 # ──────────────────────────────────────────────
+_SKIP = {"me", "master_ota_channels"}  # ✅ 중복 로드 방지 대상 추가
+
 for _, name, _ in pkgutil.iter_modules(__path__):  # type: ignore[name-defined]
-    if name.startswith("_") or name in _PREFERRED_MODULES:
+    if name.startswith("_") or name in _PREFERRED_MODULES or name in _SKIP:
         continue
     _r = _load_router(name)
     if _r is not None:
@@ -126,13 +110,10 @@ for _, name, _ in pkgutil.iter_modules(__path__):  # type: ignore[name-defined]
         log.info(f"[routers:auto] loaded: {name:<24} prefix={getattr(_r, 'prefix', '')}")
 
 # ──────────────────────────────────────────────
-# 5️⃣ FastAPI 앱에 라우터 일괄 등록
+# 5️⃣ FastAPI 앱에 일괄 include
 # ──────────────────────────────────────────────
 def include_all_routers(app):
-    """
-    FastAPI 앱에 모든 라우터를 순서대로 include
-    (SSOT 기준 순서 보장: 인증 → 도메인 → 마스터 → 운영)
-    """
+    """FastAPI 앱에 모든 라우터를 순서대로 include (SSOT 기준 순서 보장)"""
     ok, fail = 0, 0
     for name in __all__:
         router = globals().get(name)
@@ -146,7 +127,6 @@ def include_all_routers(app):
         except Exception as e:
             fail += 1
             log.warning(f"[routers] include FAIL: {name:<24} → {e}")
-
     log.info(f"[routers] Routers Loaded — OK={ok}, FAIL={fail}, TOTAL={ok + fail}")
 
 # ──────────────────────────────────────────────
@@ -156,6 +136,6 @@ __all__ = list(dict.fromkeys(__all__))
 
 # ============================================================================
 # 참고:
-#   • Master 계열 10종 라우터가 통합되어 /api/master/* 경로로 제공됩니다.
-#   • Alembic 및 FastAPI 구동 시 [routers:init] 로그는 정상 초기화 메시지입니다.
+#   • me 라우터는 완전 제거, master_ota_channels 는 중복 방지를 위해 자동탐색 스킵.
+#   • include_all_routers() 호출 시 모든 라우터가 단일 경로(/api/...)로만 등록됨.
 # ============================================================================

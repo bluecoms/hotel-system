@@ -1,6 +1,7 @@
+# -*- coding: utf-8 -*-
 # ============================================================================
 # File      : app/routers/bank.py
-# Version   : 2025.10-23 · v2.1 (Partition Options + part_key Fix · SSOT)
+# Version   : 2025.10-31 · v2.2 (3.8 Safe · Partition Options · SSOT Stable)
 # Purpose   : Hotel Admin — Bank Upload & Summary Router (/api/*)
 # ----------------------------------------------------------------------------
 # 목적:
@@ -9,22 +10,22 @@
 #   • 업로드 이력(uploaded_files) 저장 및 세션/버전 관리
 #   • 대시보드용 간단 합계/잔액 요약 제공 (/api/bank/summary)
 #   • ✅ 프런트 파티션 칩용 계좌 옵션 API 추가 (/api/bank/accounts/options)
-#   • ✅ 업로드 이력 part_key 정정(계좌코드 반영)
+#   • ✅ UploadedFile.part_key = account_code (기존 'expense' 오타 제거)
 # ----------------------------------------------------------------------------
-# 변경 사항(v2.1)
-#   ✅ NEW: GET /api/bank/accounts/options  → 계좌 칩(파티션) 옵션 제공
-#   ✅ FIX: UploadedFile.part_key = account_code (기존 'expense' 오타 제거)
-#   ✅ KEEP: 기존 업로드/요약 엔드포인트와 파라미터/동작 완전 호환 (비파괴)
+# 변경 사항(v2.2)
+#   ✅ Python 3.8 호환: list[str] → List[str]
+#   ✅ 주석/정렬 SSOT 규격화
+#   ✅ 기존 동작 및 파라미터 100 % 유지 (비파괴)
 # ----------------------------------------------------------------------------
-# 보안/권한:
+# 권한 정책:
 #   • 모든 엔드포인트 require_token_local
-#   • 업로드/요약은 ADMIN/SUPERADMIN 권한 요구
+#   • 업로드/요약은 ADMIN 또는 SUPERADMIN 권한 필요
 # ----------------------------------------------------------------------------
-# 연계 모델/유틸:
-#   • app/models/bank.py        → BankAccount, BankTxn, BankDailyBalance
-#   • app/models/closing.py     → UploadSession, UploadedFile
-#   • app/core/normalize_bank.py → read_bank_upload_to_csv_text, normalize_bank_csv
-#   • app/core/settings.py      → UPLOAD_ROOT
+# 연계 모듈:
+#   • app/models/bank.py          → BankAccount, BankTxn, BankDailyBalance
+#   • app/models/closing.py       → UploadSession, UploadedFile
+#   • app/core/normalize_bank.py  → read_bank_upload_to_csv_text, normalize_bank_csv
+#   • app/core/settings.py        → UPLOAD_ROOT
 # ============================================================================
 
 from __future__ import annotations
@@ -44,18 +45,18 @@ from app.models.bank import BankAccount, BankTxn, BankDailyBalance
 from app.core.normalize_bank import read_bank_upload_to_csv_text, normalize_bank_csv
 from app.core.settings import settings
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
 # Router & Logger
-# ─────────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
 router = APIRouter(prefix="/api", tags=["bank"])
 log = logging.getLogger(__name__)
 
 DATA_ROOT = Path(settings.UPLOAD_ROOT)
 DATA_ROOT.mkdir(parents=True, exist_ok=True)
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
 # helpers (공통)
-# ─────────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
 def _filter_by_model_columns(model, data: Dict) -> Dict:
     cols: List[str] = list(model.__table__.columns.keys())
     return {k: v for k, v in data.items() if k in cols}
@@ -74,7 +75,8 @@ def _get_or_create_session(db: Session, dataset: str, business_date: str, proper
             dict(dataset=dataset, business_date=business_date, property_code=property_code, status="STORED"),
         )
         sess = UploadSession(**payload)
-        db.add(sess); db.flush()
+        db.add(sess)
+        db.flush()
     return sess
 
 def _next_version(db: Session, session_id: int) -> int:
@@ -87,10 +89,12 @@ def _store_file(bin_file: UploadFile, dest_dir: Path, dest_name: str) -> Dict:
     size = 0
     with dest.open("wb") as fw:
         for chunk in iter(lambda: bin_file.file.read(1024 * 1024), b""):
-            fw.write(chunk); size += len(chunk)
+            fw.write(chunk)
+            size += len(chunk)
     return {"path": str(dest), "size": size, "filename": bin_file.filename or dest_name}
 
-def _head_rows(text_: str, n: int = 5) -> list[str]:
+def _head_rows(text_: str, n: int = 5) -> List[str]:
+    """CSV 텍스트의 상위 n 행만 미리보기용으로 반환"""
     rows = text_.splitlines()
     return rows[: min(len(rows), n)]
 
@@ -101,12 +105,12 @@ def _ensure_account(
     bank_name: str = "",
     account_name: str = "",
 ) -> BankAccount:
-    """계좌 기준정보가 없으면 최소 정보로 생성(기존 동작 유지)."""
+    """계좌 기준정보가 없으면 최소 정보로 생성."""
     acc = (
         db.query(BankAccount)
-          .filter(BankAccount.property_code == property_code)
-          .filter(BankAccount.account_code == account_code)
-          .first()
+        .filter(BankAccount.property_code == property_code)
+        .filter(BankAccount.account_code == account_code)
+        .first()
     )
     if not acc:
         acc = BankAccount(
@@ -115,7 +119,8 @@ def _ensure_account(
             bank_name=bank_name,
             account_name=account_name,
         )
-        db.add(acc); db.flush()
+        db.add(acc)
+        db.flush()
     return acc
 
 def _insert_txns(
@@ -129,7 +134,7 @@ def _insert_txns(
     session_id: int,
     version_no: int,
 ) -> int:
-    """정규화 CSV → bank_txns 적재."""
+    """정규화된 CSV → bank_txns 적재."""
     import csv, io, datetime as dt
     rdr = csv.DictReader(io.StringIO(canon_csv))
     count = 0
@@ -163,12 +168,13 @@ def _insert_txns(
             session_id=session_id,
             version_no=version_no,
         )
-        db.add(bt); count += 1
+        db.add(bt)
+        count += 1
     return count
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 업로드: 입금(수입) → dataset: pay_settlement
-# ─────────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
+# 업로드: 입금(수입) → dataset = pay_settlement
+# ─────────────────────────────────────────────
 @router.post(
     "/upload/pay_settlement",
     name="Upload Bank Income (Deposits)",
@@ -177,13 +183,14 @@ def _insert_txns(
 async def upload_bank_income(
     business_date: str = Form(..., description="YYYY-MM-DD"),
     property_code: str = Form("MOP"),
-    account_code: str = Form("", description="은행 계좌 코드(파티션)"),
-    bank_name: str = Form("", description="표시용 은행명(선택)"),
-    account_name: str = Form("", description="표시용 계좌명(선택)"),
+    account_code: str = Form("", description="은행 계좌 코드 (파티션)"),
+    bank_name: str = Form("", description="표시용 은행명 (선택)"),
+    account_name: str = Form("", description="표시용 계좌명 (선택)"),
     dry_run: int = Form(1),
     file: UploadFile = File(..., description="은행 입금 내역 (XLS/XLSX/CSV)"),
     db: Session = Depends(get_db),
 ):
+    """은행 입금(수입) 내역 업로드"""
     if not business_date or len(business_date) != 10:
         raise HTTPException(422, "business_date required (YYYY-MM-DD)")
 
@@ -211,13 +218,11 @@ async def upload_bank_income(
     dataset = "pay_settlement"
     sess = _get_or_create_session(db, dataset, business_date, property_code)
     version_no = _next_version(db, sess.id)
-
     dest_dir = DATA_ROOT / dataset / property_code / business_date / f"v{version_no}"
     meta = _store_file(file, dest_dir, file.filename or "income.xls")
 
     _ensure_account(db, property_code, acct, bank_name, account_name)
 
-    # ✅ part_key를 계좌코드로 정확히 기록 (기존 'expense' 오타 제거)
     rec = UploadedFile(
         **_filter_by_model_columns(
             UploadedFile,
@@ -256,9 +261,9 @@ async def upload_bank_income(
         "file": meta,
     }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 업로드: 출금(지출) → dataset: expenses
-# ─────────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
+# 업로드: 출금(지출) → dataset = expenses
+# ─────────────────────────────────────────────
 @router.post(
     "/upload/expenses",
     name="Upload Bank Expense (Withdrawals)",
@@ -267,13 +272,14 @@ async def upload_bank_income(
 async def upload_bank_expense(
     business_date: str = Form(..., description="YYYY-MM-DD"),
     property_code: str = Form("MOP"),
-    account_code: str = Form("", description="은행 계좌 코드(파티션)"),
-    bank_name: str = Form("", description="표시용 은행명(선택)"),
-    account_name: str = Form("", description="표시용 계좌명(선택)"),
+    account_code: str = Form("", description="은행 계좌 코드 (파티션)"),
+    bank_name: str = Form("", description="표시용 은행명 (선택)"),
+    account_name: str = Form("", description="표시용 계좌명 (선택)"),
     dry_run: int = Form(1),
     file: UploadFile = File(..., description="은행 출금 내역 (XLS/XLSX/CSV)"),
     db: Session = Depends(get_db),
 ):
+    """은행 출금(지출) 내역 업로드"""
     if not business_date or len(business_date) != 10:
         raise HTTPException(422, "business_date required (YYYY-MM-DD)")
 
@@ -301,13 +307,11 @@ async def upload_bank_expense(
     dataset = "expenses"
     sess = _get_or_create_session(db, dataset, business_date, property_code)
     version_no = _next_version(db, sess.id)
-
     dest_dir = DATA_ROOT / dataset / property_code / business_date / f"v{version_no}"
     meta = _store_file(file, dest_dir, file.filename or "expense.xls")
 
     _ensure_account(db, property_code, acct, bank_name, account_name)
 
-    # ✅ part_key를 계좌코드로 정확히 기록
     rec = UploadedFile(
         **_filter_by_model_columns(
             UploadedFile,
@@ -346,9 +350,9 @@ async def upload_bank_expense(
         "file": meta,
     }
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
 # 조회: 잔액/요약 (대시보드용 간단 합계)
-# ─────────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
 @router.get(
     "/bank/summary",
     dependencies=[Depends(require_token_local), Depends(require_roles(["ADMIN", "SUPERADMIN"]))],
@@ -358,7 +362,7 @@ def bank_summary(
     date: Optional[str] = Query(None, description="YYYY-MM-DD (없으면 전체)"),
     db: Session = Depends(get_db),
 ):
-    """계좌별 입/출 합계 및 최대 잔액 요약."""
+    """계좌별 입·출 합계 및 최대 잔액 요약"""
     params: Dict[str, any] = {"pc": property_code}
     where = "property_code = :pc"
     if date:
@@ -379,8 +383,10 @@ def bank_summary(
     items = []
     total_in = total_out = 0
     for account_code, s_in, s_out, max_bal in rows:
-        s_in = int(s_in or 0); s_out = int(s_out or 0)
-        total_in += s_in; total_out += s_out
+        s_in = int(s_in or 0)
+        s_out = int(s_out or 0)
+        total_in += s_in
+        total_out += s_out
         items.append({
             "account_code": account_code,
             "sum_in": s_in,
@@ -397,28 +403,31 @@ def bank_summary(
         "net": total_in - total_out,
     }
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
 # 조회: 파티션 칩 옵션 (프런트 DatasetCard 용)
-# ─────────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
 @router.get(
     "/bank/accounts/options",
     dependencies=[Depends(require_token_local), Depends(require_roles(["ADMIN", "SUPERADMIN"]))],
-    summary="계좌 파티션 칩 옵션(활성 계좌)",
+    summary="계좌 파티션 칩 옵션 (활성 계좌)",
 )
 def bank_account_options(
     property_code: str = Query("MOP"),
     only_active: int = Query(1, description="1=활성만, 0=전체"),
     db: Session = Depends(get_db),
 ):
-    """
-    프런트 탭의 파티션 칩을 위한 계좌 옵션 목록.
-    - 반환: [{ title, value }] 형태 (value=account_code)
-    """
+    """프런트 탭 파티션 칩용 계좌 옵션 목록 (value=account_code)"""
     q = db.query(BankAccount).filter(BankAccount.property_code == property_code)
     if int(only_active or 0) == 1:
         q = q.filter(BankAccount.is_active.is_(True))
     rows = q.order_by(BankAccount.account_code.asc()).all()
     return {
         "ok": True,
-        "items": [{"title": f"{r.account_code} · {r.bank_name or ''}".strip(), "value": r.account_code} for r in rows],
+        "items": [
+            {
+                "title": f"{r.account_code} · {r.bank_name or ''}".strip(),
+                "value": r.account_code,
+            }
+            for r in rows
+        ],
     }

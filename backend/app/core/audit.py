@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # ============================================================================
 # File      : app/core/audit.py
-# Version   : 2025-10-31 · v3.6 (SSOT Stable)
+# Version   : 2025-10-31 · v3.6 (SSOT Stable · Python3.9 호환 수정)
 # Purpose   : 감사 로그 기록 유틸리티
 # ----------------------------------------------------------------------------
 # 목적:
@@ -23,6 +23,7 @@ import logging
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.db.session import is_sqlite
+from typing import Optional
 
 log = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ def write_audit(
     actor: str,
     action: str,
     target: str,
-    meta: dict | None = None,
+    meta: Optional[dict] = None,   # ✅ Python 3.9 호환 수정
 ) -> None:
     """
     감사 로그 기록 함수.
@@ -45,10 +46,10 @@ def write_audit(
         ts_expr = "datetime('now')" if is_sqlite() else "NOW()"
 
         db.execute(
-            text(f"""
+            text("""
                 INSERT INTO audit_logs(ts, actor, action, target, meta_json)
                 VALUES({ts_expr}, :actor, :action, :target, :meta)
-            """),
+            """.format(ts_expr=ts_expr)),
             {
                 "actor": actor or "system",
                 "action": action,

@@ -78,12 +78,12 @@ _MODULES: Dict[str, List[str]] = {
         "MasterRankOut",
         "MasterRankReorderBody",
     ],
-    "master_titles": [
+    "master_title": [
         "MasterTitleIn",
         "MasterTitleOut",
         "MasterTitleReorderBody",
     ],
-    "master_positions": [
+    "master_position": [
         "MasterPositionIn",
         "MasterPositionOut",
         "MasterPositionReorderBody",

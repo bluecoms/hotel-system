@@ -1,6 +1,7 @@
+# -*- coding: utf-8 -*-
 # ============================================================================
 # File      : app/core/auth.py
-# Version   : 2025.10-22 Final Stable
+# Version   : 2025.10-22 · v3.8-Compat (Phase6 Stable)
 # Purpose   : Hotel Admin — Auth Core (FastAPI)
 # ----------------------------------------------------------------------------
 # 목적:
@@ -28,12 +29,12 @@
 #   • 개발: 미설정 시 dev-admin-token 으로 통과 허용
 #   • SUPERADMIN → 모든 권한 자동 승인
 # ============================================================================
-from __future__ import annotations
 
+from __future__ import annotations
 import os
 import secrets
 import string
-from typing import Iterable, Optional, Dict, Any
+from typing import Iterable, Optional, Dict, Any, List
 
 from fastapi import Depends, Header, HTTPException, status, APIRouter, Body, Request
 from sqlalchemy.orm import Session
@@ -43,7 +44,6 @@ from app.db.session import get_db
 from app.core.settings import settings
 from app.models.user import User
 from app.models.role import Role, UserRole, RoleAccess
-
 
 # ──────────────────────────────────────────────
 # 내부: 환경/역할 보조
@@ -65,7 +65,7 @@ def _uid_from_token(token: str) -> Optional[int]:
         return None
 
 
-def _roles_of_user(db: Session, user_id: int) -> list[str]:
+def _roles_of_user(db: Session, user_id: int) -> List[str]:
     """DB에서 사용자 역할코드 목록 로드 (대문자 변환)"""
     rows = (
         db.query(Role.code)
@@ -83,7 +83,6 @@ def _effective_role_for_dev(x_debug_role: Optional[str]) -> str:
         return (x_debug_role or "SUPERADMIN").upper()
     return "ADMIN"  # 운영 기본값
 
-
 # ──────────────────────────────────────────────
 # 토큰 검사 (내부/로그인 공용)
 # ──────────────────────────────────────────────
@@ -98,10 +97,7 @@ def require_user(
     # ✅ 헤더 케이스 통합 처리
     token = x_internal_token or request.headers.get("x-internal-token")
     if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing X-Internal-Token",
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing X-Internal-Token")
 
     # 1️⃣ 로그인 토큰 (token-<uid>)
     if str(token).startswith("token-"):
@@ -118,7 +114,6 @@ def require_user(
 
     # ❌ 운영: 불일치 시 거부
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-
 
 # ──────────────────────────────────────────────
 # 현재 사용자 로드 (dev 우회 & DB 역할 병합)
@@ -156,7 +151,6 @@ def current_user(
     # ❌ 실패
     raise HTTPException(status_code=401, detail="Unauthorized")
 
-
 # ──────────────────────────────────────────────
 # 역할 기반 권한 검사
 # ──────────────────────────────────────────────
@@ -172,7 +166,6 @@ def require_roles(need: Iterable[str]):
 
     return _dep
 
-
 # ──────────────────────────────────────────────
 # 세부 접근 수준(require_access)
 # ──────────────────────────────────────────────
@@ -187,17 +180,14 @@ def require_access(route_name: str, level: str = "view"):
 
         needed = LEVEL_ORDER.get(level, 1)
         for r in roles:
-            rec = (
-                db.query(RoleAccess)
-                .filter(RoleAccess.role_code == r, RoleAccess.route_name == route_name)
-                .first()
-            )
-            if rec and (LEVEL_ORDER.get(rec.access_level, 0) >= needed):
+            rec = db.query(RoleAccess).filter(
+                RoleAccess.route_name == route_name
+            ).first()
+            if rec and ("ALL_VIEW" in rec.access_scope or "ALL_EDIT" in rec.access_scope):
                 return user
         raise HTTPException(status_code=403, detail=f"insufficient:{route_name}")
 
     return _dep
-
 
 # ──────────────────────────────────────────────
 # 내부 토큰 검사 (Shim)
@@ -220,12 +210,10 @@ def require_token_local(
         return {"ok": True, "dev": True}
     return {"ok": True, "dev": True}
 
-
 # ──────────────────────────────────────────────
 # 로그인 / 세션 / 비밀번호 API
 # ──────────────────────────────────────────────
 router = APIRouter(prefix="/api", tags=["auth"])
-
 
 @router.post("/login", operation_id="auth_login")
 def login(
@@ -242,16 +230,14 @@ def login(
     if not bcrypt.verify(password, u.password_hash):
         raise HTTPException(status_code=401, detail="비밀번호가 올바르지 않습니다.")
 
-    token = f"token-{u.id}"
+    token = "token-%d" % u.id
     roles = _roles_of_user(db, u.id)
     return {"token": token, "user": {"email": u.email, "name": (u.name or u.email), "roles": roles}}
-
 
 @router.get("/me", operation_id="auth_me")
 def me(user=Depends(current_user)):
     """현재 사용자 정보 반환"""
     return {"user": user}
-
 
 @router.post("/password/change", operation_id="auth_change_password")
 def change_password(
@@ -276,7 +262,6 @@ def change_password(
     db.add(u)
     db.commit()
     return {"ok": True}
-
 
 @router.post("/users/password/reset", operation_id="auth_reset_password")
 def reset_password(
