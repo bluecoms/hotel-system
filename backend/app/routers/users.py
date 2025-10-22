@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 # ============================================================================
 # File    : app/routers/users.py
-# Version : 2025-10-31 · v3.3 (Phase6 SSOT Stable · Python 3.8 Safe)
-# Purpose : Hotel Admin — 사용자 및 권한 관리 라우터 (/api/users)
+# Version : 2025-10-31 · v3.6 (SSOT Phase 3.5 Final · DeptAccess Split)
+# Purpose : Hotel Admin — 사용자 관리 라우터 (/api/users)
 # ----------------------------------------------------------------------------
 # 목적:
-#   • 사용자 CRUD, 승인, 사원 매핑, 권한(RoleAccess) 관리 통합
+#   • 사용자 CRUD, 승인/비활성화, 사원 매핑
 #   • 내부 API(X-Internal-Token) 기반 보호
+#   • ⚠️ 권한(DeptAccess) 관리는 app/routers/roles_access.py 로 완전 분리
 # ----------------------------------------------------------------------------
 # 정책 요약:
 #   ✅ 인증 : require_token_local (헤더 X-Internal-Token)
@@ -26,10 +27,8 @@ from app.core.auth import require_token_local, require_roles
 from app.db.session import get_db
 from app.models.user import User
 from app.models.employee import Employee, UserEmployeeMap
-from app.models.role import RoleAccess
 from app.schemas.users import UserCreate, UserListOut, UserActivateIn, CreateFromEmployeeIn
 from app.core.audit import write_audit
-
 
 # ─────────────────────────────────────────────
 # Router 정의
@@ -48,7 +47,11 @@ router = APIRouter(
 # ============================================================================
 @router.get("/{user_id}", dependencies=[Depends(require_roles(["ADMIN", "SUPERADMIN"]))])
 def get_user(user_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
-    """단일 사용자 조회"""
+    """
+    단일 사용자 조회
+    - UserEmployeeMap을 통해 employee_id 연결값을 함께 반환
+    - roles 필드는 ORM 관계(selectin)로 읽기 전용 리스트
+    """
     u = db.get(User, user_id)
     if not u:
         raise HTTPException(status_code=404, detail="user not found")
@@ -68,15 +71,19 @@ def get_user(user_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
 # ============================================================================
 @router.get("", dependencies=[Depends(require_roles(["ADMIN", "SUPERADMIN"]))])
 def list_users(
-    q: Optional[str] = Query("", description="검색어"),
+    q: Optional[str] = Query("", description="검색어 (이름/이메일 부분일치)"),
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=200),
     db: Session = Depends(get_db),
 ) -> Dict[str, Any]:
-    """사용자 목록 조회 (검색/페이징 지원)"""
+    """
+    사용자 목록 조회 (검색/페이징 지원)
+    - employee_id는 별도 매핑 조회 후 합성
+    - Pydantic UserListOut로 직렬화
+    """
     qry = db.query(User)
     if q:
-        like = "%%%s%%" % q
+        like = f"%{q}%"
         qry = qry.filter(or_(User.email.ilike(like), User.name.ilike(like)))
 
     total = qry.count()
@@ -111,26 +118,33 @@ def list_users(
 # ============================================================================
 @router.post("", dependencies=[Depends(require_roles(["SUPERADMIN"]))])
 def create_user(body: UserCreate, db: Session = Depends(get_db)) -> Dict[str, Any]:
-    """신규 사용자 생성 (기본 비밀번호 hotel1234)"""
+    """
+    신규 사용자 생성
+    - password 미지정 시 기본값 'hotel1234'
+    - password_hash(bcrypt) 저장
+    """
     if db.query(User).filter(User.email == body.email).first():
         raise HTTPException(status_code=400, detail="email exists")
 
     raw_pw = body.password or "hotel1234"
     hashed = bcrypt.hash(raw_pw)
-    user = User(email=body.email, name=body.name or body.email, password_hash=hashed, is_active=True)
+    user = User(email=body.email, name=body.name or body.email, password_hash=hashed, is_active=body.is_active)
     db.add(user)
     db.commit()
     db.refresh(user)
 
-    write_audit(db, "system", "user.create", f"user={user.email}, pw=default")
-    return {"ok": True, "id": user.id, "default_password": "hotel1234"}
+    write_audit(db, "system", "user.create", f"user={user.email}, default_pw={'yes' if body.password is None else 'no'}")
+    return {"ok": True, "id": user.id, "default_password": (None if body.password else "hotel1234")}
 
 # ============================================================================
 # 4️⃣ 사용자 승인/비활성화 (ADMIN+)
 # ============================================================================
 @router.put("/{user_id}/approve", dependencies=[Depends(require_roles(["ADMIN", "SUPERADMIN"]))])
 def approve_user(user_id: int, body: UserActivateIn, db: Session = Depends(get_db)) -> Dict[str, Any]:
-    """사용자 승인/비활성화"""
+    """
+    사용자 활성/비활성 전환
+    - is_active 토글
+    """
     u = db.get(User, user_id)
     if not u:
         raise HTTPException(status_code=404, detail="user not found")
@@ -140,11 +154,14 @@ def approve_user(user_id: int, body: UserActivateIn, db: Session = Depends(get_d
     return {"ok": True, "id": user_id, "is_active": u.is_active}
 
 # ============================================================================
-# 5️⃣ 사용자 비활성화 (삭제 아님)
+# 5️⃣ 사용자 비활성화 (삭제 아님) (SUPERADMIN)
 # ============================================================================
 @router.delete("/{user_id}", dependencies=[Depends(require_roles(["SUPERADMIN"]))])
 def deactivate_user(user_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
-    """사용자 비활성화"""
+    """
+    사용자 비활성화
+    - 실제 삭제가 아닌 is_active=False
+    """
     u = db.get(User, user_id)
     if not u:
         raise HTTPException(status_code=404, detail="user not found")
@@ -158,7 +175,10 @@ def deactivate_user(user_id: int, db: Session = Depends(get_db)) -> Dict[str, An
 # ============================================================================
 @router.put("/{user_id}/employee/{emp_id}", dependencies=[Depends(require_roles(["ADMIN", "SUPERADMIN"]))])
 def map_employee(user_id: int, emp_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
-    """사용자와 사원 ID 매핑"""
+    """
+    사용자와 사원(Employee) ID 매핑
+    - 기존 매핑 존재 시 교체, 없으면 생성
+    """
     u = db.get(User, user_id)
     e = db.get(Employee, emp_id)
     if not u or not e:
@@ -178,16 +198,20 @@ def map_employee(user_id: int, emp_id: int, db: Session = Depends(get_db)) -> Di
 # ============================================================================
 @router.post("/from-employee", dependencies=[Depends(require_roles(["HRADMIN", "SUPERADMIN"]))])
 def create_from_employee(body: CreateFromEmployeeIn, db: Session = Depends(get_db)) -> Dict[str, Any]:
-    """사원정보로 사용자 계정 자동 생성"""
+    """
+    사원정보로 사용자 계정 자동 생성
+    - 이미 다른 유저와 매핑된 사원은 거부
+    - 기본 비밀번호 'hotel1234'
+    """
     emp = db.get(Employee, body.employee_id)
     if not emp:
         raise HTTPException(status_code=404, detail="employee not found")
     if db.query(UserEmployeeMap).filter(UserEmployeeMap.employee_id == emp.id).first():
         raise HTTPException(status_code=400, detail="employee already linked")
 
-    email = emp.email or f"{emp.emp_no}@local"
+    email = body.email or emp.email or f"{getattr(emp, 'emp_no', emp.id)}@local"
     default_pw = "hotel1234"
-    user = User(email=email, name=emp.name, password_hash=bcrypt.hash(default_pw), is_active=True)
+    user = User(email=email, name=emp.name or email, password_hash=bcrypt.hash(default_pw), is_active=body.is_active)
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -197,29 +221,7 @@ def create_from_employee(body: CreateFromEmployeeIn, db: Session = Depends(get_d
     return {"ok": True, "id": user.id, "default_password": default_pw}
 
 # ============================================================================
-# 8️⃣ 역할 접근 관리 (RoleAccess)
+# ⚠️ 중요: 권한(DeptAccess) 관련 엔드포인트는 roles_access.py 로 이관
+#   • /api/roles/access
+#   • /api/roles/access/effective
 # ============================================================================
-@router.get("/roles/access/effective", dependencies=[Depends(require_roles(["ADMIN", "SUPERADMIN"]))])
-def get_effective_access(db: Session = Depends(get_db)) -> Dict[str, Any]:
-    """역할별 접근권한 전체 조회"""
-    rows = db.query(RoleAccess).all()
-    items = [{"role": r.role, "resource": r.resource, "access": r.access} for r in rows]
-    return {"items": items, "total": len(items)}
-
-@router.put("/roles/access", dependencies=[Depends(require_roles(["SUPERADMIN"]))])
-def update_access(data: List[Dict[str, Any]], db: Session = Depends(get_db)) -> Dict[str, Any]:
-    """역할별 접근권한 전체 갱신"""
-    db.query(RoleAccess).delete()
-    for row in data:
-        db.add(RoleAccess(role=row.get("role"), resource=row.get("resource"), access=row.get("access")))
-    db.commit()
-    write_audit(db, "system", "roleaccess.update", f"count={len(data)}")
-    return {"ok": True, "count": len(data)}
-
-@router.delete("/roles/access", dependencies=[Depends(require_roles(["SUPERADMIN"]))])
-def clear_access(db: Session = Depends(get_db)) -> Dict[str, Any]:
-    """모든 접근권한 초기화"""
-    n = db.query(RoleAccess).delete()
-    db.commit()
-    write_audit(db, "system", "roleaccess.clear", f"deleted={n}")
-    return {"ok": True, "deleted": n}

@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*-
 # ============================================================================
 # File      : app/schemas/__init__.py
-# Version   : 2025.10-30 · v4.0 (SSOT Final Stable · Positions & Titles Sync)
+# Version   : 2025-10-31 · v4.1 (SSOT Phase 3.5 Final · Role/DeptAccess Unified)
 # Purpose   : Hotel Admin — Pydantic Schemas Auto Import (Unified SSOT Loader)
 # ----------------------------------------------------------------------------
 # 목적:
 #   • schemas/*.py 내 BaseModel 상속 클래스를 자동 탐색 및 전역 등록
-#   • 주요 도메인(auth, users, employees, contracts, ota, reports 등) 우선 로드
-#   • Master 기준정보 10개 도메인 통합:
-#       departments / ranks / titles / positions / empno_policy /
-#       salary_grade / property / bank / hk_status / ota_channel
+#   • 주요 도메인(auth, employees, contracts, ota, reports 등) 우선 로드
+#   • Master 기준정보 10개 도메인 통합 관리
+# ----------------------------------------------------------------------------
+# 핵심 개선 (v4.1):
+#   ✅ UserRole / RoleAccess 완전 제거
+#   ✅ DeptAccess(roles_access.py) 기반 권한 스키마 추가
+#   ✅ Role/Access 로딩 순서 정비 (role → roles_access)
+#   ✅ Pydantic v2 호환 (ConfigDict.from_attributes=True)
 # ----------------------------------------------------------------------------
 # 운영 방침:
 #   • OTA 수수료(commission)는 운영 데이터로 분리 (/api/ota/commissions)
@@ -22,6 +26,7 @@
 #   v3.6 (2025-10-25) ✅ MasterOtaChannel 추가 (9종 완성)
 #   v3.9 (2025-10-27) ✅ MasterOtaCommission 제거 (운영 라우트로 분리)
 #   v4.0 (2025-10-30) ✅ MasterPosition + MasterTitle 확정 / Bank 확장 반영
+#   v4.1 (2025-10-31) ✅ DeptAccess(roles_access) 통합 및 RoleAccess 완전 제거
 # ============================================================================
 
 import pkgutil
@@ -46,7 +51,6 @@ __all__: List[str] = []
 _MODULES: Dict[str, List[str]] = {
     # 인증 / 사용자
     "auth": ["ApproveBody", "UserCreate", "CreateFromEmpIn", "TokenPayload"],
-    "users": ["UserOut", "UserIn", "UserListOut"],
 
     # 역할 / 권한 (DeptAccess 포함)
     "role": [
@@ -56,6 +60,12 @@ _MODULES: Dict[str, List[str]] = {
         "DeptAccessOut",
         "RoleWithAccessOut",
         "EffectiveAccessOut",
+    ],
+    "roles_access": [
+        "DeptAccessBase",
+        "DeptAccessIn",
+        "DeptAccessOut",
+        "EffectiveDeptAccess",
     ],
 
     # 인사 / 조직
@@ -113,7 +123,6 @@ _MODULES: Dict[str, List[str]] = {
         "MasterOtaChannelIn",
         "MasterOtaChannelOut",
     ],
-    # NOTE: master_ota_commission 제거 — 운영 라우트(/api/ota/commissions)로 분리
 
     # ✅ HR / 계약
     "contract": [
@@ -227,7 +236,7 @@ __all__ = sorted(set(__all__))
 
 # ============================================================================
 # 참고:
-#   • MasterPosition / MasterTitle / MasterBank / MasterOtaChannel 등
-#     모든 기준정보 스키마가 본 모듈에 자동 등록됩니다.
+#   • DeptAccess(roles_access) 는 RoleAccess/UserRole 을 완전히 대체합니다.
+#   • 모든 Master 계열 스키마는 본 모듈에서 자동 등록됩니다.
 #   • Alembic 및 FastAPI 실행 시 schemas 자동 탐색 로그 출력은 정상입니다.
 # ============================================================================

@@ -1,6 +1,7 @@
+# -*- coding: utf-8 -*-
 # ============================================================================
 # File      : app/routers/__init__.py
-# Version   : 2025.10-31 · v4.3 (OTA Dup Fix · SSOT Final Stable)
+# Version   : 2025.10-31 · v4.4 (SSOT Phase 3.5 Final · RoleAccess Unified)
 # Purpose   : Hotel Admin — FastAPI Router Auto-Export (Unified Loader)
 # ----------------------------------------------------------------------------
 # 목적:
@@ -8,10 +9,16 @@
 #   • ImportError 발생 시 skip 처리로 안전 초기화 지원
 #   • FastAPI 앱에서 include_all_routers(app) 호출 시 전체 자동 include
 # ----------------------------------------------------------------------------
-# 개선 사항 (v4.3)
+# 개선 사항 (v4.4)
 #   ✅ me 라우터 완전 제거 (Phase 3 이후 불필요 기능)
-#   ✅ master_ota_channels 중복 로드 방지 (prefix 중복 근본 해결)
+#   ✅ user_roles 라우터 완전 제거 (DeptAccess 구조로 통합)
+#   ✅ roles_access 라우터 신규 명시 등록 (/api/roles/access)
+#   ✅ master_ota_channels 중복 로드 방지 유지
 #   ✅ 순환참조 및 로드 순서 안정화
+# ----------------------------------------------------------------------------
+# 참고:
+#   • RoleAccess(User↔Role)는 폐기됨 → DeptAccess(roles_access.py) 사용.
+#   • include_all_routers() 호출 시 모든 라우터가 단일 경로(/api/...)로 등록됨.
 # ============================================================================
 import logging
 import pkgutil
@@ -22,7 +29,7 @@ __all__: List[str] = []
 log = logging.getLogger("app.routers")
 
 # ──────────────────────────────────────────────
-# 1️⃣ 우선순위 라우터 정의 (필수 항목만 명시)
+# 1️⃣ 우선순위 라우터 정의 (핵심 경로 우선 로드)
 # ──────────────────────────────────────────────
 _PREFERRED_MODULES: Dict[str, str] = {
     # 인증 / 시스템
@@ -34,8 +41,8 @@ _PREFERRED_MODULES: Dict[str, str] = {
     # 사용자 / 조직 / 권한
     "users": "users",
     "employees": "employees",
-    "user_roles": "user_roles",
     "roles": "roles",
+    "roles_access": "roles_access",  # ✅ DeptAccess 기반 신규 권한 라우터
     "keywords": "keywords",
 
     # 인사 / HR / 계약
@@ -98,7 +105,7 @@ for _mod, _export_name in _PREFERRED_MODULES.items():
 # ──────────────────────────────────────────────
 # 4️⃣ 나머지 자동 탐색 (Base, 내부 제외)
 # ──────────────────────────────────────────────
-_SKIP = {"me", "master_ota_channels"}  # ✅ 중복 로드 방지 대상 추가
+_SKIP = {"me", "master_ota_channels", "user_roles"}  # ✅ 폐기 라우터 스킵
 
 for _, name, _ in pkgutil.iter_modules(__path__):  # type: ignore[name-defined]
     if name.startswith("_") or name in _PREFERRED_MODULES or name in _SKIP:
@@ -136,6 +143,7 @@ __all__ = list(dict.fromkeys(__all__))
 
 # ============================================================================
 # 참고:
-#   • me 라우터는 완전 제거, master_ota_channels 는 중복 방지를 위해 자동탐색 스킵.
-#   • include_all_routers() 호출 시 모든 라우터가 단일 경로(/api/...)로만 등록됨.
+#   • me, user_roles 라우터는 완전 제거.
+#   • master_ota_channels 는 중복 방지를 위해 자동탐색 스킵.
+#   • roles_access 라우터(DeptAccess)는 SSOT 기준 권한 엔드포인트로 통합됨.
 # ============================================================================

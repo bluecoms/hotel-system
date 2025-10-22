@@ -1,22 +1,25 @@
 # -*- coding: utf-8 -*-
 # ============================================================================
 # File      : app/models/__init__.py
-# Version   : 2025.10-31 · v4.1 (SSOT Final Stable · Property Fix)
+# Version   : 2025.10-31 · v4.2 (SSOT Phase 3.5 Final · Role/Access Unified)
 # Purpose   : Hotel Admin — SQLAlchemy Models Export (Unified ORM Loader)
 # ----------------------------------------------------------------------------
 # 목적:
 #   • app/models/* 내 모든 ORM 클래스를 안전하게 통합 export
 #   • Base → ORM import 순서 보장, Alembic 호환
-#   • 중복 import / 중복 Table 등록을 원천 차단
+#   • 중복 import / 중복 Table 등록 원천 차단
 # ----------------------------------------------------------------------------
-# 핵심 개선(v4.1):
-#   ✅ Base.metadata.registered_tables() 중복 등록 방지
+# 핵심 개선 (v4.2):
+#   ✅ UserRole / RoleAccess 완전 제거
+#   ✅ DeptAccess(roles_access.py) 로 통합
+#   ✅ Base.metadata.registered_tables() 중복 등록 방지 강화
 #   ✅ properties 테이블 extend_existing=True 자동 처리
 #   ✅ Alembic / FastAPI 부팅 시 경고 억제
 # ----------------------------------------------------------------------------
 # 주의:
 #   • Master 계열 10종 통합 유지 (Departments / Ranks / Titles / Positions 등)
 #   • Base.metadata 는 app/db/base_class.py 단일 소스만 사용.
+#   • Role/Access 는 Role + DeptAccess(roles_access) 조합만 유지.
 # ============================================================================
 
 from importlib import import_module
@@ -42,12 +45,14 @@ _registered_tables = set(Base.metadata.tables.keys())
 # ──────────────────────────────────────────────
 _MODULES: Dict[str, List[str]] = {
     # 사용자 / 권한
-    "user": ["User"],
-    "role": ["Role", "UserRole", "RoleAccess"],
+    "role": ["Role"],                # ✅ RoleAccess → DeptAccess로 교체됨
+    "roles_access": ["DeptAccess"],  # ✅ 새로운 DeptAccess 모델 (권한 SSOT)
+
     # 인사 / 조직 / 계약
     "employee": ["Employee", "UserEmployeeMap"],
     "employee_file": ["EmployeeFile"],
     "contract": ["EmployeeContract"],
+
     # 기준정보 (Master Domains)
     "master_departments": ["MasterDepartment"],
     "master_ranks": ["MasterRank"],
@@ -59,15 +64,20 @@ _MODULES: Dict[str, List[str]] = {
     "master_bank": ["MasterBank"],
     "master_hk_status": ["MasterHkStatus"],
     "master_ota_channel": ["MasterOtaChannel"],
+
     # OTA/Keyword (운영 도메인)
     "keyword": ["Keyword"],
     "ota": ["OTAChannel", "OTACommission", "OTAOrder"],
+
     # 영업마감 / 업로드
     "closing": ["ClosingDay", "UploadSession", "UploadedFile"],
+
     # 병합엔진
     "merge": ["MergeBatch", "MergeChangeLog"],
+
     # 회계 / 은행
     "bank": ["BankAccount", "BankTxn", "BankDailyBalance"],
+
     # 감사 / 게시판 등
     "audit": ["AuditLog"],
     "board": ["BoardPost", "BoardFile", "BoardComment"],
@@ -114,7 +124,6 @@ def _import_symbols(module_name: str, symbols: List[str]) -> None:
             __all__.append(sym)
             print(f"[models:init] loaded: {module_name}.{sym}")
 
-
 # ──────────────────────────────────────────────
 # 3️⃣ 명시 등록된 ORM 우선 로드
 # ──────────────────────────────────────────────
@@ -160,8 +169,8 @@ __all__ = sorted(set(__all__))
 
 # ----------------------------------------------------------------------------
 # 참고:
+#   • UserRole / RoleAccess 는 완전히 폐기되었으며 DeptAccess 로 통합.
 #   • properties 테이블 중복 경고는 v4.1 이후 완전 억제.
 #   • Base.metadata 는 app/db/base_class.py 단일 소스만 사용.
 #   • extend_existing=True 처리는 runtime conflict 없이 적용.
 # ============================================================================
-
