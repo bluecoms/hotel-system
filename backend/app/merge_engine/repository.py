@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 # ============================================================================
 # File      : app/merge_engine/repository.py
-# Version   : 2025.10-30 · v3.2 (SSOT Canon Map + SalesFront/OTA Ready)
+# Version   : 2025-10-31 · v3.6 (SSOT Canon Map + MergeAudit Stable)
 # Purpose   : Hotel Admin — Merge Engine Repository Layer
 # ----------------------------------------------------------------------------
 # 목적:
 #   • Canon / History 테이블에 대한 CRUD 및 병합 기록 관리
-#   • MergeBatch, MergeChangeLog 감사 로그와 통합
+#   • MergeBatch / MergeChangeLog 감사 로그 통합
 #   • SSOT 엔진 기반 Canon 최신화 + History append-only 구조 유지
-#   • dataset 키 기준으로 Canon/History 모델을 자동 매핑
+#   • dataset 키 기준으로 Canon/History 모델 자동 매핑
 # ----------------------------------------------------------------------------
 # 주요 기능:
 #   ✅ CanonRepository — Canon/History UPSERT + append-only History 기록
@@ -16,26 +16,21 @@
 #   ✅ persist_records() — Canon + Audit 통합 반영
 # ----------------------------------------------------------------------------
 # 연계 모듈:
-#   • app/core/settings_merge.py      → 병합 정책 조회
-#   • app/core/hashing.py             → key_hash, record_hash 생성
-#   • app/models/{canon,audit}.py     → ORM 정의
-#   • app/merge_engine/engine.py      → 엔진 실행부
-# ----------------------------------------------------------------------------
-# 변경 로그:
-#   v3.2 (2025-10-30)
-#     ✅ Canon 매핑에 sales_front 추가
-#     ✅ OTA dataset 확장 준비(ota_orders)
-#     ✅ 주석/로깅 구조 SSOT 규격화
+#   • app/core/settings_merge.py   → 병합 정책 조회
+#   • app/core/hashing.py          → key_hash, record_hash 생성
+#   • app/models/{canon,merge}.py  → ORM 정의
+#   • app/merge_engine/engine.py   → 엔진 실행부
 # ============================================================================
+
 import json
 import logging
 from datetime import datetime, date
 from typing import Any, Dict, List, Tuple, Optional
-
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.models.audit import MergeBatch, MergeChangeLog
+# ✅ MergeBatch / ChangeLog 은 merge.py 에서 import (순환참조 방지)
+from app.models.merge import MergeBatch, MergeChangeLog
 from app.models.canon import (
     RoomsStatusCanon,
     RoomsStatusHistory,
@@ -43,7 +38,6 @@ from app.models.canon import (
     FnbItemsHistory,
     FnbTendersCanon,
     FnbTendersHistory,
-    # Canon 확장 시 여기 import
     # SalesFrontCanon, SalesFrontHistory,
     # OtaOrdersCanon, OtaOrdersHistory,
 )
@@ -54,22 +48,18 @@ log = logging.getLogger("merge_repository")
 
 # ============================================================================
 # 1️⃣ Canon / History 모델 매핑 (dataset 기준)
-# ----------------------------------------------------------------------------
-# - dataset 키를 기준으로 Canon/History 클래스를 동적 연결.
-# - persist_records() 내부에서 자동 호출.
 # ============================================================================
 CANON_MODELS: Dict[str, Tuple[Any, Any]] = {
     "rooms_status": (RoomsStatusCanon, RoomsStatusHistory),
     "fnb_items": (FnbItemsCanon, FnbItemsHistory),
     "fnb_tenders": (FnbTendersCanon, FnbTendersHistory),
-    # ✅ 신규 확장 대상 (주석 해제 시 활성)
     # "sales_front": (SalesFrontCanon, SalesFrontHistory),
     # "ota_orders": (OtaOrdersCanon, OtaOrdersHistory),
 }
 
 # ============================================================================
 # 2️⃣ CanonRepository — Canon / History 관리
-# ----------------------------------------------------------------------------
+# ============================================================================
 class CanonRepository:
     """Canon/History CRUD 관리 + UPSERT + append-only History 기록"""
 
@@ -101,7 +91,6 @@ class CanonRepository:
         - payload_json 비교를 통해 UPSERT / NOOP 결정
         - History는 append-only로 모든 변경 내역 보존
         """
-        # dataset별 주요 key 결정
         if self.dataset == "rooms_status":
             key_fields = ("business_date", "property_code", "room_no")
         elif self.dataset == "fnb_items":
@@ -168,17 +157,15 @@ class CanonRepository:
 
         return (action, key_hash)
 
-
 # ============================================================================
 # 3️⃣ MergeAuditRepository — MergeBatch / ChangeLog 관리
-# ----------------------------------------------------------------------------
+# ============================================================================
 class MergeAuditRepository:
     """MergeBatch / MergeChangeLog 관리용 리포지토리"""
 
     def __init__(self, db: Session):
         self.db = db
 
-    # ─────────────────────────────────────────────
     def create_batch(
         self,
         dataset: str,
@@ -213,7 +200,6 @@ class MergeAuditRepository:
             log.exception(f"[REPO] create_batch failed: {e}")
             raise
 
-    # ─────────────────────────────────────────────
     def log_change(
         self,
         batch_id: int,
@@ -240,7 +226,6 @@ class MergeAuditRepository:
             log.exception(f"[REPO] log_change failed: {e}")
             raise
 
-    # ─────────────────────────────────────────────
     def finalize_batch(
         self,
         batch: MergeBatch,
@@ -263,7 +248,6 @@ class MergeAuditRepository:
             log.exception(f"[REPO] finalize_batch failed: {e}")
             raise
 
-    # ─────────────────────────────────────────────
     def safe_commit(self):
         """안전 커밋 (에러시 rollback)"""
         try:
@@ -273,10 +257,9 @@ class MergeAuditRepository:
             log.exception(f"[REPO] DB Commit failed: {e}")
             raise
 
-
 # ============================================================================
 # 4️⃣ persist_records — Canon + Audit 통합 적용
-# ----------------------------------------------------------------------------
+# ============================================================================
 def persist_records(db: Session, dataset: str, batch_id: int, records: List[Dict[str, Any]]) -> Dict[str, int]:
     """
     CanonRepository + MergeAuditRepository 통합 적용
