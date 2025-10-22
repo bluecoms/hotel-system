@@ -1,26 +1,44 @@
-# Python
+# ============================================================
+# Git Ignore — Hotel System (Python + Vue + NAS)
+# ------------------------------------------------------------
+# 목적:
+#   • Python / Node / Vite 빌드 캐시 및 임시파일 제외
+#   • DB / 업로드 / 로그 / venv / IDE 설정 등 제외
+#   • runbooks/snapshots 는 .gitkeep 유지
+# ============================================================
+
+# Python cache / compiled
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
 *.pyd
+
+# Virtual environment
+venv*/
+venv39_py39/
 
 # Databases
 *.db
 *.db-shm
 *.db-wal
 
-# Node dependencies / build cache
-frontend/admin/node_modules/
-frontend/admin/node_modules/.vite/
-frontend/admin/node_modules/.bin/
-
-# Temp / outputs
+# Logs / outputs / uploads
+logs/
+backend/_uploads/
 backend/out.csv
 _pmhub_audit/
 
-# IDE
+# Frontend dependencies / build cache
+frontend/admin/node_modules/
+frontend/admin/node_modules/.vite/
+frontend/admin/node_modules/.bin/
+frontend/admin/dist/
+
+# IDE / OS metadata
 .vscode/
 .idea/
+.DS_Store
+Thumbs.db
 
 # Snapshots (keep placeholder)
 docs/runbooks/snapshots/*
