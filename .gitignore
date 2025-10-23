@@ -43,3 +43,4 @@ Thumbs.db
 # Snapshots (keep placeholder)
 docs/runbooks/snapshots/*
 !docs/runbooks/snapshots/.gitkeep
+backend/app_debug.log
