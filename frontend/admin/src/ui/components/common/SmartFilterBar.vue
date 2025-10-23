@@ -1,16 +1,25 @@
-<!-- ============================================================
- Hotel Admin — SmartFilterBar (v2025.10.22 Glass Harmony Ver.)
----------------------------------------------------------------
- 목적:
-   • Glass 톤 + 플로팅 입체감의 상단 툴바 (KPI 카드 톤 통일)
-   • Property Select / BizDatePicker / Actions의 일관성 확보
-   • 중복 기능 버튼(‘새로고침’ vs ‘Refresh’) 통합
-=========================================================== -->
+<!-- ============================================================================
+  File    : src/ui/components/common/SmartFilterBar.vue
+  Version : 2025.10.30 Final Stable (HR 간소화 10차 · Glass Harmony · 중복버튼 제거)
+  Purpose : Hotel Admin — Smart Filter Bar (Glass Harmony · HR/운영 공통)
+  ------------------------------------------------------------------------------
+  목적:
+    • HR / 운영 공통으로 사용하는 상단 검색 필터 바(Glass 톤)
+    • Property 코드 동기화(localStorage + emit)
+    • 검색/조회/초기화 이벤트를 통합(search / reset)
+    • Glass Harmony 톤 통일(Brand Theme 기반)
+  ------------------------------------------------------------------------------
+  변경 요약 (v2025.10.30)
+    ✅ showProperty=false 시 Property 선택 숨김 (HR 화면용)
+    ✅ 검색/조회/초기화 버튼 중복 제거 (조회/초기화 1세트만)
+    ✅ keyword + property 상태 emit 통합
+    ✅ 스타일 유지 + 주석 보강
+============================================================================ -->
 <template>
   <div class="smart-filter-bar">
-    <!-- ▣ 좌측: Property + 날짜 + 조회 -->
+    <!-- ▣ 좌측 필터 그룹 -->
     <div class="filter-group">
-      <!-- Property -->
+      <!-- Property 선택 (전역 동기화) -->
       <div v-if="showProperty" class="ctl property-wrap">
         <v-select
           v-model="internalProperty"
@@ -19,7 +28,7 @@
           variant="solo-filled"
           hide-details
           class="property-select"
-          @update:model-value="$emit('update:property', $event)"
+          @update:model-value="onPropertyChange"
         >
           <template #prepend-inner>
             <v-icon size="18" color="primary" class="mr-1">mdi-domain</v-icon>
@@ -27,12 +36,13 @@
         </v-select>
       </div>
 
-      <!-- 날짜 (slot로 교체 가능) -->
+      <!-- slot 확장 (부서/상태 필터 등 추가 가능) -->
       <slot name="filters">
+        <!-- 기본 검색 필드 -->
         <v-text-field
-          v-model="search"
-          type="date"
-          label="Business Date"
+          v-model="keyword"
+          label="검색"
+          placeholder="검색어를 입력하세요"
           variant="solo-filled"
           hide-details
           density="comfortable"
@@ -41,13 +51,18 @@
         />
       </slot>
 
-      <!-- 조회 버튼 -->
+      <!-- 조회 버튼 (검색 이벤트 발생) -->
       <v-btn color="primary" class="btn" rounded="md" @click="emitSearch">
         조회
       </v-btn>
+
+      <!-- 초기화 버튼 -->
+      <v-btn variant="outlined" color="grey" class="btn" @click="emitReset">
+        초기화
+      </v-btn>
     </div>
 
-    <!-- ▣ 우측: 확장 slot (예: 상태칩 / 진행률 / Refresh 등) -->
+    <!-- ▣ 우측 확장 영역 (예: 상태칩, 기간필터 등) -->
     <div class="extra-group">
       <slot name="extra" />
     </div>
@@ -55,45 +70,75 @@
 </template>
 
 <script setup lang="ts">
-/* ============================================================
-   SmartFilterBar Script — Reactive State / Events
-=========================================================== */
-import { ref, watch, withDefaults } from 'vue'
+/* ===========================================================================
+   Script — SmartFilterBar
+   ---------------------------------------------------------------------------
+   • property_code 자동 동기화(localStorage + emit)
+   • 검색(search) / 초기화(reset) 이벤트 일원화
+   • HR/운영 화면의 상단 필터바 표준화
+=========================================================================== */
+import { ref, watch, withDefaults, onMounted } from 'vue'
 
+/** Props 정의 */
 const props = withDefaults(defineProps<{
   property?: string
   propertyOptions?: string[]
-  from?: string
-  to?: string
   showProperty?: boolean
 }>(), {
   showProperty: true,
 })
 
+/** Emits 정의 */
 const emit = defineEmits(['search', 'reset', 'update:property'])
 
-const search = ref('')
+/* 내부 상태 */
 const internalProperty = ref(props.property || '')
+const keyword = ref('')
 
+/* Property prop 외부 변경 감시 */
 watch(() => props.property, v => (internalProperty.value = v || ''))
 
+/* 초기 로드 시 전역 property 동기화(localStorage) */
+onMounted(() => {
+  if (!internalProperty.value) {
+    internalProperty.value =
+      localStorage.getItem('property_code') ||
+      import.meta.env.VITE_DEFAULT_PROPERTY_CODE ||
+      'MOP'
+  }
+})
+
+/** Property 변경 시 localStorage와 emit 모두 업데이트 */
+function onPropertyChange(v: string) {
+  localStorage.setItem('property_code', v)
+  emit('update:property', v)
+}
+
+/** 검색/조회 이벤트 (엔터키 또는 버튼 클릭 시) */
 function emitSearch() {
   emit('search', {
     property: internalProperty.value,
-    keyword: search.value,
+    keyword: keyword.value,
   })
+}
+
+/** 초기화 이벤트 */
+function emitReset() {
+  keyword.value = ''
+  emit('reset')
 }
 </script>
 
 <style scoped>
-/* ============================================================
-   SmartFilterBar — Glass Floating Unified Style
-   ------------------------------------------------------------
-   Glass 톤, 둥근 radius, soft shadow, 반응형 지원
-=========================================================== */
+/* ===========================================================================
+   Style — SmartFilterBar (Glass Harmony Ver.)
+   ---------------------------------------------------------------------------
+   • 브랜드 톤 기반 반투명 Glass 효과
+   • 필터/버튼/추가영역 정렬 및 반응형 대응
+=========================================================================== */
 .smart-filter-bar {
   display: grid;
-  grid-template-columns: 1fr auto; /* 좌측 유동, 우측 내용 */
+  grid-template-columns: 1fr auto; /* 좌측 유동, 우측 고정 */
   align-items: center;
   gap: 14px;
 
@@ -162,7 +207,7 @@ function emitSearch() {
   transform: translateY(-1px);
 }
 
-/* Responsive */
+/* 반응형 대응 */
 @media (max-width: 1024px) {
   .smart-filter-bar {
     grid-template-columns: 1fr;

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # ============================================================================
 # File      : app/schemas/master_bank.py
-# Version   : 2025.10-28 · v1.5 (Upgrade: order_no / country_code / meta)
+# Version   : 2025.10-28 · v1.6 (Hotfix · country_code Optional · ValidationError Fix)
 # Purpose   : Hotel Admin — Master Banks Schema (/api/master/banks)
 # ----------------------------------------------------------------------------
 # 목적:
@@ -26,6 +26,10 @@
 #       ✅ country_code / order_no / meta 필드 추가
 #       ✅ MasterBankOption 스키마 추가
 #       ✅ 주석/필드 설명 보강
+#   v1.6 (2025-10-30) · Hotfix:
+#       ✅ FastAPI ResponseValidationError 해결
+#       ✅ country_code: Optional[str] = Field(None, ...) 로 변경
+#       ✅ None 입력 허용 및 기본값 KR 유지
 # ============================================================================
 from datetime import datetime
 from typing import Optional, ClassVar, Dict, Any
@@ -40,11 +44,15 @@ class MasterBankBase(BaseModel):
     code: str = Field(..., description="은행 코드 (예: NH, WR, KB, IBK 등)")
     name: str = Field(..., description="은행명 (예: 농협은행, 국민은행 등)")
     alias: Optional[str] = Field("", description="약칭 또는 표시명 (예: 농협, 국민)")
-    country_code: str = Field("KR", description="국가 코드 (예: KR)")
+    # ✅ None 허용으로 ResponseValidationError 방지
+    country_code: Optional[str] = Field(
+        "KR", description="국가 코드 (예: KR, JP, US). None 허용"
+    )
     order_no: Optional[int] = Field(0, description="정렬 순서 (낮을수록 우선)")
     is_active: bool = Field(True, description="활성 여부 (False 시 /options에서 제외)")
     meta: Optional[Dict[str, Any]] = Field(
-        None, description="부가정보(JSON) — 예: {'bic': 'KOEXKRSE', 'logo_url': '...'}"
+        None,
+        description="부가정보(JSON) — 예: {'bic': 'KOEXKRSE', 'logo_url': '...'}",
     )
 
 

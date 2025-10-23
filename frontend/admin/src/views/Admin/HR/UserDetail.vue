@@ -1,17 +1,13 @@
 <!-- ============================================================================
 # VIEW: HR-USER-DETAIL
 # File    : src/views/Admin/HR/UserDetail.vue
-# Version : 2025.10-28 · v2.0 (Tabs 제거 · Master 연동 · UX 개선 · 오류 정정)
+# Version : 2025.10-28 · v2.0.1 (Hotfix · Master API 인자 제거 · 주석정리)
 # Purpose : 사용자 상세/편집 화면 (프로필 단일 뷰, 계약은 별도 화면으로 이동)
 # ----------------------------------------------------------------------------
-# 변경 요약 (v2.0)
-#   ✅ 상단 제목 오류 제거: 이상한 URL 문자열 제거, 사용자 이름/이메일만 표기
-#   ✅ 탭 구조 제거: '프로필/계약서' 탭 → 프로필 단일 화면로 단순화
-#   ✅ ContractTab 컴포넌트 import 제거 (없어진 파일 참조 오류 해결)
-#   ✅ 역할(Role) 입력: 단일 선택 → 다중 선택(roles[])로 개선 (백엔드 배열 호환)
-#   ✅ 부서/직위: Master API 연동(v-select, 옵션 로드)
-#   ✅ 저장 필드 정리: 허용 필드만 PUT, 입력 검증 최소 보강
-#   ✅ UX 개선: 상단 요약 카드 + 우측 액션(계약 관리로 이동 / 비활성 표시 등)
+# 변경 요약 (v2.0.1)
+#   ✅ TS2554 해결: MasterApi.departmentOptions({}) → MasterApi.departmentOptions()
+#   ✅ Master API 호출 주석 정리 (departmentOptions / positionOptions)
+#   ✅ 전체 주석/가독성 정리 및 정책(axios금지) 강조
 # ----------------------------------------------------------------------------
 # 연계
 #   • GET  /api/users/{id}              → 사용자 로드 (users.py)
@@ -21,8 +17,8 @@
 #   • 계약 관리 이동: /admin/hr/contracts (employee_id 있을 때 필터를 쿼리로 전달)
 # ----------------------------------------------------------------------------
 # 주의
-#   • 우리 정책: fetch 기반 http.ts 사용(axios 금지). 여기서는 http.ts 유지.
-#   • 역할(Role) 코드는 대문자 사용. SUPERADMIN 우선.
+#   • fetch 기반 http.ts 사용(axios 금지)
+#   • 역할(Role) 코드는 항상 대문자 (SUPERADMIN, ADMIN 등)
 # ============================================================================ -->
 <template>
   <v-container fluid class="page-shell py-6">
@@ -36,6 +32,7 @@
         </div>
       </div>
 
+      <!-- 우측 상태/버튼 영역 -->
       <div class="bar-right d-flex align-center gap8 mt-2 mt-sm-0">
         <v-chip
           size="small"
@@ -46,39 +43,27 @@
           {{ user?.is_active ? '활성' : '비활성' }}
         </v-chip>
 
-        <v-btn
-          variant="outlined"
-          color="primary"
-          prepend-icon="mdi-arrow-left"
-          @click="router.push('/admin/users')"
-        >
+        <v-btn variant="outlined" color="primary" prepend-icon="mdi-arrow-left" @click="router.push('/admin/users')">
           목록으로
         </v-btn>
 
-        <!-- 직원 매핑이 있는 경우 계약 관리로 빠르게 이동 -->
         <v-btn
           v-if="user?.employee_id"
           color="primary"
           prepend-icon="mdi-file-sign"
           variant="flat"
-          @click="goContracts()"
+          @click="goContracts"
         >
           계약 관리로
         </v-btn>
       </div>
     </div>
 
-    <!-- ───────────── 본문 카드 ───────────── -->
+    <!-- ───────────── 프로필 카드 ───────────── -->
     <v-card class="rounded-xl elevation-1">
       <v-card-text class="pa-6">
         <!-- 상단 요약 -->
-        <v-alert
-          v-if="user"
-          type="info"
-          variant="tonal"
-          border="start"
-          class="mb-4"
-        >
+        <v-alert v-if="user" type="info" variant="tonal" border="start" class="mb-4">
           <div class="d-flex align-center flex-wrap gap8">
             <v-icon icon="mdi-badge-account" start />
             <div class="text-body-2">
@@ -111,12 +96,7 @@
         <v-form ref="formRef" @submit.prevent="saveProfile" class="py-3">
           <v-row dense>
             <v-col cols="12" md="4">
-              <v-text-field
-                v-model.trim="form.name"
-                label="이름"
-                :rules="[req]"
-                hide-details="auto"
-              />
+              <v-text-field v-model.trim="form.name" label="이름" :rules="[req]" hide-details="auto" />
             </v-col>
 
             <v-col cols="12" md="4">
@@ -129,19 +109,12 @@
               />
             </v-col>
 
-            <!-- 역할: 다중 선택 (대문자 코드) -->
+            <!-- 역할: 다중 선택 -->
             <v-col cols="12" md="4">
-              <v-select
-                v-model="form.roles"
-                :items="roleItems"
-                label="역할(Role)"
-                multiple
-                chips
-                hide-details="auto"
-              />
+              <v-select v-model="form.roles" :items="roleItems" label="역할(Role)" multiple chips hide-details="auto" />
             </v-col>
 
-            <!-- 부서: Master 옵션 -->
+            <!-- 부서 선택 -->
             <v-col cols="12" md="6">
               <v-select
                 v-model="form.department"
@@ -154,7 +127,7 @@
               />
             </v-col>
 
-            <!-- 직위: Master 옵션 -->
+            <!-- 직위 선택 -->
             <v-col cols="12" md="6">
               <v-select
                 v-model="form.position"
@@ -168,12 +141,7 @@
             </v-col>
 
             <v-col cols="12">
-              <v-textarea
-                v-model.trim="form.memo"
-                label="메모"
-                rows="3"
-                hide-details="auto"
-              />
+              <v-textarea v-model.trim="form.memo" label="메모" rows="3" hide-details="auto" />
             </v-col>
           </v-row>
 
@@ -190,16 +158,16 @@
 <script setup lang="ts">
 /* ===========================================================================
 # Script — HR User Detail (프로필 단일 뷰)
-# ---------------------------------------------------------------------------
 # 흐름:
 #   1) route.params.id 로 사용자 로드 (/api/users/{id})
-#   2) Master 부서/직위 옵션 로드 → v-select 바인딩
+#   2) Master 부서/직위 옵션 로드 → v-select에 바인딩
 #   3) 저장 시 허용 필드만 PUT (name, email, roles, department, position, memo)
-#   4) 직원 매핑이 있으면 '계약 관리' 화면으로 이동 버튼 제공
-# 주의:
-#   • ContractTab.vue 를 더 이상 사용하지 않음 (탭 제거)
-#   • http.ts(fetch) 정책 유지
-# =========================================================================== */
+#   4) 직원 매핑이 있을 경우 '계약 관리' 화면으로 이동 버튼 제공
+# ---------------------------------------------------------------------------
+# 정책:
+#   • axios 금지, fetch 기반 http.ts만 사용
+#   • roles는 항상 대문자 코드 (SUPERADMIN, ADMIN 등)
+=========================================================================== */
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import http from '@/services/http'
@@ -216,17 +184,17 @@ const user = ref<any>(null)
 const formRef = ref()
 const saving = ref(false)
 
-/** 폼 상태 (roles: 다중 선택) */
+/** 폼 상태 */
 const form = ref<any>({
   name: '',
   email: '',
-  roles: [] as string[],     // ✅ 다중 선택으로 변경
+  roles: [] as string[],
   department: '',
   position: '',
   memo: '',
 })
 
-/** 역할 코드(대문자) */
+/** 역할 코드 (대문자) */
 const roleItems = ['SUPERADMIN', 'ADMIN', 'FRONT', 'HK', 'FNB']
 
 /** Master 옵션 (부서/직위) */
@@ -244,9 +212,8 @@ const emailRule = (v: any) => {
 /** 사용자 로드 */
 async function loadUser() {
   try {
-    const r = await http.get<any>(`/users/${userId}`)  // ✅ 타입 명시
+    const r = await http.get<any>(`/users/${userId}`)
     user.value = r
-    // roles가 배열이 아닐 수 있으니 방어
     const rolesArray = Array.isArray(r?.roles) ? r.roles : (r?.roles ? [r.roles] : [])
     Object.assign(form.value, {
       name: r?.name ?? '',
@@ -256,21 +223,23 @@ async function loadUser() {
       position: r?.position ?? '',
       memo: r?.memo ?? '',
     })
-  } catch (e) {
+  } catch {
     error('사용자 정보를 불러오지 못했습니다.')
   }
 }
 
-/** Master 옵션 로드 */
+/** Master 옵션 로드
+ * Hotfix: departmentOptions() 인자 제거 (TS2554 해결)
+ */
 async function loadMasters() {
   try {
-    const deptRes = await MasterApi.departmentOptions({})  // [{title,value}]
+    const deptRes = await MasterApi.departmentOptions() // ✅ 인자 제거
     deptOptions.value = Array.isArray(deptRes) ? deptRes : (deptRes?.items ?? [])
   } catch {
     deptOptions.value = []
   }
+
   try {
-    // positionOptions(): 서비스에 정의되어 있으면 사용, 없으면 fallback
     const pos = (await (MasterApi as any).positionOptions?.()) || []
     positionOptions.value = Array.isArray(pos) ? pos : (pos?.items ?? [])
   } catch {
@@ -280,11 +249,10 @@ async function loadMasters() {
 
 /** 저장 */
 async function saveProfile() {
-  // name/email 간단 검증
   const ok =
-  ((formRef.value as any)?.validate)
-    ? await (formRef.value as any).validate()
-    : { valid: true }
+    (formRef.value as any)?.validate
+      ? await (formRef.value as any).validate()
+      : { valid: true }
   if (ok?.valid === false) return
 
   if (form.value.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email)) {
@@ -294,8 +262,7 @@ async function saveProfile() {
 
   try {
     saving.value = true
-    // 허용 필드만 추려서 전송
-    const payload: any = {
+    const payload = {
       name: form.value.name,
       email: form.value.email,
       roles: (form.value.roles || []).map((x: any) => String(x).toUpperCase()),
@@ -306,21 +273,21 @@ async function saveProfile() {
     await http.put(`/users/${userId}`, payload)
     success('저장되었습니다.')
     await loadUser()
-  } catch (e) {
+  } catch {
     error('저장 실패')
   } finally {
     saving.value = false
   }
 }
 
-/** 계약 관리 화면으로 이동 (employee_id 필터 전달) */
+/** 계약 관리 화면으로 이동 */
 function goContracts() {
   const eid = user.value?.employee_id
   if (!eid) return
-  // 쿼리로 employee_id 전달 (Contracts.vue가 지원한다면 반영)
   router.push({ name: 'admin-hr-contracts', query: { employee_id: String(eid) } })
 }
 
+/** 초기 로드 */
 onMounted(async () => {
   await Promise.all([loadUser(), loadMasters()])
 })

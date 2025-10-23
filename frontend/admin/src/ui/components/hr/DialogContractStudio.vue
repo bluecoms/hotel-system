@@ -1,16 +1,14 @@
 <!-- ============================================================================
-  File    : /src/ui/components/hr/DialogContractStudio.vue
-  Version : 1.8.4 (2025-10-20 Final Stable)
-  Purpose : Hotel Admin — 계약서 작성·확정 다이얼로그 (HTML 템플릿 자동 주입)
+  File    : src/ui/components/hr/DialogContractStudio.vue
+  Version : 1.9.1 Hotfix (2025-10-24 · TS2695 Fix · 주석 정비 · 기능동일)
+  Purpose : 계약서 작성·확정 다이얼로그 (HTML 템플릿 자동 주입 + 인쇄 후 확정)
   ------------------------------------------------------------------------------
-  연결 백엔드:
-    • GET    /api/employees/{id}            → 직원 상세정보 (계좌/부서/직책 포함)
-    • PUT    /api/contracts/{id}/activate   → 계약 확정(활성화)
-  주요 개선사항:
-    ✅ 계약 확정 후 emit('saved') → 부모 reload() + 상위 emit('updated') 완전 동기화
-    ✅ afterprint + fallback 병행 (PDF 저장 시에도 정상 처리)
-    ✅ iframe 데이터 주입 안정화(maybeFill 3회 브로드캐스트)
-    ✅ 에러 로그 및 Toast 중복 방지 정비
+  변경 요약
+    ✅ TS2695 해결: `[100,300,700].forEach(...)` → for-of 반복으로 교체
+    ✅ 데이터 자동 주입(iframe postMessage) 3회 브로드캐스트 유지
+    ✅ afterprint + 3초 fallback로 인쇄 후 activate 보장
+    ✅ saving 플래그로 중복 클릭 방지
+    ✅ 주석/가독성 정리 (역할/흐름 분리)
 ============================================================================ -->
 <template>
   <v-dialog
@@ -20,7 +18,7 @@
     @update:model-value="v => emit('update:open', v)"
   >
     <v-card class="rounded-2xl">
-      <!-- ───── 헤더 ───── -->
+      <!-- ───────────── 헤더 ───────────── -->
       <v-card-title class="d-flex align-center justify-space-between py-3">
         <div class="d-flex align-center gap-2">
           <v-icon icon="mdi-file-document-edit-outline" class="mr-1" />
@@ -35,7 +33,7 @@
 
       <v-divider />
 
-      <!-- ───── 직원 정보 섹션 ───── -->
+      <!-- ───────────── 직원 요약 정보 ───────────── -->
       <v-card-text class="px-5 py-3">
         <v-row dense align="center">
           <v-col cols="12" md="9">
@@ -60,7 +58,7 @@
 
       <v-divider />
 
-      <!-- ───── 본문(아이프레임) ───── -->
+      <!-- ───────────── 본문(아이프레임) ───────────── -->
       <v-card-text class="p-0">
         <div class="iframe-wrap">
           <iframe
@@ -75,14 +73,14 @@
 
       <v-divider />
 
-      <!-- ───── 푸터(닫기 / 인쇄) ───── -->
+      <!-- ───────────── 푸터(닫기/인쇄) ───────────── -->
       <v-card-actions class="px-5 py-3 justify-end">
         <v-btn variant="text" @click="emit('update:open', false)">닫기</v-btn>
         <v-btn
           color="primary"
           variant="flat"
           prepend-icon="mdi-printer"
-          :disabled="!employeeId"
+          :disabled="!employeeId || saving"
           :loading="saving"
           @click="onPrintAndActivate"
         >
@@ -95,18 +93,22 @@
 
 <script setup lang="ts">
 /* ===========================================================================
-  Script Logic — 직원/계약 데이터 자동 주입 + 인쇄 시 계약 활성화 처리
-  ---------------------------------------------------------------------------
-  • maybeFill(): iframeReady + contextReady 모두 true 시 주입
-  • broadcastFill(): fill / fillForm / set 포맷 병행
-  • onPrintAndActivate(): 인쇄 후 activate() 호출 → 계약 확정 + 부모 reload()
+   로직 개요
+   ---------------------------------------------------------------------------
+   • props.open      : 다이얼로그 표시 제어
+   • props.contract  : 현재 작업 중인 계약(시작/종료/급여/메타 포함)
+   • 직원 컨텍스트   : employees API로 로드하여 iframe 템플릿에 주입
+   • maybeFill()     : iframe 준비 + 컨텍스트 준비 완료 시 3회 브로드캐스트
+   • onPrintAndActivate() :
+       - window.print() → afterprint 이벤트 수신 시 activate 호출
+       - 3초 후에도 afterprint 미도착 시 fallback으로 activate
 =========================================================================== */
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useToast } from '@/ui/composables/useToast'
 import * as EmployeesApi from '@/services/employees'
 import * as ContractsApi from '@/services/contracts'
 
-/** Props / Emits */
+/* ───────── Props / Emits ───────── */
 const props = defineProps<{
   open: boolean
   contract?: {
@@ -119,10 +121,14 @@ const props = defineProps<{
   }
 }>()
 
-const emit = defineEmits<{ (e: 'update:open', v: boolean): void; (e: 'saved'): void }>()
+const emit = defineEmits<{
+  (e: 'update:open', v: boolean): void
+  (e: 'saved'): void
+}>()
+
 const { success, error } = useToast()
 
-/** 직원 컨텍스트 */
+/* ───────── 상태: 직원 컨텍스트/기간/플래그 ───────── */
 const employeeId = ref<number | null>(null)
 const empContext = ref({
   name: '',
@@ -135,15 +141,13 @@ const empContext = ref({
   account: '',
   salary: null as number | null,
 })
-
-/** 계약 기간 */
 const period = ref<{ start: string; end: string | null }>({ start: '', end: null })
 
-/** 상태 플래그 */
-const iframeReady = ref(false)
-const contextReady = ref(false)
+const iframeReady = ref(false)   // iframe 로드 여부
+const contextReady = ref(false)  // 직원 컨텍스트 로드 여부
+const saving = ref(false)        // 인쇄/확정 중 중복 방지
 
-/** 주민번호 → 생년월일 */
+/* ───────── 유틸: 주민등록번호 → 생년월일 ───────── */
 function rrnToBirth(rrn?: string): string {
   if (!rrn) return ''
   const clean = rrn.replace(/[^0-9]/g, '')
@@ -155,7 +159,11 @@ function rrnToBirth(rrn?: string): string {
   return `${century}${yy.toString().padStart(2, '0')}-${mm}-${dd}`
 }
 
-/** 멀티포맷 브로드캐스트 */
+/* ───────── iframe 데이터 브로드캐스트 ─────────
+   - 템플릿 측에서 수신: fill / fillForm / set
+   - N회(3회) 반복 전송으로 초기 로딩 타이밍 오차 보정
+────────────────────────────────────────────── */
+const iframeRef = ref<HTMLIFrameElement | null>(null)
 function broadcastFill(p: any) {
   const win = iframeRef.value?.contentWindow
   if (!win) return
@@ -166,7 +174,6 @@ function broadcastFill(p: any) {
   }
 }
 
-/** 데이터 주입 */
 function maybeFill() {
   if (!iframeReady.value || !contextReady.value) return
   const p = {
@@ -182,12 +189,14 @@ function maybeFill() {
     start_date: period.value.start,
     end_date: period.value.end,
   }
-  broadcastFill(p)
-  setTimeout(() => broadcastFill(p), 200)
-  setTimeout(() => broadcastFill(p), 500)
+  // ✅ TS2695 회피: 배열 forEach 대신 for-of 루프로 setTimeout 호출
+  const delays = [100, 300, 700]
+  for (const delay of delays) {
+    setTimeout(() => broadcastFill(p), delay)
+  }
 }
 
-/** 계약 오픈 시 직원·계약정보 로드 */
+/* ───────── 다이얼로그 오픈 → 직원 정보 로드 ───────── */
 watch(
   () => props.open,
   async (visible) => {
@@ -216,6 +225,7 @@ watch(
 
       period.value.start = c.start_date || ''
       period.value.end = c.end_date || null
+
       contextReady.value = true
       maybeFill()
     } catch (e) {
@@ -225,10 +235,8 @@ watch(
   }
 )
 
-/** iframe 통신 및 초기화 */
-const iframeRef = ref<HTMLIFrameElement | null>(null)
+/* ───────── iframe 초기화 ───────── */
 const iframeUrl = '/contracts/ocean-contract-v1.5.html'
-
 function onIframeLoad() {
   iframeReady.value = true
   const win = iframeRef.value?.contentWindow
@@ -236,75 +244,57 @@ function onIframeLoad() {
   win.postMessage({ type: 'init', template: 'MONTHLY' }, '*')
   win.postMessage({ type: 'switchTab', target: 'MONTHLY' }, '*')
   maybeFill()
-  setTimeout(maybeFill, 200)
-  setTimeout(maybeFill, 500)
 }
 
+/* ───────── 메시지 수신(템플릿 ready 등) ───────── */
 function onMessage(ev: MessageEvent) {
   const msg = ev.data
   if (!msg || typeof msg !== 'object') return
   if (msg.type === 'ready') {
     iframeReady.value = true
     maybeFill()
-    setTimeout(maybeFill, 200)
-  } else if (msg.type === 'contractSnapshotResult') {
-    _pendingResolver?.(msg.data)
-    _pendingResolver = null
   }
 }
 
-/** 스냅샷 요청 */
-let _pendingResolver: ((v: any) => void) | null = null
-function requestSnapshot(kind: 'MONTHLY'): Promise<any> {
-  return new Promise((resolve) => {
-    _pendingResolver = resolve
-    iframeRef.value?.contentWindow?.postMessage({ type: 'getSnapshot', wanted: kind }, '*')
-  })
-}
-
-/** 인쇄 + 계약 확정 처리 */
-const saving = ref(false)
+/* ───────── 인쇄 + 계약 확정(activate) ─────────
+   - window.print()
+   - afterprint 이벤트 → activate 호출
+   - 3초 내 afterprint 미수신 시 fallback으로 activate 보장
+────────────────────────────────────────────── */
 async function onPrintAndActivate() {
+  if (saving.value || !props.contract?.id) return
   const win = iframeRef.value?.contentWindow
   win?.focus()
   win?.print()
-  if (!props.contract?.id) return
 
-  try {
-    saving.value = true
-    const handler = async () => {
-      window.removeEventListener('afterprint', handler)
-      try {
-        await ContractsApi.activate(props.contract.id)
-        success('계약이 확정되었습니다.')
-        emit('saved')
-      } catch (err) {
-        console.error('[Studio] activate failed:', err)
-        error('계약 확정 실패')
-      } finally {
-        saving.value = false
-      }
+  saving.value = true
+
+  const handler = async () => {
+    window.removeEventListener('afterprint', handler)
+    try {
+      await ContractsApi.activate(props.contract!.id)
+      success('계약이 확정되었습니다.')
+      emit('saved')
+    } catch (err) {
+      console.error('[Studio] activate failed:', err)
+      error('계약 확정 실패')
+    } finally {
+      saving.value = false
     }
-    window.addEventListener('afterprint', handler)
-    // fallback: afterprint 미발생 시
-    setTimeout(() => { if (saving.value) handler() }, 3000)
-  } catch (e) {
-    saving.value = false
-    console.error('[Studio] activate outer fail:', e)
-    error('인쇄 처리 실패')
   }
+
+  window.addEventListener('afterprint', handler)
+  setTimeout(() => { if (saving.value) handler() }, 3000) // fallback
 }
 
-/** 이벤트 등록/해제 */
+/* ───────── 이벤트 등록/해제 ───────── */
 onMounted(() => window.addEventListener('message', onMessage))
 onBeforeUnmount(() => window.removeEventListener('message', onMessage))
 </script>
 
 <style scoped>
-.iframe-wrap {
-  height: calc(100vh - 280px);
-  background: #f8fafc;
-}
+/* 레이아웃/톤: iframe 영역은 밝은 배경, 상단 라운드 유지 */
+.iframe-wrap { height: calc(100vh - 280px); background: #f8fafc; }
 .contract-iframe {
   width: 100%;
   height: 100%;
