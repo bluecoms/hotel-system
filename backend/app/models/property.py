@@ -1,30 +1,35 @@
+# -*- coding: utf-8 -*-
 # ============================================================================
 # File      : app/models/property.py
-# Version   : 2025.10-31 v1.1 (Stable · extend_existing Fix)
-# Purpose   : Hotel Admin — Property(지점) 마스터 모델 (SQLAlchemy ORM)
+# Version   : 2025.10-26 · v2.0 (SSOT Final · 운영용 ORM)
+# Purpose   : Hotel Admin — Property(지점) 운영 테이블 ORM
 # ----------------------------------------------------------------------------
 # 목적:
-#   • 호텔 지점(Property) 기본 정보 저장
-#   • 직원(Employee), 계약(Contract), 업로드 등 주요 도메인의 상위 식별자 역할
+#   • 호텔 시스템 전역에서 사용하는 "운영용 지점(Property)" 테이블
+#   • MasterProperty(SSOT 관리 테이블)에서 자동 동기화됨
+#   • 직원(Employee), 계약(Contract), 마감(Closing), 업로드(Upload) 등
+#     모든 도메인의 상위 식별자(FK)로 사용된다.
 # ----------------------------------------------------------------------------
 # 설계 원칙:
-#   • code(PK) 는 문자열 기반 (예: MOP, SEO, BUS 등)
-#   • name 은 사람이 읽을 수 있는 호텔명
-#   • is_active 는 활성 여부
-#   • created_at / updated_at 은 UTC 기준 자동 기록
+#   • code(PK) : 문자열 기반 (예: MOP, SEO, BUS 등)
+#   • name     : 사람이 읽을 수 있는 호텔명
+#   • is_active: 활성 여부
+#   • created_at / updated_at : UTC 기준 자동 기록
 # ----------------------------------------------------------------------------
-# 연관 테이블:
-#   • employees.property_code (FK)
-#   • contracts.property_code (FK)
+# 연관 관계:
+#   • MasterProperty → Property (단방향 싱크)
+#   • Employees.property_code (FK)
+#   • Contracts.property_code (FK)
+#   • Closing, Upload, Reports 등 모든 도메인 참조
 # ----------------------------------------------------------------------------
-# Note:
-#   • 기본 지점은 Mokpo Ocean Hotel (code='MOP')
-#   • 데이터는 마스터 테이블로 관리되며 프런트 Property Selector 에 노출됨
+# 운영 정책:
+#   • CRUD 불가 (조회 전용)
+#   • 데이터 생성/수정은 /api/master/properties 에서만 수행
 # ----------------------------------------------------------------------------
-# 추가 설명 (v1.1):
-#   ✅ Alembic/AutoLoader 중복 로드 시 "Table 'properties' is already defined" 경고 방지
-#   ✅ __table_args__ = {'extend_existing': True} 지정 → 동일 Base.metadata 내 재등록 허용
-#   ✅ DB 스키마나 데이터에 영향 없음 (경고만 억제)
+# 변경 이력(v2.0):
+#   ✅ SSOT 구조 반영 (Master → Property 일방향 싱크)
+#   ✅ 주석/용어 정비 (운영용 ORM으로 명확화)
+#   ✅ Alembic extend_existing 설정 유지 (중복 정의 경고 억제)
 # ============================================================================
 from __future__ import annotations
 from datetime import datetime
@@ -34,10 +39,10 @@ from app.db.base_class import Base
 
 
 class Property(Base):
-    """호텔 지점(Property) 마스터"""
+    """호텔 지점(Property) — 운영용 ORM"""
 
     __tablename__ = "properties"
-    __table_args__ = {"extend_existing": True}  # ✅ 중복 테이블 정의 허용 (경고 억제)
+    __table_args__ = {"extend_existing": True}  # Alembic 중복 경고 억제용
 
     # ─────────────────────────────
     # 기본 컬럼

@@ -35,7 +35,6 @@ _PREFERRED_MODULES: Dict[str, str] = {
     # 인증 / 시스템
     "auth": "auth",
     "health": "health",
-    "menu": "menu",
     # "me": "me",   # ❌ 제거됨 (Phase 3 이후 폐기)
 
     # 사용자 / 조직 / 권한

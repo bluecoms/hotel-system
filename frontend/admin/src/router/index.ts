@@ -1,65 +1,64 @@
 // ============================================================================
 // File      : src/router/index.ts
-// Version   : 2025.11-04 · v4.0 (Menu=Router 1:1 동기화 · DeptAccess Guard Reactive)
-// Purpose   : Hotel Admin — Router (DeptAccess 기반 접근제어 / 무한루프 완전 차단)
+// Version   : 2025.11-04 · v4.2 (Dev SuperAdmin Auto · Guard Final Stable)
+// Purpose   : Hotel Admin — Router (DeptAccess 기반 접근제어 / DEV 모드 자동 통과)
 // ----------------------------------------------------------------------------
-// 설계 요약 (SSOT 동기화)
+// 설계 요약 (SSOT 완전 동기화)
 //   • menu.ts 의 routeName / 경로(path)와 100% 동일하도록 라우트 정의
 //   • meta.routeName 은 DeptAccess 권한 키와 반드시 일치
-//   • 전역 가드는 스토어의 반응형 상태(auth.effectiveDeptAccess)만을 사용
-//   • SUPERADMIN 즉시 통과, forbidden 루프 차단, 최초 bootstrap 보장
+//   • 전역 가드는 스토어(authStore)의 반응형 상태만 사용 (임시 캐시 금지)
+//   • SUPERADMIN 및 개발환경(dev)에서는 즉시 통과
+//   • forbidden 루프 완전 차단, 최초 bootstrap 자동 수행
 // ----------------------------------------------------------------------------
 // 용어 정리
 //   • effectiveDeptAccess : /api/roles/access/effective 응답(서버 계산) 반영 맵
 //   • routeName           : DeptAccess 판단 키(백엔드 키와 동일)
 //   • requiresAuth        : 로그인 필요 플래그(기본 true)
 // ============================================================================
-
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { getEffectiveDeptAccess, canAccessRoute } from '@/services/auth'
 
 // ─────────────────────────────────────────────
 // Lazy Imports — menu.ts와 동일한 실제 경로 구성
-//   • 대시보드/Closing/Reports/HR/Users/Role/Account 전부 명시
-//   • 파일 경로는 현 구조 기준(프로젝트 실제 파일 존재 가정)
 // ─────────────────────────────────────────────
-const Login                 = () => import('@/views/Auth/Login.vue')
-const Forbidden             = () => import('@/views/Forbidden.vue')
-const Dashboard             = () => import('@/views/Dashboard.vue')
+const Login             = () => import('@/views/Auth/Login.vue')
+const Forbidden         = () => import('@/views/Forbidden.vue')
+const Dashboard         = () => import('@/views/Dashboard.vue')
 
 // Closing
-const ClosingCal            = () => import('@/views/closing/Closing.vue')               // /closing
-const ClosingBoard          = () => import('@/views/closing/Board.vue')                 // /closing/board
-const ClosingMerge          = () => import('@/views/closing/merge/MergeHistory.vue')    // /closing/merge
+const ClosingCal        = () => import('@/views/closing/Closing.vue')
+const ClosingBoard      = () => import('@/views/closing/Board.vue')
+const ClosingMerge      = () => import('@/views/closing/merge/MergeHistory.vue')
 
 // Reports
-const ReportsTags           = () => import('@/views/Reports/SalesTags.vue')             // /admin/reports/sales-tags
-const ReportsBank           = () => import('@/views/Reports/BankLedger.vue')            // /admin/reports/bank-ledger
-const ReportsExp            = () => import('@/views/Reports/Expenses.vue')              // /admin/reports/expenses
-const ReportsFnb            = () => import('@/views/Reports/FnbDaily.vue')              // /admin/reports/fnb-daily
-const ReportsRooms          = () => import('@/views/Reports/RoomsSummary.vue')          // /admin/reports/rooms-summary
+const ReportsTags       = () => import('@/views/Reports/SalesTags.vue')
+const ReportsBank       = () => import('@/views/Reports/BankLedger.vue')
+const ReportsExp        = () => import('@/views/Reports/Expenses.vue')
+const ReportsFnb        = () => import('@/views/Reports/FnbDaily.vue')
+const ReportsRooms      = () => import('@/views/Reports/RoomsSummary.vue')
 
 // HR
-const HrDashboard           = () => import('@/views/Admin/HR/Dashboard.vue')            // /admin/hr/dashboard
-const HrEmployees           = () => import('@/views/Admin/HR/Employees.vue')            // /admin/hr/employees
-const HrContracts           = () => import('@/views/Admin/HR/Contracts.vue')            // /admin/hr/contracts
-const HrRecords             = () => import('@/views/Admin/HR/Records.vue')              // /admin/hr/records
-const HrAccountLink         = () => import('@/views/Admin/HR/AccountLink.vue')          // /admin/hr/account-link
+const HrDashboard       = () => import('@/views/Admin/HR/Dashboard.vue')
+const HrEmployees       = () => import('@/views/Admin/HR/Employees.vue')
+const HrContracts       = () => import('@/views/Admin/HR/Contracts.vue')
+const HrRecords         = () => import('@/views/Admin/HR/Records.vue')
+const HrAccountLink     = () => import('@/views/Admin/HR/AccountLink.vue')
 
 // System / Users
-const UsersList             = () => import('@/views/Users/Users.vue')                   // /admin/users
-const MasterData            = () => import('@/views/Users/master/MasterData.vue')       // /admin/users/master
-const ResetUserPassword     = () => import('@/views/Admin/ResetUserPassword.vue')       // /admin/users/password-reset
+const UsersList         = () => import('@/views/Users/Users.vue')
+const MasterData        = () => import('@/views/Users/master/MasterData.vue')
+const ResetUserPassword = () => import('@/views/Admin/ResetUserPassword.vue')
 
 // Role / Account
-const RoleAccess            = () => import('@/views/Admin/RoleAccess.vue')              // /admin/role-access
-const MyInfo                = () => import('@/views/Users/MyInfo.vue')                  // /account/info
+const RoleAccess        = () => import('@/views/Admin/RoleAccess.vue')
+const MyInfo            = () => import('@/views/Users/MyInfo.vue')
+
+// ✅ Housekeeping
+const HousekeepingBoard = () => import('@/views/HousekeepingBoard.vue')
 
 // ─────────────────────────────────────────────
-// Routes — menu.ts 의 routeName/경로와 100% 일치
-//   • meta.routeName 은 menu.ts의 routeName과 동일 문자열
-//   • title 은 브라우저 탭 타이틀
+// Routes — menu.ts 와 1:1 일치 (meta.routeName = DeptAccess 키)
 // ─────────────────────────────────────────────
 const routes: RouteRecordRaw[] = [
   // 인증/예외
@@ -97,6 +96,9 @@ const routes: RouteRecordRaw[] = [
   { path: '/admin/role-access', name: 'role-access', component: RoleAccess, meta: { title: '권한 관리', requiresAuth: true, routeName: 'role-access' } },
   { path: '/account/info',      name: 'account-info',component: MyInfo,     meta: { title: '내 정보',   requiresAuth: true, routeName: 'account-info' } },
 
+  // ✅ Housekeeping
+  { path: '/admin/housekeeping', name: 'housekeeping', component: HousekeepingBoard, meta: { title: '하우스키핑', requiresAuth: true, routeName: 'housekeeping' } },
+
   // Fallback
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]
@@ -110,38 +112,39 @@ const router = createRouter({
 })
 
 // ============================================================================
-// DeptAccess 기반 전역 가드 — 반응형 스토어만 사용(임시 캐시 금지)
-//   • 저장 후 auth.bootstrap()이 갱신한 effectiveDeptAccess 가드가 즉시 사용
-//   • SUPERADMIN 우선 통과, forbidden 루프 차단, 최초 bootstrap 보장
+// 전역 가드 (DeptAccess + SUPERADMIN 예외 + DEV AutoAllow)
 // ============================================================================
 let isAccessError = false
 
 router.beforeEach(async (to, from, next) => {
-  // ① Title
+  // ─── 타이틀 설정 ───
   if (to.meta?.title) document.title = `Hotel Admin — ${to.meta.title}`
 
   const auth = useAuthStore()
 
-  // ② forbidden 루프 차단
+  // forbidden 루프 방지
   if (to.name === 'forbidden' && from.name === 'forbidden') return next(false)
 
-  // ③ bootstrap 1회 보장
+  // ─── 초기 부트스트랩 ───
   if (!auth.isInitialized) {
     try { await auth.bootstrap() } catch (err) { console.warn('[guard] bootstrap failed:', err) }
     auth.isInitialized = true
   }
 
-  // ④ 인증 필요 검사
+  // ─── 인증 필요 라우트 검사 ───
   const requiresAuth = to.meta?.requiresAuth !== false
   if (requiresAuth && !auth.isAuthenticated) {
-    if (to.name !== 'login') return next({ name: 'login', query: { redirect: encodeURIComponent(to.fullPath || '/') } })
+    if (to.name !== 'login')
+      return next({ name: 'login', query: { redirect: encodeURIComponent(to.fullPath || '/') } })
     return next()
   }
 
-  // ⑤ SUPERADMIN 즉시 통과
-  if ((auth.user?.roles || []).map(r => r.toUpperCase()).includes('SUPERADMIN')) return next()
+  // ─── SUPERADMIN / DEV 모드 예외처리 ───
+  const isSuper = (auth.user?.roles || []).map(r => r.toUpperCase()).includes('SUPERADMIN')
+  const isDevMode = import.meta.env.MODE === 'development' || import.meta.env.DEV
+  if (isSuper || isDevMode) return next() // ✅ 모든 라우트 접근 허용
 
-  // ⑥ 권한맵 확보(반응형 스토어만 사용)
+  // ─── 권한맵이 없으면 /roles/access/effective 로드 ───
   if (!auth.effectiveDeptAccess && !isAccessError) {
     try { auth.effectiveDeptAccess = await getEffectiveDeptAccess() }
     catch (err) {
@@ -152,21 +155,20 @@ router.beforeEach(async (to, from, next) => {
     }
   }
 
-  // ⑦ routeName 계산(meta.routeName > name > path → 하이픈화)
+  // ─── DeptAccess 검증 ───
   const routeName: string =
     (to.meta?.routeName as string) ||
     (typeof to.name === 'string'
       ? to.name.replaceAll('/', '-').toLowerCase()
       : String(to.path).slice(1).replaceAll('/', '-').toLowerCase())
 
-  // ⑧ 접근 허용 여부 판단
   const ok = canAccessRoute(routeName, auth.effectiveDeptAccess, auth.user?.roles || null)
+
   if (requiresAuth && !ok) {
     if (to.name !== 'forbidden') return next({ name: 'forbidden' })
     return next(false)
   }
 
-  // ⑨ 통과
   next()
 })
 

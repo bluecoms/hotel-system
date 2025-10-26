@@ -44,8 +44,8 @@ _registered_tables = set(Base.metadata.tables.keys())
 # ──────────────────────────────────────────────
 _MODULES: Dict[str, List[str]] = {
     # 사용자 / 권한
-    "role": ["Role"],                # ✅ RoleAccess → DeptAccess로 교체됨
-    "roles_access": ["DeptAccess"],  # ✅ 새로운 DeptAccess 모델 (권한 SSOT)
+    "role": ["Role"],
+    "roles_access": ["DeptAccess"],
 
     # 인사 / 조직 / 계약
     "employee": ["Employee", "UserEmployeeMap"],
@@ -60,11 +60,12 @@ _MODULES: Dict[str, List[str]] = {
     "master_empno_policy": ["MasterEmpNoPolicy"],
     "master_salary_grade": ["MasterSalaryGrade"],
     "master_property": ["MasterProperty"],
+    "property": ["Property"],             # ✅ 여기 추가
     "master_bank": ["MasterBank"],
     "master_hk_status": ["MasterHkStatus"],
     "master_ota_channel": ["MasterOtaChannel"],
 
-    # OTA/Keyword (운영 도메인)
+    # OTA / Keyword
     "keyword": ["Keyword"],
     "ota": ["OTAChannel", "OTACommission", "OTAOrder"],
 

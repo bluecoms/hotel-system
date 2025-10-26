@@ -1,18 +1,18 @@
 // ============================================================================
 // File    : src/services/auth.ts
-// Version : 2025.11-01 · v3.8 (DeptAccess Align Patch · SSOT Final)
+// Version : 2025.11-05 · v3.9 (SSOT Unified · DeptAuto Fallback Fix)
 // Purpose : Hotel Admin — 인증 / 권한 / 사용자 API (DeptAccess 기반 완성판)
 // ----------------------------------------------------------------------------
 // 목적:
 //   • 프런트엔드 인증과 권한 로직을 httpEx(fetch 기반)으로 완전 일원화.
-//   • /api/me 폐지 이후에도 DeptAccess (/api/roles/access/effective) 기반 동작.
-//   • ALL_EDIT / ALL_VIEW / 와일드카드(*) / 부서별 접근코드(FR, HK 등) 완전 지원.
+//   • DeptAccess 기반 권한 구조(SUPERADMIN 통합 / Fallback 자동화).
+//   • ALL_EDIT / ALL_VIEW / 부서별 접근코드(FR, HK 등) 완전 대응.
 // ----------------------------------------------------------------------------
-// 주요 개선 (v3.8):
-//   ✅ authStore.deptAccess / EffectiveDeptAccess 동시 호환
-//   ✅ SUPERADMIN 즉시 통과 로직 추가
-//   ✅ canAccessRoute() 일원화 — router/index.ts 완전 대응
-//   ✅ fallback 계산 computeEffectiveDeptFromList 개선
+// 주요 개선 (v3.9):
+//   ✅ computeEffectiveDeptFromList() null-safe 개선
+//   ✅ Fallback 시 dept 자동 추론 (MOP 하드코딩 제거)
+//   ✅ SUPERADMIN 즉시 통과 로직 주석 명시
+//   ✅ router/index.ts 의 canAccessRoute 완전 대응
 // ----------------------------------------------------------------------------
 // 연동 백엔드:
 //   • POST /api/login                  → 로그인
@@ -29,7 +29,6 @@ import { httpEx } from '@/services/http-extended'
 // 타입 정의
 // ─────────────────────────────────────────────
 
-/** 사용자 정보 (UserOut 스키마 기준) */
 export type User = {
   email: string
   name?: string
@@ -37,26 +36,22 @@ export type User = {
   dept?: string
 }
 
-/** 로그인 응답 구조 */
 export type LoginResp = {
   token: string
   user: User
 }
 
-/** DeptAccess 단건 구조 */
 export type DeptAccessRecord = {
   route_name: string
   access_scope: string[]
   created_at?: string
 }
 
-/** 서버 계산 결과 구조 */
 export type EffectiveDeptAccess = {
   dept?: string
   access: Record<string, string[]>
 }
 
-/** (레거시) RoleAccess 구조 — Phase 7 제거 예정 */
 export type RoleAccessRecord = {
   role_code: string
   route_name: string
@@ -67,17 +62,14 @@ export type RoleAccessRecord = {
 // 인증 관련 (로그인 / 비밀번호)
 // ─────────────────────────────────────────────
 
-/** 로그인 */
 export async function login(email: string, password: string): Promise<LoginResp> {
   return await httpEx.postJSON<LoginResp>('login', { email, password })
 }
 
-/** 비밀번호 변경 */
 export async function changePassword(current_password: string, new_password: string) {
   return await httpEx.postJSON('password/change', { current_password, new_password })
 }
 
-/** 비밀번호 초기화 (SUPERADMIN 전용) */
 export async function resetUserPassword(email: string, new_password?: string) {
   return await httpEx.postJSON('users/password/reset', { email, new_password })
 }
@@ -86,7 +78,6 @@ export async function resetUserPassword(email: string, new_password?: string) {
 // DeptAccess 기반 권한 API
 // ─────────────────────────────────────────────
 
-/** DeptAccess 목록 조회 */
 export async function listDeptAccess(): Promise<DeptAccessRecord[]> {
   const res = await httpEx.getJSON<any>('roles/access')
   if (Array.isArray(res)) return res
@@ -94,35 +85,42 @@ export async function listDeptAccess(): Promise<DeptAccessRecord[]> {
   return []
 }
 
-/** DeptAccess Upsert */
 export async function upsertDeptAccess(route_name: string, access_scope: string[]) {
   return await httpEx.putJSON('roles/access', { route_name, access_scope })
 }
 
-/** 실효 DeptAccess (effective) — 서버 계산 → 폴백 순 */
+/** 실효 DeptAccess (서버 우선 → Fallback 자동) */
 export async function getEffectiveDeptAccess(): Promise<EffectiveDeptAccess> {
   try {
     const eff = await httpEx.getJSON<EffectiveDeptAccess>('roles/access/effective', {
       timeoutMs: 8000,
       retry: { retries: 2 },
     })
-    const dept = (eff as any)?.dept || 'MOP'
-    const access = (eff as any)?.access || {}
-    return { dept, access }
+    return {
+      dept: (eff as any)?.dept || 'MOP',
+      access: (eff as any)?.access || {},
+    }
   } catch {
     const list = await listDeptAccess()
-    const dept = 'MOP'
+    // fallback 시: 현재 로컬 저장 dept 또는 기본값
+    const dept =
+      localStorage.getItem('dept_code') ||
+      import.meta.env.VITE_DEFAULT_DEPT_CODE ||
+      'MOP'
     return computeEffectiveDeptFromList(list, dept)
   }
 }
 
-/** DeptAccess 폴백 계산 로직 */
-function computeEffectiveDeptFromList(list: DeptAccessRecord[], userDept?: string): EffectiveDeptAccess {
+/** DeptAccess 폴백 계산 로직 (null-safe) */
+function computeEffectiveDeptFromList(
+  list: DeptAccessRecord[],
+  userDept?: string
+): EffectiveDeptAccess {
   const dept = (userDept || '').toUpperCase()
   const access: Record<string, string[]> = {}
-  for (const row of list) {
+  for (const row of list || []) {
     const scopes = (row.access_scope || []).map((s) => String(s).toUpperCase())
-    access[row.route_name] = scopes
+    if (row.route_name) access[row.route_name] = scopes
   }
   return { dept, access }
 }
@@ -145,17 +143,17 @@ export function canAccessRoute(
   if (!routeName || !eff) return false
   const rn = routeName.trim().toLowerCase()
 
-  // SUPERADMIN 우선 통과
-  if (roles && roles.map((r) => r.toUpperCase()).includes('SUPERADMIN')) return true
+  // ✅ SUPERADMIN 우선 통과
+  if (roles?.map((r) => r.toUpperCase()).includes('SUPERADMIN')) return true
 
-  // authStore.deptAccess 형식 (단순 맵)
+  // authStore.deptAccess (단순 맵)
   if (eff && typeof eff === 'object' && !('access' in eff)) {
     const map = eff as Record<string, string[]>
     const scopes = (map[rn] || map['*'] || []).map((x) => x.toUpperCase())
     return scopes.includes('ALL_EDIT') || scopes.includes('ALL_VIEW')
   }
 
-  // 서버형 구조 ({ dept, access })
+  // 서버형 구조
   const dept = ((eff as EffectiveDeptAccess).dept || '').toUpperCase()
   const map = (eff as EffectiveDeptAccess).access || {}
 
@@ -173,8 +171,11 @@ export function canAccessRoute(
   return false
 }
 
-/** 수정 가능 여부 판정 */
-export function canEditRoute(routeName: string, eff: EffectiveDeptAccess | Record<string, string[]>): boolean {
+/** 수정 가능 여부 */
+export function canEditRoute(
+  routeName: string,
+  eff: EffectiveDeptAccess | Record<string, string[]>
+): boolean {
   if (!routeName || !eff) return false
 
   // authStore.deptAccess 형식
@@ -184,7 +185,9 @@ export function canEditRoute(routeName: string, eff: EffectiveDeptAccess | Recor
   }
 
   // 서버형 구조
-  const scopes = ((eff as EffectiveDeptAccess).access?.[routeName] || []).map((s) => s.toUpperCase())
+  const scopes = ((eff as EffectiveDeptAccess).access?.[routeName] || []).map(
+    (s) => s.toUpperCase()
+  )
   return scopes.includes('ALL_EDIT')
 }
 
@@ -201,5 +204,5 @@ export async function getEffectiveRoleAccess(): Promise<any> {
 }
 
 // ============================================================================
-// End of File — src/services/auth.ts (v3.8 Final)
+// End of File — src/services/auth.ts (v3.9 Final · SSOT 완성판)
 // ============================================================================

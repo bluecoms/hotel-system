@@ -1,14 +1,14 @@
 <!-- ============================================================================
   File    : src/ui/components/hr/DialogEmployeeForm.vue
-  Version : 2.1 Final (2025-10-30 · HR 간소화 6차 Hotfix · 성능/옵션/급여월환산 개선)
+  Version : 2.2 Final (2025-11-04 · Options-First · Fallback Safe · Monthly Salary Auto)
   Purpose : Hotel Admin — 신규 직원 등록 다이얼로그 (계약정보 통합 입력)
   ------------------------------------------------------------------------------
-  변경 요약 (v2.1)
-    ✅ Promise.all 기반 기준정보 병렬 로드 (옵션 연결 안정화 / 로딩지연 최소화)
-    ✅ Master API 캐시(1회 로드 후 재사용) → 재오픈 시 느려짐 개선
-    ✅ 급여등급(연봉) 선택 시 월급 자동 계산(salary = annual_salary / 12)
-    ✅ 은행/부서/직책/직급 한글화 일원화
-    ✅ 주석 보강 및 로직 흐름 명확화
+  변경 요약 (v2.2)
+    ✅ v-select는 모두 /options 엔드포인트 우선 사용 (가벼운 payload/빠른 응답)
+    ✅ /options 미구현/405 시 list() 기반으로 폴백 (운영/개발 안전)
+    ✅ 급여등급(연봉) → 월급 자동 환산(salary = annual_salary / 12)
+    ✅ Master API 캐시(1회 로드 후 재사용)로 재오픈 지연 최소화
+    ✅ 주석 보강 및 오류 로그 최소화(사용자 노출 토스트만 유지)
 ============================================================================ -->
 <template>
   <v-dialog
@@ -56,7 +56,7 @@
               />
             </v-col>
 
-            <!-- 부서 -->
+            <!-- 부서 (SSOT: /api/master/departments/options) -->
             <v-col cols="12" md="6">
               <v-select
                 v-model="form.dept"
@@ -70,7 +70,7 @@
               />
             </v-col>
 
-            <!-- 직책 -->
+            <!-- 직책 (SSOT: /api/master/titles/options) -->
             <v-col cols="12" md="6">
               <v-select
                 v-model="form.title"
@@ -84,7 +84,7 @@
               />
             </v-col>
 
-            <!-- 직급 -->
+            <!-- 급여등급(연봉) → 월급 자동환산 -->
             <v-col cols="12" md="6">
               <v-select
                 v-model="form.rank"
@@ -99,7 +99,7 @@
               />
             </v-col>
 
-            <!-- 은행명 -->
+            <!-- 은행 (SSOT: /api/master/banks/options) -->
             <v-col cols="12" md="6">
               <v-select
                 v-model="form.bank_name"
@@ -204,7 +204,7 @@
               />
             </v-col>
 
-            <!-- 계약 시작일 -->
+            <!-- 계약 시작/종료 -->
             <v-col cols="12" md="6">
               <v-text-field
                 v-model="form.contract_start"
@@ -214,8 +214,6 @@
                 density="comfortable"
               />
             </v-col>
-
-            <!-- 계약 종료일 -->
             <v-col cols="12" md="6">
               <v-text-field
                 v-model="form.contract_end"
@@ -276,11 +274,12 @@
 
 <script setup lang="ts">
 /* ===========================================================================
-   Script: DialogEmployeeForm (v2.1)
+   Script: DialogEmployeeForm (v2.2)
    ---------------------------------------------------------------------------
-   • 기준정보 옵션 병렬 로드 + 캐시로 성능 개선
-   • 급여등급 연봉 → 월급 자동환산
-   • 직원 + 계약 통합 등록 지원
+   • v-select → /options 엔드포인트 우선 사용 (경량/표준화)
+   • /options 미구현/405 시 list() 폴백 (안전)
+   • 급여등급 연봉 → 월급 자동환산 유지
+   • 옵션 캐시(컴포넌트 정적 변수)로 재오픈 속도 개선
 =========================================================================== */
 import { ref, reactive, onMounted, nextTick } from 'vue'
 import { useToast } from '@/ui/composables/useToast'
@@ -288,34 +287,37 @@ import * as EmployeesApi from '@/services/employees'
 import * as MasterApi from '@/services/master'
 
 const props = defineProps<{ open: boolean }>()
-const emit = defineEmits<{ (e: 'update:open', v: boolean): void; (e: 'saved'): void }>()
-
+const emit = defineEmits<{ (e:'update:open', v:boolean):void; (e:'saved'):void }>()
 const { success, error } = useToast()
+
 const formRef = ref()
 const valid = ref(false)
 const saving = ref(false)
 const nameRef = ref<HTMLInputElement>()
 
-/* 기준정보 선택지 (캐시 static 변수로 1회만 호출) */
+/** v-select 옵션 — /options 우선, 실패 시 list() 폴백 */
 const deptItems  = ref<{ title: string; value: string }[]>([])
 const titleItems = ref<{ title: string; value: string }[]>([])
 const rankItems  = ref<{ title: string; value: string; annual_salary?: number }[]>([])
 const bankItems  = ref<{ title: string; value: string }[]>([])
-let cached = false // 캐시 여부
 
-/* 계약유형 */
+/** 1회 캐시 플래그 */
+let cached = false
+
+/** 계약유형 (정적) */
 const contractTypes = [
   { title: '정규직', value: 'MONTHLY' },
   { title: '시간제', value: 'HOURLY' },
-  { title: '기타', value: 'OTHER' },
+  { title: '기타',  value: 'OTHER' },
 ]
 
-/* 폼 데이터 */
+/** property_code (SSOT: localStorage → .env → 기본 MOP) */
 const propertyCode =
   localStorage.getItem('property_code') ||
   import.meta.env.VITE_DEFAULT_PROPERTY_CODE ||
   'MOP'
 
+/** 폼 데이터 */
 const form = reactive({
   emp_no: '',
   name: '',
@@ -329,56 +331,79 @@ const form = reactive({
   bank_name: '',
   account_mask: '',
   account_last4: '',
-  hire_date: new Date().toISOString().slice(0, 10),
+  hire_date: new Date().toISOString().slice(0,10),
   memo: '',
   property_code: propertyCode,
-  // 계약정보
   contract_type: 'MONTHLY',
-  contract_start: new Date().toISOString().slice(0, 10),
+  contract_start: new Date().toISOString().slice(0,10),
   contract_end: '',
   salary: null as number | null,
 })
 
-/* 필수값 검증 */
-const req = (v: any) => !!String(v ?? '').trim() || '필수 항목입니다.'
+/** 필수값 검증 */
+const req = (v:any) => !!String(v ?? '').trim() || '필수 항목입니다.'
 
+/** 주민번호 포맷 */
 function formatRrn(val?: string) {
   if (!val) return ''
   const d = String(val).replace(/[^0-9]/g, '').slice(0, 13)
-  return d.length <= 6 ? d : `${d.slice(0, 6)}-${d.slice(6)}`
+  return d.length <= 6 ? d : `${d.slice(0,6)}-${d.slice(6)}`
 }
 
-/* 급여등급 선택 시 → 월급 계산 */
+/** 급여등급 선택 시 → 월급 계산 */
 function onRankSelect(code: string) {
   const sel = rankItems.value.find(r => r.value === code)
   form.salary = sel?.annual_salary ? Math.round(sel.annual_salary / 12) : null
 }
 
-/* 기준정보 로드 (Promise.all + 캐시) */
+/** 옵션 로드 — /options 우선, 실패 시 list() 폴백 */
 async function loadOptions() {
-  if (cached) return // 이미 로드됨
+  if (cached) return
   cached = true
   try {
-    const [depts, titles, ranks, banks] = await Promise.all([
-      MasterApi.listDepartments(),
-      MasterApi.listTitles(),
-      MasterApi.listSalaryGrades(),
-      MasterApi.listBanks(),
+    // 1) /options 가벼운 호출 우선
+    const [deptOpt, titleOpt, bankOpt] = await Promise.all([
+      MasterApi.departmentOptions?.() ?? Promise.reject('no-dept-options'),
+      MasterApi.titleOptions?.()      ?? Promise.reject('no-title-options'),
+      MasterApi.bankOptions?.()       ?? Promise.reject('no-bank-options'),
     ])
-    deptItems.value  = (depts || []).map((d: any) => ({ title: d.name, value: d.code }))
-    titleItems.value = (titles || []).map((t: any) => ({ title: t.name, value: t.code }))
-    rankItems.value  = (ranks || []).map((r: any) => ({ title: r.name, value: r.code, annual_salary: r.annual_salary }))
-    bankItems.value  = (banks || []).map((b: any) => ({ title: b.name, value: b.name }))
+
+    deptItems.value  = Array.isArray(deptOpt)  ? deptOpt  : []
+    titleItems.value = Array.isArray(titleOpt) ? titleOpt : []
+    bankItems.value  = Array.isArray(bankOpt)  ? bankOpt  : []
+  } catch (e) {
+    console.warn('[DialogEmployeeForm] /options 호출 실패 → list() 폴백', e)
+    // 2) 폴백: list()로 변환
+    try {
+      const [depts, titles, banks] = await Promise.all([
+        MasterApi.listDepartments(),
+        MasterApi.listTitles(),
+        MasterApi.listBanks(),
+      ])
+      deptItems.value  = (depts  || []).map((d:any)=>({ title:d.name,  value:d.code }))
+      titleItems.value = (titles || []).map((t:any)=>({ title:t.name,  value:t.code }))
+      bankItems.value  = (banks  || []).map((b:any)=>({ title:b.name,  value:b.name }))
+    } catch (err) {
+      console.error('[DialogEmployeeForm] list() 폴백도 실패', err)
+      deptItems.value = []
+      titleItems.value = []
+      bankItems.value = []
+    }
+  }
+
+  // 급여등급은 연봉이 필요하므로 list() 고정
+  try {
+    const ranks = await MasterApi.listSalaryGrades()
+    rankItems.value = (ranks || []).map((r:any)=>({
+      title: r.name, value: r.code, annual_salary: r.annual_salary ?? r.base_salary ?? null,
+    }))
   } catch (err) {
-    console.error('[loadOptions] failed:', err)
-    deptItems.value = []
-    titleItems.value = []
+    console.error('[DialogEmployeeForm] 급여등급 로드 실패', err)
     rankItems.value = []
-    bankItems.value = []
   }
 }
 
-/* 저장 처리 */
+/** 저장 처리 */
 async function onSubmit() {
   const ok = await (formRef.value as any)?.validate?.()
   if (!ok?.valid) return
@@ -388,14 +413,14 @@ async function onSubmit() {
     success('직원이 등록되었습니다.')
     emit('saved')
     emit('update:open', false)
-  } catch (e: any) {
+  } catch (e:any) {
     error('저장 실패: ' + (e?.message || '서버 오류'))
   } finally {
     saving.value = false
   }
 }
 
-/* 초기 로드 */
+/** 초기 로드 */
 onMounted(async () => {
   await loadOptions()
   try {
@@ -409,7 +434,5 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.v-card {
-  background: rgb(var(--v-theme-surface));
-}
+.v-card { background: rgb(var(--v-theme-surface)); }
 </style>

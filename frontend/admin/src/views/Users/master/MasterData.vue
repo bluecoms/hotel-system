@@ -1,12 +1,12 @@
 <!-- ============================================================================
 # File      : src/views/Users/master/MasterData.vue
-# Version   : 2025.10-30 · v4.0 (Positions & Titles · SSOT Final Stable)
+# Version   : 2025.11-05 · v4.1 (SSOT Final · Property API Fix)
 # Purpose   : Hotel Admin — 기준/정제 정보 '카테고리 탭' 통합 관리 화면
 # ----------------------------------------------------------------------------
-# ✅ 이번 패치 요약
-#   • 직위(Position) + 직책(Titles) 구조를 v4.0 백엔드 API와 완전 동기화
-#   • API 베이스 /api/master/* 규칙 통일 (titles, positions, ranks 등)
-#   • MasterTable 공통 컴포넌트 구조 최신화
+# ✅ 이번 패치 요약 (v4.1)
+#   • Property(지점코드) API → /api/master/properties 로 교체 (SSOT 규약)
+#   • /api/properties 는 운영 조회 전용으로 분리 유지
+#   • MasterTable 공통 구조 및 탭 구성을 그대로 유지
 # ----------------------------------------------------------------------------
 # 카테고리/탭 구성:
 #   1) 조직·인사  : 부서 / 직책 / 직위 / 직급 / 급여등급 / 사번정책(전용 폼)
@@ -15,9 +15,9 @@
 #   4) 콘텐츠관리 : 키워드 관리
 # ----------------------------------------------------------------------------
 # 트러블슈팅 팁:
-#   [TIP-1] 사번정책은 단일 정책 → EmpNoPolicyForm으로 렌더. (MasterTable 사용 금지)
+#   [TIP-1] 사번정책은 단일 정책 → EmpNoPolicyForm 렌더 (MasterTable 금지)
 #           API 경로: /api/master/empno-policy
-#   [TIP-2] Property는 /api/properties (마스터 prefix 아님)
+#   [TIP-2] Property는 /api/master/properties (관리자용 SSOT)
 #   [TIP-3] OTA 기준채널: /api/master/ota-channels (SSOT)
 #   [TIP-4] OTA 운영/수수료: /api/ota/channels, /api/ota/commissions
 # ============================================================================ -->
@@ -163,8 +163,8 @@ const orgTabs = [
 /* ▣ 2) 재무·지점 */
 const financeTab = ref('property')
 const financeTabs = [
-  { key: 'property', title: '지점 코드', apiBase: '/api/properties',   icon: 'mdi-domain',  color: 'blue' },
-  { key: 'banks',    title: '은행 코드', apiBase: '/api/master/banks', icon: 'mdi-bank',    color: 'blue-grey' },
+  { key: 'property', title: '지점 코드', apiBase: '/api/master/properties', icon: 'mdi-domain', color: 'blue' },
+  { key: 'banks',    title: '은행 코드', apiBase: '/api/master/banks',      icon: 'mdi-bank',  color: 'blue-grey' },
 ]
 
 /* ▣ 3) 운영 기준정보 */

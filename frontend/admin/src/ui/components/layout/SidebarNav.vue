@@ -237,7 +237,7 @@ const dashboardItem = computed<NavItem | undefined>(() =>
 /* 업무 섹션 */
 const workGroups = computed(() =>
   filteredMenu.value.filter(m =>
-    ['마감 관리', '리포트', '인사 관리'].includes(m.label)
+    ['마감 관리', '리포트', '하우스키핑', '인사 관리'].includes(m.label)
   )
 )
 
