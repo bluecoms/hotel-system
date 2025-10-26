@@ -1,12 +1,13 @@
-# app/service/__init__.py
+# app/services/__init__.py
 # -*- coding: utf-8 -*-
 # Python 3.8/3.9 호환
 """
-서비스 계층 자동 export (SSOT Phase 2 안정판)
+서비스 계층 자동 Export (SSOT Phase 3 안정판)
 ──────────────────────────────────────────────
 - routers에서 직접 import 가능한 서비스만 노출
-- ImportError 발생 시 무시 (안전)
-- Phase 2: merge_service 중심 구조
+- BaseService 또는 *Service 네이밍 클래스 자동 탐색
+- 명시 등록 우선, ImportError는 안전하게 무시
+- 예: MergeService, UploadService, HousekeepingService 등
 """
 
 from importlib import import_module
@@ -18,12 +19,13 @@ __all__: List[str] = []
 log = logging.getLogger("app.services")
 
 # ────────────────────────────────
-# 1️⃣ 명시 등록 (우선순위)
+# 1️⃣ 명시 등록 (우선순위 적용)
 # ────────────────────────────────
 _MODULES: Dict[str, List[str]] = {
     "merge_service": ["MergeService"],
     "upload_service": ["UploadService"],
     "upload_apply": ["UploadApplyService"],
+    "housekeeping_service": ["HousekeepingService"],  # ✅ 신규 등록
 }
 
 def _safe_import(module_name: str, symbols: List[str]) -> None:
@@ -33,6 +35,7 @@ def _safe_import(module_name: str, symbols: List[str]) -> None:
     except Exception as e:
         log.debug(f"[services] skip {module_name}: {e}")
         return
+
     for sym in symbols:
         obj = getattr(mod, sym, None)
         if obj:
@@ -43,7 +46,7 @@ for _mod, _symbols in _MODULES.items():
     _safe_import(_mod, _symbols)
 
 # ────────────────────────────────
-# 2️⃣ 자동 탐색 (BaseService 상속 검색)
+# 2️⃣ 자동 탐색 (기타 서비스 자동 등록)
 # ────────────────────────────────
 _specified = set(_MODULES.keys())
 
@@ -52,7 +55,8 @@ for _, name, ispkg in pkgutil.iter_modules(__path__):  # type: ignore[name-defin
         continue
     try:
         mod = import_module(f".{name}", __name__)
-    except Exception:
+    except Exception as e:
+        log.debug(f"[services] skip auto {name}: {e}")
         continue
 
     for k, v in mod.__dict__.items():

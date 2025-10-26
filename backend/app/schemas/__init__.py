@@ -1,32 +1,27 @@
 # -*- coding: utf-8 -*-
 # ============================================================================
 # File      : app/schemas/__init__.py
-# Version   : 2025-10-31 · v4.1 (SSOT Phase 3.5 Final · Role/DeptAccess Unified)
+# Version   : 2025-10-31 · v4.2 (SSOT Phase 3.5 Final · +Housekeeping Added)
 # Purpose   : Hotel Admin — Pydantic Schemas Auto Import (Unified SSOT Loader)
 # ----------------------------------------------------------------------------
 # 목적:
 #   • schemas/*.py 내 BaseModel 상속 클래스를 자동 탐색 및 전역 등록
 #   • 주요 도메인(auth, employees, contracts, ota, reports 등) 우선 로드
-#   • Master 기준정보 10개 도메인 통합 관리
+#   • Master 기준정보 10개 도메인 + 하우스키핑 업무 스키마 통합
 # ----------------------------------------------------------------------------
-# 핵심 개선 (v4.1):
-#   ✅ UserRole / RoleAccess 완전 제거
-#   ✅ DeptAccess(roles_access.py) 기반 권한 스키마 추가
-#   ✅ Role/Access 로딩 순서 정비 (role → roles_access)
-#   ✅ Pydantic v2 호환 (ConfigDict.from_attributes=True)
+# 핵심 개선 (v4.2):
+#   ✅ DeptAccess 기반 Role/Dept 통합 유지
+#   ✅ Master/Operation 계열 완전 자동화
+#   ✅ HousekeepingTask 스키마 추가 (업무·유닛·상태관리)
 # ----------------------------------------------------------------------------
 # 운영 방침:
 #   • OTA 수수료(commission)는 운영 데이터로 분리 (/api/ota/commissions)
-#     → Master 계열(MasterOtaCommission)에서는 제외 (SSOT 원칙)
+#   • HousekeepingTask 는 closing/rooms_status 와 병행 관리됨
 #   • 모든 BaseModel 스키마는 자동 탐색되어 FastAPI에서 전역 import 가능
 # ----------------------------------------------------------------------------
 # 변경 로그:
-#   v3.4 (2025-10-23) ✅ MasterBank 추가 (7종 완성)
-#   v3.5 (2025-10-25) ✅ MasterHkStatus 추가 (8종 완성)
-#   v3.6 (2025-10-25) ✅ MasterOtaChannel 추가 (9종 완성)
-#   v3.9 (2025-10-27) ✅ MasterOtaCommission 제거 (운영 라우트로 분리)
-#   v4.0 (2025-10-30) ✅ MasterPosition + MasterTitle 확정 / Bank 확장 반영
-#   v4.1 (2025-10-31) ✅ DeptAccess(roles_access) 통합 및 RoleAccess 완전 제거
+#   v4.1 (2025-10-31) ✅ DeptAccess 통합 및 RoleAccess 제거
+#   v4.2 (2025-10-31) ✅ HousekeepingTask 스키마 추가
 # ============================================================================
 
 import pkgutil
@@ -34,9 +29,6 @@ import sys
 from importlib import import_module
 from typing import Dict, List
 
-# ──────────────────────────────────────────────
-# 1️⃣ BaseModel 확보 (pydantic v1/v2 호환)
-# ──────────────────────────────────────────────
 try:
     from pydantic import BaseModel  # type: ignore
 except Exception:  # fallback
@@ -46,7 +38,7 @@ except Exception:  # fallback
 __all__: List[str] = []
 
 # ──────────────────────────────────────────────
-# 2️⃣ 명시 모듈 등록 (도메인별 우선순위)
+# 1️⃣ 명시 모듈 등록 (도메인별 우선순위)
 # ──────────────────────────────────────────────
 _MODULES: Dict[str, List[str]] = {
     # 인증 / 사용자
@@ -77,7 +69,7 @@ _MODULES: Dict[str, List[str]] = {
     ],
 
     # ✅ 기준정보 (Master Domains)
-    "master_departments": [
+    "master_department": [
         "MasterDepartmentIn",
         "MasterDepartmentOut",
         "MasterDepartmentOption",
@@ -132,6 +124,15 @@ _MODULES: Dict[str, List[str]] = {
         "ContractHistoryOut",
     ],
 
+    # ✅ 하우스키핑 (Housekeeping)
+    "housekeeping_task": [
+        "HousekeepingTaskBase",
+        "HousekeepingTaskCreate",
+        "HousekeepingTaskUpdate",
+        "HousekeepingTaskOut",
+        "HousekeepingStatsOut",
+    ],
+
     # 영업마감 / 클로징
     "closing": [
         "DayStatusBody",
@@ -172,7 +173,7 @@ _MODULES: Dict[str, List[str]] = {
         "MergeExecResp",
     ],
 
-    # ✅ 업로드 (Upload / UploadedFile)
+    # 업로드
     "upload": [
         "UploadedFileOut",
         "UploadVersionList",
@@ -180,7 +181,7 @@ _MODULES: Dict[str, List[str]] = {
 }
 
 # ──────────────────────────────────────────────
-# 3️⃣ 명시 모듈 우선 import
+# 2️⃣ 명시 모듈 우선 import
 # ──────────────────────────────────────────────
 def _import_symbols(module_name: str, symbols: List[str]) -> None:
     """명시된 모듈 내 스키마를 안전하게 import"""
@@ -203,14 +204,13 @@ for _mod, _symbols in _MODULES.items():
     _import_symbols(_mod, _symbols)
 
 # ──────────────────────────────────────────────
-# 4️⃣ 나머지 자동 탐색 (BaseModel 상속 클래스)
+# 3️⃣ 자동 탐색 (BaseModel 상속 클래스)
 # ──────────────────────────────────────────────
 _specified = set(_MODULES.keys())
 
 for _, name, ispkg in pkgutil.iter_modules(__path__):  # type: ignore[name-defined]
     if ispkg or name.startswith("_") or name in _specified:
         continue
-
     try:
         mod = import_module(f".{name}", __name__)
     except Exception as e:
@@ -230,13 +230,13 @@ for _, name, ispkg in pkgutil.iter_modules(__path__):  # type: ignore[name-defin
             continue
 
 # ──────────────────────────────────────────────
-# 5️⃣ 중복 제거 및 정렬
+# 4️⃣ 중복 제거 및 정렬
 # ──────────────────────────────────────────────
 __all__ = sorted(set(__all__))
 
 # ============================================================================
 # 참고:
-#   • DeptAccess(roles_access) 는 RoleAccess/UserRole 을 완전히 대체합니다.
-#   • 모든 Master 계열 스키마는 본 모듈에서 자동 등록됩니다.
-#   • Alembic 및 FastAPI 실행 시 schemas 자동 탐색 로그 출력은 정상입니다.
+#   • DeptAccess(roles_access)는 RoleAccess/UserRole을 완전히 대체합니다.
+#   • HousekeepingTask 스키마가 포함되어 하우스키핑 업무 연동 완결.
+#   • Alembic 및 FastAPI 실행 시 자동 탐색 로그 출력은 정상입니다.
 # ============================================================================

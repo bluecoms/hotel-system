@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # ============================================================================
 # File      : app/routers/__init__.py
-# Version   : 2025.10-31 · v4.4 (SSOT Phase 3.5 Final · RoleAccess Unified)
+# Version   : 2025.10-31 · v4.5 (SSOT Phase 3.5 Final · +Housekeeping Added)
 # Purpose   : Hotel Admin — FastAPI Router Auto-Export (Unified Loader)
 # ----------------------------------------------------------------------------
 # 목적:
@@ -9,10 +9,9 @@
 #   • ImportError 발생 시 skip 처리로 안전 초기화 지원
 #   • FastAPI 앱에서 include_all_routers(app) 호출 시 전체 자동 include
 # ----------------------------------------------------------------------------
-# 개선 사항 (v4.4)
-#   ✅ me 라우터 완전 제거 (Phase 3 이후 불필요 기능)
-#   ✅ user_roles 라우터 완전 제거 (DeptAccess 구조로 통합)
-#   ✅ roles_access 라우터 신규 명시 등록 (/api/roles/access)
+# 개선 사항 (v4.5)
+#   ✅ 하우스키핑( /api/housekeeping ) 신규 라우터 정식 통합
+#   ✅ DeptAccess 구조 유지 (RoleAccess 완전 제거)
 #   ✅ master_ota_channels 중복 로드 방지 유지
 #   ✅ 순환참조 및 로드 순서 안정화
 # ----------------------------------------------------------------------------
@@ -20,6 +19,7 @@
 #   • RoleAccess(User↔Role)는 폐기됨 → DeptAccess(roles_access.py) 사용.
 #   • include_all_routers() 호출 시 모든 라우터가 단일 경로(/api/...)로 등록됨.
 # ============================================================================
+
 import logging
 import pkgutil
 from importlib import import_module
@@ -50,11 +50,11 @@ _PREFERRED_MODULES: Dict[str, str] = {
     "employee_files": "employee_files",
     "hr_bridge": "hr_bridge",
 
-    # 업로드 / 마감 / OTA
+    # 업로드 / 마감 / OTA / 하우스키핑
     "upload": "upload",
     "closing": "closing",
     "ota": "ota",
-    # ⚠️ master_ota_channels 는 자동탐색 전용 (여기 명시 금지)
+    "housekeeping_task": "housekeeping",  # ✅ 신규 등록
 
     # 리포트 계열
     "reports": "reports",
@@ -144,6 +144,7 @@ __all__ = list(dict.fromkeys(__all__))
 # ============================================================================
 # 참고:
 #   • me, user_roles 라우터는 완전 제거.
+#   • housekeeping 라우터(DeptAccess=HK)는 /api/housekeeping 으로 등록됨.
 #   • master_ota_channels 는 중복 방지를 위해 자동탐색 스킵.
 #   • roles_access 라우터(DeptAccess)는 SSOT 기준 권한 엔드포인트로 통합됨.
 # ============================================================================

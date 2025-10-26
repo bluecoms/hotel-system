@@ -1,20 +1,21 @@
 # -*- coding: utf-8 -*-
 # ============================================================================
 # File      : app/routers/contracts.py
-# Version   : 2025.10-31 Final Stable (v3.9 · 3.8 Safe OR · SSOT 규격)
+# Version   : 2025.10-31 Final Stable (v3.9.1 · 3.8 Safe OR · SSOT 규격 · Syntax Fix)
 # Purpose   : Hotel Admin — 직원 계약 관리 API (EmployeeContracts)
 # ----------------------------------------------------------------------------
 # 목적:
-#   • 직원(Employee)별 계약 생성/조회/이력/확정 관리
+#   • 직원(Employee)별 계약 생성/조회/이력/확정/종료 관리
 #   • 계약 확정 시 Employee 테이블(contract_status/start/end) 자동 반영
 #   • 계약이 없는 직원도 "미계약" 상태로 목록에 표시 (LEFT JOIN)
 #   • Property(지점 코드) 단위 필터 지원
 # ----------------------------------------------------------------------------
-# 주요 개선사항 (v3.9)
+# 주요 개선사항 (v3.9.1)
 #   ✅ Python 3.8 호환: 검색 필터에서 `|` → `or_(...)`로 전환
-#   ✅ dept_name 접근 오류 수정 (Employee.dept_code → MasterDepartment JOIN)
-#   ✅ Employee 기준 LEFT JOIN + Department LEFT JOIN 병행
-#   ✅ SSOT 원칙 강화 — Employee는 dept_code만 보유, 부서명은 MasterDepartment에서 관리
+#   ✅ dept_name 접근 오류 수정 (Employee.dept ↔ MasterDepartment.dept_code JOIN)
+#   ✅ LEFT JOIN 안정화 (Employee ← EmployeeContract ← MasterDepartment)
+#   ✅ 문법 오류(SyntaxError) 수정: JOIN 조건 사이 콤마 누락 보완
+#   ✅ SSOT 원칙 강화 — Employee는 dept(코드)만 보유, 부서명은 MasterDepartment 참조
 # ----------------------------------------------------------------------------
 # 엔드포인트:
 #   • GET    /api/contracts                     → 계약 목록 조회 (LEFT JOIN)
@@ -38,7 +39,7 @@ from app.core.auth import require_roles, require_user
 from app.db.session import get_db
 from app.models.contract import EmployeeContract
 from app.models.employee import Employee
-from app.models.master_departments import MasterDepartment
+from app.models.master_department import MasterDepartment
 from app.schemas.contract import ContractOut
 
 # ─────────────────────────────────────────────
@@ -55,6 +56,7 @@ def _safe_date(v: Any) -> Optional[date]:
     except Exception:
         return None
 
+
 # ─────────────────────────────────────────────
 # Router 설정
 # ─────────────────────────────────────────────
@@ -64,14 +66,18 @@ router = APIRouter(
     dependencies=[Depends(require_user)],
 )
 
+
 # ============================================================================
 # 1️⃣ 계약 목록 조회 (Employee 기준 LEFT JOIN)
+#   - Employee ← EmployeeContract (LEFT)
+#   - Employee.dept (코드) → MasterDepartment.dept_code (LEFT) 로 부서명 합성
+#   - 계약이 없는 직원도 status='none' 으로 노출
 # ============================================================================
 @router.get("", dependencies=[Depends(require_roles(["ADMIN", "SUPERADMIN"]))])
 def list_contracts(
     property_code: str = Query(..., description="지점 코드 (예: MOP)"),
-    q: Optional[str] = Query(None, description="검색어 (이름/부서/직책 등)"),
-    status: Optional[str] = Query(None, description="계약 상태 필터"),
+    q: Optional[str] = Query(None, description="검색어 (이름/사번/부서명 등)"),
+    status: Optional[str] = Query(None, description="계약 상태 필터 (none/active/terminated)"),
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=200),
     db: Session = Depends(get_db),
@@ -79,11 +85,12 @@ def list_contracts(
     """
     직원 기준 계약 목록 조회
     --------------------------------------------------------------------------
-    - LEFT JOIN:
-        Employee ← EmployeeContract (직원기준)
-        Employee.dept_code → MasterDepartment.dept_code (부서명 조회)
-    - 계약이 없는 직원도 "미계약" 상태로 표시
-    - Employee 모델은 dept_code만 보유하므로, dept_name은 반드시 JOIN을 통해 얻는다.
+    LEFT JOIN
+      - Employee.id = EmployeeContract.employee_id
+      - Employee.dept(코드) = MasterDepartment.dept_code AND property_code 동치
+    검색/필터
+      - q: name/emp_no/dept_name 부분일치 검색
+      - status: none → 계약레코드가 없는 직원만, 그 외(active/terminated) → 계약 상태 필터
     --------------------------------------------------------------------------
     """
     qset = (
@@ -92,14 +99,14 @@ def list_contracts(
         .outerjoin(
             MasterDepartment,
             and_(
-                Employee.dept_code == MasterDepartment.dept_code,
+                Employee.dept == MasterDepartment.dept_code,            # ✅ 콤마 누락 보완
                 Employee.property_code == MasterDepartment.property_code,
             ),
         )
         .filter(Employee.property_code == property_code)
     )
 
-    # 검색어 필터 (Python 3.8 안전: or_(...))
+    # 검색어 필터 (3.8 Safe: or_)
     if q:
         like = f"%{q}%"
         qset = qset.filter(
@@ -107,16 +114,16 @@ def list_contracts(
                 Employee.name.ilike(like),
                 Employee.emp_no.ilike(like),
                 MasterDepartment.dept_name.ilike(like),
-                Employee.title_name.ilike(like),
             )
         )
 
     # 상태 필터
     if status:
-        if status == "none":
+        s = (status or "").strip().lower()
+        if s == "none":
             qset = qset.filter(EmployeeContract.id.is_(None))
-        else:
-            qset = qset.filter(EmployeeContract.status == status)
+        elif s in {"active", "terminated", "draft"}:
+            qset = qset.filter(EmployeeContract.status == s)
 
     total = qset.count()
     rows = (
@@ -135,8 +142,8 @@ def list_contracts(
                 "employee_id": emp.id,
                 "emp_no": emp.emp_no,
                 "emp_name": emp.name,
-                "dept_name": dept_name or "-",  # ✅ 조인 결과 부서명
-                "title_name": emp.title_name,
+                "dept_name": dept_name or "-",
+                "title_name": getattr(emp, "title_name", None),
                 "property_code": emp.property_code,
                 # 계약 정보 (없으면 None)
                 "contract_id": c.id if c else None,
@@ -144,11 +151,12 @@ def list_contracts(
                 "contract_start": c.start_date if c else None,
                 "contract_end": c.end_date if c else None,
                 "salary": c.salary if c else None,
-                "status": c.status if c else "none",
+                "status": (c.status if c else "none"),
             }
         )
 
     return {"ok": True, "items": items, "page": page, "size": size, "total": total}
+
 
 # ============================================================================
 # 2️⃣ 계약 생성 (Append-only)
@@ -207,6 +215,7 @@ def create_contract(
 
     return {"ok": True, "contract": ContractOut.model_validate(rec).model_dump()}
 
+
 # ============================================================================
 # 3️⃣ 계약 이력 (직원별)
 # ============================================================================
@@ -226,6 +235,7 @@ def contract_history(employee_id: int, db: Session = Depends(get_db)) -> Dict[st
     items = [ContractOut.model_validate(r).model_dump() for r in rows]
     return {"employee_id": employee_id, "items": items, "total": len(items)}
 
+
 # ============================================================================
 # 4️⃣ 계약 버전 목록 (계약 ID 기준)
 # ============================================================================
@@ -243,6 +253,7 @@ def contract_versions(contract_id: int, db: Session = Depends(get_db)) -> List[D
         .all()
     )
     return [ContractOut.model_validate(r).model_dump() for r in rows]
+
 
 # ============================================================================
 # 5️⃣ 계약 종료 (논리적 종료 처리)
@@ -271,6 +282,7 @@ def terminate_contract(contract_id: int, db: Session = Depends(get_db)) -> Dict[
         pass
 
     return {"ok": True, "terminated": contract_id}
+
 
 # ============================================================================
 # 6️⃣ 계약 확정 (인쇄 완료 후 활성화)

@@ -1,28 +1,26 @@
 # -*- coding: utf-8 -*-
 # ============================================================================
 # File      : app/core/auth.py
-# Version   : 2025.11-01 · v3.7 (DeptAccess Unified · CEO SuperAdmin)
+# Version   : 2025.11-01 · v3.8 (Dev SuperAdmin Auto · SSOT Final)
 # Purpose   : Hotel Admin — Auth Core (FastAPI)
 # ----------------------------------------------------------------------------
 # 목적:
-#   • 헤더 기반 인증 (X-Internal-Token / token-<uid>)
-#   • dev / 운영 환경별 토큰 처리 분기
-#   • 현재 사용자 로딩(current_user): 이메일 / 이름 / 역할 목록
-#   • 역할 기반(require_roles) + DeptAccess 기반 접근 제어 통합
+#   • 개발환경(dev)에서는 SUPERADMIN 자동 부여 (로컬 토큰/디버그 헤더 포함)
+#   • CEO(ceo@mokpooceanhotel.co.kr)는 운영환경에서도 SUPERADMIN 고정
+#   • INTERNAL_TOKEN(dev-admin-token)도 SUPERADMIN으로 처리
 # ----------------------------------------------------------------------------
-# 주요 개선:
-#   ✅ CEO 계정(ceo@mokpooceanhotel.co.kr) → SUPERADMIN 자동 부여
-#   ✅ dev-admin-token 환경에서도 정상 동작
-#   ✅ DeptAccess 기반 구조에 완전 호환
-#   ✅ require_access() → RoleAccess → DeptAccess로 안전 폴백
+# 개발용 슈퍼어드민 정책:
+#   ✅ 조건
+#       - APP_ENV=dev 또는 DEBUG=True
+#       - X-Internal-Token=dev-admin-token 이거나
+#       - X-Debug-Role 헤더 지정 시 ("SUPERADMIN" 자동)
+#   ✅ 결과
+#       - 모든 DeptAccess, RoleAccess, require_roles() 검사 통과
+#       - 메뉴/화면 전체 접근 허용
 # ============================================================================
-
 from __future__ import annotations
-import os
-import secrets
-import string
+import os, secrets, string
 from typing import Iterable, Optional, Dict, Any, List
-
 from fastapi import Depends, Header, HTTPException, status, APIRouter, Body, Request
 from sqlalchemy.orm import Session
 from passlib.hash import bcrypt
@@ -32,18 +30,19 @@ from app.core.settings import settings
 from app.models.user import User
 from app.models.role import Role
 
-# ──────────────────────────────────────────────
-# 내부 유틸: 환경·역할 보조
-# ──────────────────────────────────────────────
+
+# ----------------------------------------------------------------------------
+# 환경 감지 유틸
+# ----------------------------------------------------------------------------
 def _is_dev_env() -> bool:
-    """DEV/LCL 환경 플래그"""
+    """개발환경(dev/local) 여부 확인"""
     env = str(settings.APP_ENV or "").lower()
     dbg = str(getattr(settings, "DEBUG", "")).lower()
     return dbg in {"1", "true", "yes"} or env in {"dev", "development", "local"}
 
 
 def _uid_from_token(token: str) -> Optional[int]:
-    """로그인 토큰 규약: 'token-<uid>' → uid 반환"""
+    """로그인 토큰 규약: token-<uid>"""
     if not token or not token.startswith("token-"):
         return None
     try:
@@ -53,20 +52,20 @@ def _uid_from_token(token: str) -> Optional[int]:
 
 
 def _effective_role_for_dev(x_debug_role: Optional[str]) -> str:
-    """개발환경에서만 허용되는 디버그 역할"""
+    """개발환경에서는 SUPERADMIN 자동"""
     if _is_dev_env():
         return (x_debug_role or "SUPERADMIN").upper()
     return "ADMIN"
 
 
-# ──────────────────────────────────────────────
-# 토큰 검사 (내부/로그인 공용)
-# ──────────────────────────────────────────────
+# ----------------------------------------------------------------------------
+# 1️⃣ 기본 토큰 검증
+# ----------------------------------------------------------------------------
 def require_user(
     request: Request,
     x_internal_token: Optional[str] = Header(None, alias="X-Internal-Token"),
 ) -> Dict[str, Any]:
-    """X-Internal-Token 헤더 유효성 검증 (대소문자 무관)"""
+    """X-Internal-Token 헤더 유효성 검증"""
     token = x_internal_token or request.headers.get("x-internal-token")
     if not token:
         raise HTTPException(status_code=401, detail="Missing X-Internal-Token")
@@ -75,62 +74,59 @@ def require_user(
     if token.startswith("token-"):
         return {"token": token}
 
-    # 내부 고정 토큰 (운영/개발 분기)
+    # 내부 고정 토큰 (운영/개발)
     internal_token = settings.INTERNAL_API_TOKEN or ("dev-admin-token" if _is_dev_env() else None)
     if internal_token and token == internal_token:
         return {"token": token}
 
-    # dev 환경: 임의 토큰 허용
+    # 개발환경에서는 아무 토큰이나 허용
     if _is_dev_env():
         return {"token": token}
 
     raise HTTPException(status_code=401, detail="Invalid token")
 
 
-# ──────────────────────────────────────────────
-# 현재 사용자 로드
-# ──────────────────────────────────────────────
+# ----------------------------------------------------------------------------
+# 2️⃣ 현재 사용자 로드
+# ----------------------------------------------------------------------------
 def current_user(
     user_hdr=Depends(require_user),
     x_debug_role: Optional[str] = Header(None, alias="X-Debug-Role"),
     db: Session = Depends(get_db),
 ) -> Dict[str, Any]:
-    """현재 사용자 로드 — dev/운영 환경에 따라 역할 및 정보 결정"""
+    """현재 사용자 로드 — dev/운영 환경에 따라 SUPERADMIN 자동 반영"""
     tok = str(user_hdr.get("token", ""))
     uid = _uid_from_token(tok)
 
-    # 1️⃣ 로그인 토큰 → DB 사용자/역할
+    # 로그인 토큰 → DB 조회
     if uid:
         u = db.query(User).filter(User.id == uid).first()
         if not u:
             raise HTTPException(status_code=401, detail="User not found")
-
-        # ✅ CEO 계정은 SUPERADMIN, 나머지는 ADMIN
+        # CEO는 항상 SUPERADMIN
         if u.email.strip().lower() == "ceo@mokpooceanhotel.co.kr":
             roles = ["SUPERADMIN"]
         else:
             roles = ["ADMIN"]
+        return {"email": u.email, "name": u.name or u.email, "roles": roles}
 
-        return {"email": u.email, "name": (u.name or u.email), "roles": roles}
-
-    # 2️⃣ INTERNAL TOKEN (운영/개발)
+    # 내부 토큰
     internal_token = settings.INTERNAL_API_TOKEN or ("dev-admin-token" if _is_dev_env() else None)
     if internal_token and tok == internal_token:
-        if _is_dev_env():
-            return {"email": "internal@system.local", "name": "Internal", "roles": ["SUPERADMIN"]}
-        return {"email": "internal@system.local", "name": "Internal", "roles": ["ADMIN"]}
+        role = "SUPERADMIN" if _is_dev_env() else "ADMIN"
+        return {"email": "internal@system.local", "name": "Internal", "roles": [role]}
 
-    # 3️⃣ 개발 환경 디버그 역할
+    # 개발 환경 (디버그 롤 포함)
     if _is_dev_env():
         role = _effective_role_for_dev(x_debug_role)
-        return {"email": "dev@local", "name": "Dev User", "roles": [role]}
+        return {"email": "dev@local", "name": "Dev SuperAdmin", "roles": [role]}
 
     raise HTTPException(status_code=401, detail="Unauthorized")
 
 
-# ──────────────────────────────────────────────
-# 역할 기반 권한 검사
-# ──────────────────────────────────────────────
+# ----------------------------------------------------------------------------
+# 3️⃣ 역할 기반 권한 검사
+# ----------------------------------------------------------------------------
 def require_roles(need: Iterable[str]):
     """SUPERADMIN 통과 / 지정 역할 교집합 검사"""
     need_upper = {r.upper() for r in need}
@@ -144,9 +140,9 @@ def require_roles(need: Iterable[str]):
     return _dep
 
 
-# ──────────────────────────────────────────────
-# 내부 토큰 단순 검사 (require_token_local)
-# ──────────────────────────────────────────────
+# ----------------------------------------------------------------------------
+# 4️⃣ 내부 토큰 간이 검사 (require_token_local)
+# ----------------------------------------------------------------------------
 def require_token_local(
     x_internal_token: Optional[str] = Header(None, alias="X-Internal-Token"),
 ) -> Dict[str, Any]:
@@ -159,16 +155,17 @@ def require_token_local(
             return {"ok": True}
         raise HTTPException(status_code=401, detail="Invalid internal token")
 
+    # 개발환경은 전부 허용
     if x_internal_token == (settings.INTERNAL_API_TOKEN or "dev-admin-token"):
-        return {"ok": True, "dev": True}
+        return {"ok": True, "dev": True, "role": "SUPERADMIN"}
     if x_internal_token.startswith("token-"):
-        return {"ok": True, "dev": True}
-    return {"ok": True, "dev": True}
+        return {"ok": True, "dev": True, "role": "SUPERADMIN"}
+    return {"ok": True, "dev": True, "role": "SUPERADMIN"}
 
 
-# ──────────────────────────────────────────────
-# 로그인 / 비밀번호 API
-# ──────────────────────────────────────────────
+# ----------------------------------------------------------------------------
+# 5️⃣ 로그인 / 비밀번호 관련 API
+# ----------------------------------------------------------------------------
 router = APIRouter(prefix="/api", tags=["auth"])
 
 @router.post("/login", operation_id="auth_login")
@@ -185,9 +182,9 @@ def login(
         raise HTTPException(status_code=401, detail="비밀번호가 올바르지 않습니다.")
 
     token = f"token-{u.id}"
-    # ✅ CEO 계정은 SUPERADMIN 으로 응답
+    # CEO → SUPERADMIN, 일반 → ADMIN
     roles = ["SUPERADMIN"] if u.email.strip().lower() == "ceo@mokpooceanhotel.co.kr" else ["ADMIN"]
-    return {"token": token, "user": {"email": u.email, "name": (u.name or u.email), "roles": roles}}
+    return {"token": token, "user": {"email": u.email, "name": u.name or u.email, "roles": roles}}
 
 
 @router.get("/me", operation_id="auth_me")

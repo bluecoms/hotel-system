@@ -20,6 +20,7 @@
 #   • Master 계열 10종 통합 유지 (Departments / Ranks / Titles / Positions 등)
 #   • Base.metadata 는 app/db/base_class.py 단일 소스만 사용.
 #   • Role/Access 는 Role + DeptAccess(roles_access) 조합만 유지.
+#   • HousekeepingTask(하우스키핑) 모델 추가됨.
 # ============================================================================
 
 from importlib import import_module
@@ -36,8 +37,6 @@ from app.db.base_class import Base
 warnings.filterwarnings("ignore", message="Table 'properties' is already defined")
 
 __all__: List[str] = []
-
-# 이미 등록된 테이블명을 캐시로 추적
 _registered_tables = set(Base.metadata.tables.keys())
 
 # ──────────────────────────────────────────────
@@ -54,7 +53,7 @@ _MODULES: Dict[str, List[str]] = {
     "contract": ["EmployeeContract"],
 
     # 기준정보 (Master Domains)
-    "master_departments": ["MasterDepartment"],
+    "master_department": ["MasterDepartment"],
     "master_ranks": ["MasterRank"],
     "master_titles": ["MasterTitle"],
     "master_position": ["MasterPosition"],
@@ -81,6 +80,9 @@ _MODULES: Dict[str, List[str]] = {
     # 감사 / 게시판 등
     "audit": ["AuditLog"],
     "board": ["BoardPost", "BoardFile", "BoardComment"],
+
+    # ✅ 하우스키핑 (신규)
+    "housekeeping_task": ["HousekeepingTask"],
 }
 
 # ──────────────────────────────────────────────
@@ -110,7 +112,6 @@ def _import_symbols(module_name: str, symbols: List[str]) -> None:
         try:
             tablename = getattr(obj, "__tablename__", None)
             if tablename and tablename in _registered_tables:
-                # properties와 같이 중복 정의되는 테이블은 extend_existing 허용
                 table: Table = Base.metadata.tables.get(tablename)
                 if table is not None:
                     table.info["extend_existing"] = True
@@ -170,6 +171,7 @@ __all__ = sorted(set(__all__))
 # ----------------------------------------------------------------------------
 # 참고:
 #   • UserRole / RoleAccess 는 완전히 폐기되었으며 DeptAccess 로 통합.
+#   • HousekeepingTask (하우스키핑 업무) 모델이 추가되어 ORM 완결.
 #   • properties 테이블 중복 경고는 v4.1 이후 완전 억제.
 #   • Base.metadata 는 app/db/base_class.py 단일 소스만 사용.
 #   • extend_existing=True 처리는 runtime conflict 없이 적용.
