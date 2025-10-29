@@ -1,27 +1,13 @@
 # -*- coding: utf-8 -*-
 # =============================================================================
 # File      : app/schemas/__init__.py
-# Version   : 2025-11-09 · v4.3 (SSOT Phase 4 Final · RoomType/HkUnitRule Added)
+# Version   : 2025-11-11 · v4.4 (Add HousekeepingAssignment · SSOT Final)
 # Purpose   : Hotel Admin — Pydantic Schemas Auto Import (Unified SSOT Loader)
 # -----------------------------------------------------------------------------
-# 목적:
-#   • app/schemas/*.py 내 BaseModel 상속 클래스를 자동 탐색 및 전역 등록
-#   • 주요 도메인(auth, employees, contracts, ota, reports 등) 우선 로드
-#   • Master 기준정보 12개 도메인 + 하우스키핑 업무 스키마 통합
-# -----------------------------------------------------------------------------
-# 핵심 개선 (v4.3):
-#   ✅ DeptAccess 기반 Role/Dept 통합 유지
-#   ✅ MasterRoomType / MasterHkUnitRule 스키마 추가
-#   ✅ HousekeepingTask 스키마 포함 (업무·유닛·상태관리)
-# -----------------------------------------------------------------------------
-# 운영 방침:
-#   • OTA 수수료(commission)는 운영 데이터로 분리 (/api/ota/commissions)
-#   • HousekeepingTask 는 closing/rooms_status 와 병행 관리됨
-#   • 모든 BaseModel 스키마는 자동 탐색되어 FastAPI에서 전역 import 가능
-# -----------------------------------------------------------------------------
-# 변경 로그:
-#   v4.2 (2025-10-31) ✅ HousekeepingTask 스키마 추가
-#   v4.3 (2025-11-09) ✅ RoomType/HkUnitRule 기준정보 추가
+# 주요 변경사항 (v4.4)
+#   ✅ HousekeepingAssignment 스키마 추가
+#   ✅ 하우스키핑 도메인 완결 (Task + Assignment)
+#   ✅ 기존 구조 유지 (MasterRoomType/HkUnitRule 포함)
 # =============================================================================
 
 import pkgutil
@@ -37,14 +23,14 @@ except Exception:  # fallback
 
 __all__: List[str] = []
 
-# ──────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # 1️⃣ 명시 모듈 등록 (도메인별 우선순위)
-# ──────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 _MODULES: Dict[str, List[str]] = {
     # 인증 / 사용자
     "auth": ["ApproveBody", "UserCreate", "CreateFromEmpIn", "TokenPayload"],
 
-    # 역할 / 권한 (DeptAccess 포함)
+    # 역할 / 권한
     "role": [
         "RoleIn",
         "RoleOut",
@@ -75,67 +61,20 @@ _MODULES: Dict[str, List[str]] = {
         "MasterDepartmentOption",
         "MasterDepartmentReorderBody",
     ],
-    "master_ranks": [
-        "MasterRankIn",
-        "MasterRankOut",
-        "MasterRankReorderBody",
-    ],
-    "master_title": [
-        "MasterTitleIn",
-        "MasterTitleOut",
-        "MasterTitleReorderBody",
-    ],
-    "master_position": [
-        "MasterPositionIn",
-        "MasterPositionOut",
-        "MasterPositionReorderBody",
-    ],
-    "master_empno_policy": [
-        "MasterEmpNoPolicyIn",
-        "MasterEmpNoPolicyOut",
-    ],
-    "master_salary_grade": [
-        "MasterSalaryGradeIn",
-        "MasterSalaryGradeOut",
-        "MasterSalaryGradeReorderBody",
-    ],
-    "master_property": [
-        "MasterPropertyIn",
-        "MasterPropertyOut",
-    ],
-    "master_bank": [
-        "MasterBankIn",
-        "MasterBankOut",
-    ],
-    "master_hk_status": [
-        "MasterHkStatusIn",
-        "MasterHkStatusOut",
-    ],
-    "master_ota_channel": [
-        "MasterOtaChannelIn",
-        "MasterOtaChannelOut",
-    ],
-    # ✅ 추가된 기준정보
-    "master_room_type": [
-        "RoomTypeBase",
-        "RoomTypeCreate",
-        "RoomTypeUpdate",
-        "RoomTypeOut",
-    ],
-    "master_hk_unit_rule": [
-        "HkUnitRuleBase",
-        "HkUnitRuleCreate",
-        "HkUnitRuleUpdate",
-        "HkUnitRuleOut",
-    ],
+    "master_ranks": ["MasterRankIn", "MasterRankOut", "MasterRankReorderBody"],
+    "master_title": ["MasterTitleIn", "MasterTitleOut", "MasterTitleReorderBody"],
+    "master_position": ["MasterPositionIn", "MasterPositionOut", "MasterPositionReorderBody"],
+    "master_empno_policy": ["MasterEmpNoPolicyIn", "MasterEmpNoPolicyOut"],
+    "master_salary_grade": ["MasterSalaryGradeIn", "MasterSalaryGradeOut", "MasterSalaryGradeReorderBody"],
+    "master_property": ["MasterPropertyIn", "MasterPropertyOut"],
+    "master_bank": ["MasterBankIn", "MasterBankOut"],
+    "master_hk_status": ["MasterHkStatusIn", "MasterHkStatusOut"],
+    "master_ota_channel": ["MasterOtaChannelIn", "MasterOtaChannelOut"],
+    "master_room_type": ["RoomTypeBase", "RoomTypeCreate", "RoomTypeUpdate", "RoomTypeOut"],
+    "master_hk_unit_rule": ["HkUnitRuleBase", "HkUnitRuleCreate", "HkUnitRuleUpdate", "HkUnitRuleOut"],
 
     # ✅ HR / 계약
-    "contract": [
-        "ContractIn",
-        "ContractOut",
-        "ContractListOut",
-        "ContractHistoryOut",
-    ],
+    "contract": ["ContractIn", "ContractOut", "ContractListOut", "ContractHistoryOut"],
 
     # ✅ 하우스키핑 (Housekeeping)
     "housekeeping_task": [
@@ -145,16 +84,16 @@ _MODULES: Dict[str, List[str]] = {
         "HousekeepingTaskOut",
         "HousekeepingStatsOut",
     ],
-
-    # 영업마감 / 클로징
-    "closing": [
-        "DayStatusBody",
-        "RestoreBody",
-        "ClosingDay",
-        "ClosingCalendarResp",
+    # ✅ 추가: 하우스키핑 정비 배정 (Assignment)
+    "housekeeping_assignment": [
+        "AssignmentBase",
+        "AssignmentCreate",
+        "AssignmentUpdate",
+        "AssignmentOut",
     ],
 
-    # 키워드 / OTA (운영용)
+    # 클로징 / 리포트
+    "closing": ["DayStatusBody", "RestoreBody", "ClosingDay", "ClosingCalendarResp"],
     "keywords": ["KeywordIn", "KeywordOut"],
     "ota": [
         "OTAChannelCreate",
@@ -166,18 +105,10 @@ _MODULES: Dict[str, List[str]] = {
         "OTASummaryItem",
         "OTASummaryOut",
     ],
-
-    # 리포트
     "reports": ["PosItemRow", "SalesTagsOut", "DashboardKPIOut"],
-
-    # 은행 / 회계 / 감사
     "bank": ["BankLedgerOut", "BankLedgerIn"],
     "audit": ["AuditLogOut", "AuditLogIn"],
-
-    # 게시판 / 문서
     "board": ["BoardPostIn", "BoardPostOut", "BoardFileOut"],
-
-    # 병합엔진
     "merge": [
         "MergeBatchBase",
         "MergeChangeLogBase",
@@ -185,17 +116,12 @@ _MODULES: Dict[str, List[str]] = {
         "MergeDryRunResp",
         "MergeExecResp",
     ],
-
-    # 업로드
-    "upload": [
-        "UploadedFileOut",
-        "UploadVersionList",
-    ],
+    "upload": ["UploadedFileOut", "UploadVersionList"],
 }
 
-# ──────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # 2️⃣ 명시 모듈 우선 import
-# ──────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 def _import_symbols(module_name: str, symbols: List[str]) -> None:
     """명시된 모듈 내 스키마를 안전하게 import"""
     try:
@@ -216,9 +142,9 @@ def _import_symbols(module_name: str, symbols: List[str]) -> None:
 for _mod, _symbols in _MODULES.items():
     _import_symbols(_mod, _symbols)
 
-# ──────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # 3️⃣ 자동 탐색 (BaseModel 상속 클래스)
-# ──────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 _specified = set(_MODULES.keys())
 
 for _, name, ispkg in pkgutil.iter_modules(__path__):  # type: ignore[name-defined]
@@ -242,16 +168,14 @@ for _, name, ispkg in pkgutil.iter_modules(__path__):  # type: ignore[name-defin
         except Exception:
             continue
 
-# ──────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # 4️⃣ 중복 제거 및 정렬
-# ──────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 __all__ = sorted(set(__all__))
 
 # ============================================================================
 # 참고:
-#   • DeptAccess(roles_access)는 RoleAccess/UserRole을 완전히 대체합니다.
-#   • MasterRoomType, MasterHkUnitRule 스키마가 추가되어
-#     하우스키핑/객실 기준정보 SSOT 완결되었습니다.
-#   • HousekeepingTask 스키마 포함으로 업무 연동 완료.
-#   • Alembic 및 FastAPI 실행 시 자동 탐색 로그 출력은 정상입니다.
+#   • HousekeepingAssignment 추가로 정비 배정 기능까지 완결됨.
+#   • HousekeepingTask + Assignment 스키마로 도메인 완성.
+#   • RoomType / HkUnitRule 포함으로 기준정보 완결.
 # ============================================================================
