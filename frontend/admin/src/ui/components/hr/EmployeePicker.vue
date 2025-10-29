@@ -1,15 +1,20 @@
 <!-- ============================================================================
-  File      : src/ui/components/hr/EmployeePicker.vue
-  Version   : 2.0 Final (2025-10-23 · HR 간소화 8차 · Property AutoSync + ActiveFilter)
-  Purpose   : Hotel Admin — 직원 선택 컴포넌트 (검색형 콤보박스)
-  ------------------------------------------------------------------------------
-  변경 요약 (v2.0)
-    ✅ property_code 자동 반영 (MOP 기본값 + localStorage + store 연동)
-    ✅ onlyActive 옵션 → status 필터(active) 자동 적용
-    ✅ 한글화 출력 (사번 / 이름 / 부서 / 직책 / 상태)
-    ✅ 검색(q) 입력 시 즉시 fetch (EmployeesApi.list 기반)
-    ✅ 선택 시 @selected(row) emit 구조 통일
-============================================================================ -->
+# File      : src/ui/components/hr/EmployeePicker.vue
+# Version   : 2.1 (2025-11-10 · SSOT Final · UX Polish)
+# Purpose   : 직원 선택 콤보박스 (검색형 + Property 자동 동기화)
+# ----------------------------------------------------------------------------
+# 기능 요약:
+#   • 검색어 입력 시 실시간 조회 (/api/employees)
+#   • onlyActive=true → status=active 자동 필터링
+#   • property_code 자동 주입 (localStorage / VITE_DEFAULT)
+#   • 한글 라벨: 계약상태(계약중/만료/미계약)
+#   • 선택 시 @selected(row) / v-model 동기화
+# ----------------------------------------------------------------------------
+# 연계 파일:
+#   • src/services/employees.ts
+#   • src/ui/components/hr/DialogContractForm.vue
+#   • src/views/Admin/HR/Contracts.vue
+# ============================================================================ -->
 <template>
   <v-autocomplete
     v-model="innerValue"
@@ -50,12 +55,21 @@
 </template>
 
 <script setup lang="ts">
+/* ============================================================================
+   Script — EmployeePicker (v2.1)
+   ---------------------------------------------------------------------------
+   Props:
+     • modelValue: 선택된 직원 ID
+     • onlyActive: 활성 상태 직원만 표시
+     • label, placeholder: UI 라벨
+   Emits:
+     • update:modelValue(v:number|null)
+     • selected(row:any|null)
+============================================================================ */
 import { ref, watch, onMounted, nextTick } from 'vue'
 import * as EmployeesApi from '@/services/employees'
 
-/* ===========================================================================
-   Props / Emits
-=========================================================================== */
+/* ▣ Props / Defaults */
 const props = withDefaults(defineProps<{
   modelValue: number | null
   onlyActive?: boolean
@@ -73,9 +87,7 @@ const emit = defineEmits<{
   (e: 'selected', row: any | null): void
 }>()
 
-/* ===========================================================================
-   상태
-=========================================================================== */
+/* ▣ 상태 */
 const innerValue = ref<number | null>(props.modelValue)
 const items = ref<any[]>([])
 const loading = ref(false)
@@ -85,9 +97,12 @@ const propertyCode =
   import.meta.env.VITE_DEFAULT_PROPERTY_CODE ||
   'MOP'
 
-/* ===========================================================================
+/* ============================================================================
    데이터 로드
-=========================================================================== */
+   - EmployeesApi.list({ q, property_code, status, page, size })
+   - onlyActive=true → status='active'
+============================================================================ */
+let fetchTimer: any = null
 async function fetch(query = '') {
   loading.value = true
   try {
@@ -99,7 +114,7 @@ async function fetch(query = '') {
       property_code: propertyCode,
       sort: 'name:asc',
     })
-    items.value = res.items || []
+    items.value = res?.items || []
     const sel = items.value.find(r => Number(r?.id) === Number(innerValue.value)) || null
     emit('selected', sel)
   } catch (err) {
@@ -109,26 +124,27 @@ async function fetch(query = '') {
   }
 }
 
-/* ===========================================================================
-   검색 핸들러
-=========================================================================== */
+/* ============================================================================
+   검색 입력 이벤트 (Debounce 200ms)
+============================================================================ */
 function onSearch(v: string) {
   q.value = v || ''
-  fetch(q.value)
+  clearTimeout(fetchTimer)
+  fetchTimer = setTimeout(() => fetch(q.value), 200)
 }
 
-/* ===========================================================================
-   선택 시 부모 emit
-=========================================================================== */
+/* ============================================================================
+   선택 변경 → 부모로 전달
+============================================================================ */
 watch(innerValue, v => {
   emit('update:modelValue', v)
   const sel = items.value.find(r => Number(r?.id) === Number(v)) || null
   emit('selected', sel)
 })
 
-/* ===========================================================================
+/* ============================================================================
    상태 라벨 (한글화)
-=========================================================================== */
+============================================================================ */
 function statusLabel(s?: string) {
   const v = (s || '').toLowerCase()
   if (v === 'active') return '계약중'
@@ -137,17 +153,17 @@ function statusLabel(s?: string) {
   return ''
 }
 
-/* ===========================================================================
+/* ============================================================================
    Mount 시 초기 로드
-=========================================================================== */
+============================================================================ */
 onMounted(async () => {
   await nextTick()
   await fetch()
 })
 
-/* ===========================================================================
-   표시 포맷
-=========================================================================== */
+/* ============================================================================
+   표시 포맷터
+============================================================================ */
 const itemTitle = (r: any) =>
   `${r?.name || ''} (${r?.emp_no || ''}) — ${(r?.dept_name || r?.dept || '-')}/${(r?.title_name || r?.title || '-')}`
 const itemValue = (r: any) => Number(r?.id ?? 0)

@@ -44,6 +44,7 @@
               <EmployeePicker
                 v-model="employeeId"
                 label="직원 선택"
+                :onlyActive="false"
                 :rules="[req]"
                 @selected="onEmployeeSelected"
               />

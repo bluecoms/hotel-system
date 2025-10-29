@@ -1,39 +1,42 @@
 <!-- ============================================================================
-  File    : src/ui/components/hr/DialogEmployeeMap.vue
-  Version : 2025.10 Final Stable
-  Purpose : Hotel Admin — 사원 ↔ 사용자 계정 매핑 다이얼로그
-  ------------------------------------------------------------------------------
-  연결 백엔드:
-    • GET    /api/employees                       → 사원 목록(검색/페이징)
-    • PUT    /api/users/{uid}/employee/{eid}      → 사용자-사원 매핑
-  관련 파일:
-    • src/views/Users/Users.vue                   → 호출 측(사원 매핑 버튼)
-    • src/services/employees.ts                   → EmpApi.list()
-    • src/services/users.ts                       → UsersApi.mapEmployee()
-  주요 개선사항:
-    ✅ 드롭다운 → 리스트형 선택(사번·이름·부서·직책 병기, 직관성↑)
-    ✅ 이미 매핑된 항목 표기/선택 방지(※ 동일 사용자 매핑은 허용)
-    ✅ 선택 요약 카드 표시(사번/부서/직책)
-    ✅ 백엔드 엔드포인트 정합(users.py 기반)
-============================================================================ -->
-
+# File      : src/ui/components/hr/DialogEmployeeMap.vue
+# Version   : 1.2 (2025-11-10 · SSOT Final · Safer Emit + Type Strict)
+# Purpose   : 사원 ↔ 사용자 계정 매핑 다이얼로그 (시스템 관리 전용)
+# ----------------------------------------------------------------------------
+# 연결 백엔드:
+#   • GET    /api/employees
+#   • PUT    /api/users/{uid}/employee/{eid}
+# ----------------------------------------------------------------------------
+# 개선사항 (v1.2):
+#   ✅ emit('mapped', { user_id, employee_id }) 로 데이터 전달 통일
+#   ✅ Props 타입 강화 및 기본값 안전화
+#   ✅ 에러/토스트 메시지 한국어 일관화
+#   ✅ 주석 및 변수명 정리
+# ----------------------------------------------------------------------------
+# 연계 파일:
+#   • src/views/Users/Users.vue
+#   • src/services/employees.ts
+#   • src/services/users.ts
+# ============================================================================
+-->
 <template>
   <v-dialog v-model="open" max-width="820" transition="dialog-bottom-transition">
     <v-card class="rounded-2xl">
-      <!-- 헤더 -->
+
+      <!-- ▣ 헤더 -->
       <v-card-title class="d-flex align-center justify-space-between py-3 px-5">
         <div class="d-flex align-center gap-2">
           <v-icon icon="mdi-account-link-outline" size="20" class="text-primary" />
           <span class="text-h6 font-weight-medium">사원 매핑</span>
         </div>
-        <v-btn icon="mdi-close" variant="text" @click="open=false" />
+        <v-btn icon="mdi-close" variant="text" @click="open = false" />
       </v-card-title>
 
       <v-divider />
 
-      <!-- 본문 -->
+      <!-- ▣ 본문 -->
       <v-card-text class="px-5 py-4">
-        <!-- 선택 대상 사용자 요약 -->
+        <!-- 대상 사용자 요약 -->
         <v-alert
           v-if="user"
           type="info"
@@ -69,7 +72,7 @@
           </template>
         </v-alert>
 
-        <!-- 검색 입력 -->
+        <!-- 검색 영역 -->
         <div class="d-flex align-center gap-2 mb-3">
           <v-text-field
             v-model="q"
@@ -87,7 +90,7 @@
           </v-btn>
         </div>
 
-        <!-- 리스트형 선택 (v-autocomplete + 커스텀 아이템) -->
+        <!-- 리스트형 선택 -->
         <v-autocomplete
           v-model="selectedEmpId"
           :items="displayItems"
@@ -101,7 +104,7 @@
           hide-details
           class="mb-3"
         >
-          <!-- 아이템 렌더링: 사번/이름/부서/직책 + 상태칩 -->
+          <!-- 항목 렌더링 -->
           <template #item="{ item, props }">
             <v-list-item v-bind="props" :disabled="isDisabled(item.raw)">
               <div class="row-line">
@@ -118,15 +121,13 @@
                     color="grey"
                     variant="flat"
                     label
-                  >
-                    매핑됨
-                  </v-chip>
+                  >매핑됨</v-chip>
                 </div>
               </div>
             </v-list-item>
           </template>
 
-          <!-- 선택 렌더링(입력 상자 내부) -->
+          <!-- 선택 상태 -->
           <template #selection="{ item }">
             <span class="mono">{{ item.raw.emp_no }}</span>
             <span class="ml-1">{{ item.raw.name }}</span>
@@ -138,7 +139,7 @@
           </template>
         </v-autocomplete>
 
-        <!-- 선택 요약 카드 -->
+        <!-- 선택 요약 -->
         <v-expand-transition>
           <div v-if="selected" class="selected-card">
             <v-icon size="18" class="mr-1" color="primary">mdi-badge-account</v-icon>
@@ -152,37 +153,29 @@
 
       <v-divider />
 
-      <!-- 액션 -->
+      <!-- ▣ 액션 -->
       <v-card-actions class="px-5 py-3">
         <v-spacer />
-        <v-btn variant="text" color="grey" @click="open=false">취소</v-btn>
+        <v-btn variant="text" color="grey" @click="open = false">취소</v-btn>
         <v-btn
           color="primary"
           prepend-icon="mdi-link-variant"
           :loading="loading"
           :disabled="!selectedEmpId"
           @click="mapNow"
-        >
-          매핑 저장
-        </v-btn>
+        >매핑 저장</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
 </template>
 
 <script setup lang="ts">
-/* ============================================================================
-  Script  : DialogEmployeeMap.vue (Composition API)
-  Notes   :
-    • 열리는 순간 사원 목록 로드(EmpApi.list)
-    • 이미 타 사용자와 매핑된 사원은 선택 비활성 (단, 현재 사용자와의 기존 연결은 허용)
-    • 저장 시 UsersApi.mapEmployee(user.id, selectedEmpId)
-============================================================================ */
 import { computed, ref, watch } from 'vue'
 import * as EmpApi from '@/services/employees'
 import * as UsersApi from '@/services/users'
 import { useToast } from '@/ui/composables/useToast'
 
+/* ▣ 타입 정의 */
 type EmpRow = {
   id: number
   emp_no?: string
@@ -190,10 +183,10 @@ type EmpRow = {
   dept?: string
   title?: string
   title_name?: string
-  // 있으면 다른 사용자에 이미 매핑된 것으로 간주(백엔드 스펙에 맞춰 자유 필드)
   mapped_user_id?: number | null
 }
 
+/* ▣ Props / Emits */
 const props = defineProps<{
   modelValue: boolean
   user?: { id: number; email: string; name?: string; employee_id?: number | null }
@@ -201,20 +194,20 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:modelValue', v: boolean): void
-  (e: 'mapped'): void
+  (e: 'mapped', payload: { user_id: number; employee_id: number | null }): void
 }>()
 
+/* ▣ 상태 */
 const toast = useToast()
 const open = ref(props.modelValue)
 const user = ref(props.user || null)
-
 const employees = ref<EmpRow[]>([])
 const loadingList = ref(false)
-
 const q = ref('')
 const selectedEmpId = ref<number | null>(null)
 const loading = ref(false)
 
+/* ▣ Watchers */
 watch(() => props.modelValue, (v) => {
   open.value = v
   if (v) {
@@ -226,12 +219,11 @@ watch(() => props.modelValue, (v) => {
 watch(() => props.user, (v) => (user.value = v || null))
 watch(open, (v) => emit('update:modelValue', v))
 
+/* ▣ 목록 로드 */
 async function reload() {
   loadingList.value = true
   try {
-    // EmpApi.list: { q, page, size } 계약 가정
     const resp: any = await EmpApi.list({ q: q.value, page: 1, size: 50 })
-    // 백엔드 항목 표준화(title_name fallback 포함)
     const items: EmpRow[] = (resp?.items || []).map((r: any) => ({
       id: r.id,
       emp_no: r.emp_no || '',
@@ -242,13 +234,15 @@ async function reload() {
       mapped_user_id: r.mapped_user_id ?? null,
     }))
     employees.value = items
-  } catch (e: any) {
+  } catch {
     employees.value = []
+    toast.error('사원 목록을 불러올 수 없습니다.')
   } finally {
     loadingList.value = false
   }
 }
 
+/* ▣ 표시용 항목 구성 */
 const displayItems = computed(() =>
   employees.value
     .filter((r) => {
@@ -264,26 +258,27 @@ const displayItems = computed(() =>
     }))
 )
 
+/* ▣ 선택 상태 */
 const selected = computed(() => {
   const id = selectedEmpId.value
   if (!id) return null
   return employees.value.find((x) => x.id === id) || null
 })
 
+/* ▣ 비활성 조건 */
 function isDisabled(row: EmpRow): boolean {
-  // 다른 사용자에 이미 매핑되어 있으면 비활성
-  if (row.mapped_user_id && user.value && row.mapped_user_id !== user.value.id) return true
-  return false
+  return !!(row.mapped_user_id && user.value && row.mapped_user_id !== user.value.id)
 }
 
+/* ▣ 매핑 저장 */
 async function mapNow() {
   if (!selectedEmpId.value || !user.value) return
   loading.value = true
   try {
-    const empId = Number(selectedEmpId.value)  // ✅ 문자열 → 숫자 변환 (핵심)
+    const empId = Number(selectedEmpId.value)
     await UsersApi.mapEmployee(user.value.id, empId)
     toast.success('사원 매핑이 저장되었습니다.')
-    emit('mapped')
+    emit('mapped', { user_id: user.value.id, employee_id: empId })
     open.value = false
   } catch (e: any) {
     toast.error(e?.response?.detail || e?.message || '매핑에 실패했습니다.')
@@ -295,38 +290,12 @@ async function mapNow() {
 
 <style scoped>
 .flex-1 { flex: 1; }
-
-.row-line {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.name {
-  font-weight: 600;
-}
-
-.hint {
-  color: #6b7280; /* grey-500 */
-}
-
-.mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  letter-spacing: 0.1px;
-}
-
-.sel-hint {
-  color: #6b7280;
-  margin-left: 6px;
-}
-
+.row-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.left { display: flex; align-items: center; gap: 10px; }
+.name { font-weight: 600; }
+.hint { color: #6b7280; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono"; }
+.sel-hint { color: #6b7280; margin-left: 6px; }
 .selected-card {
   display: inline-flex;
   align-items: center;
@@ -335,6 +304,6 @@ async function mapNow() {
   border: 1px solid var(--color-line, #e5e7eb);
   border-radius: 10px;
   padding: 10px 12px;
-  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.06);
+  box-shadow: 0 2px 8px rgba(16,24,40,0.06);
 }
 </style>
