@@ -104,6 +104,13 @@ const menu: NavItem[] = [
         roles: ['HK', 'ADMIN', 'SUPERADMIN'],
         routeName: 'housekeeping-history',
       },
+      {
+        label: '정비 배정',
+        to: '/admin/housekeeping/assign',
+        icon: 'mdi-clipboard-account-outline',
+        roles: ['HK', 'ADMIN', 'SUPERADMIN'],
+        routeName: 'housekeeping-assign',
+      },
     ],
   },
 
@@ -118,8 +125,7 @@ const menu: NavItem[] = [
       { label: 'HR 대시보드', to: '/admin/hr/dashboard', icon: 'mdi-view-dashboard-variant-outline', routeName: 'hr-dashboard' },
       { label: '직원 목록', to: '/admin/hr/employees', icon: 'mdi-account-tie', routeName: 'hr-employees' },
       { label: '계약 관리', to: '/admin/hr/contracts', icon: 'mdi-file-sign', routeName: 'hr-contracts' },
-      { label: '근태 기록', to: '/admin/hr/records', icon: 'mdi-file-document-multiple-outline', routeName: 'hr-records' },
-      { label: '계정 매핑', to: '/admin/hr/account-link', icon: 'mdi-account-arrow-right', routeName: 'hr-account-link' },
+      { label: '근태 기록', to: '/admin/hr/records', icon: 'mdi-file-document-multiple-outline', routeName: 'hr-records' },      
     ],
   },
 

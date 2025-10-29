@@ -1,26 +1,25 @@
 // ============================================================================
 // File      : src/router/index.ts
-// Version   : 2025.11-04 · v4.2 (Dev SuperAdmin Auto · Guard Final Stable)
-// Purpose   : Hotel Admin — Router (DeptAccess 기반 접근제어 / DEV 모드 자동 통과)
+// Version   : 2025.11-10 · v4.3 (Housekeeping History/Assign Added · HR Cleanup)
+// Purpose   : Hotel Admin — Router (DeptAccess 기반 접근제어 / SSOT 완전 동기화)
 // ----------------------------------------------------------------------------
-// 설계 요약 (SSOT 완전 동기화)
-//   • menu.ts 의 routeName / 경로(path)와 100% 동일하도록 라우트 정의
-//   • meta.routeName 은 DeptAccess 권한 키와 반드시 일치
-//   • 전역 가드는 스토어(authStore)의 반응형 상태만 사용 (임시 캐시 금지)
-//   • SUPERADMIN 및 개발환경(dev)에서는 즉시 통과
-//   • forbidden 루프 완전 차단, 최초 bootstrap 자동 수행
+// 주요 변경사항 (v4.3)
+//   ✅ HR: 계정 매핑(AccountLink) 라우트 제거
+//   ✅ Housekeeping: 현황(Board) + 이력(History) + 배정(Assign) 추가
+//   ✅ menu.ts 완전 동기화 (routeName 기준 일치)
 // ----------------------------------------------------------------------------
-// 용어 정리
-//   • effectiveDeptAccess : /api/roles/access/effective 응답(서버 계산) 반영 맵
-//   • routeName           : DeptAccess 판단 키(백엔드 키와 동일)
-//   • requiresAuth        : 로그인 필요 플래그(기본 true)
+// 전제:
+//   • menu.ts 와 routeName / path 100% 동일
+//   • DeptAccess 권한 키(routeName)는 백엔드 DeptAccess 정책 키와 동일
+//   • SUPERADMIN / 개발환경(dev): 전면 접근 허용
 // ============================================================================
+
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { getEffectiveDeptAccess, canAccessRoute } from '@/services/auth'
 
 // ─────────────────────────────────────────────
-// Lazy Imports — menu.ts와 동일한 실제 경로 구성
+// Lazy Imports
 // ─────────────────────────────────────────────
 const Login             = () => import('@/views/Auth/Login.vue')
 const Forbidden         = () => import('@/views/Forbidden.vue')
@@ -43,7 +42,6 @@ const HrDashboard       = () => import('@/views/Admin/HR/Dashboard.vue')
 const HrEmployees       = () => import('@/views/Admin/HR/Employees.vue')
 const HrContracts       = () => import('@/views/Admin/HR/Contracts.vue')
 const HrRecords         = () => import('@/views/Admin/HR/Records.vue')
-const HrAccountLink     = () => import('@/views/Admin/HR/AccountLink.vue')
 
 // System / Users
 const UsersList         = () => import('@/views/Users/Users.vue')
@@ -55,10 +53,12 @@ const RoleAccess        = () => import('@/views/Admin/RoleAccess.vue')
 const MyInfo            = () => import('@/views/Users/MyInfo.vue')
 
 // ✅ Housekeeping
-const HousekeepingBoard = () => import('@/views/HousekeepingBoard.vue')
+const HousekeepingBoard   = () => import('@/views/HousekeepingBoard.vue')
+const HousekeepingHistory = () => import('@/views/HousekeepingHistory.vue')
+const HousekeepingAssign  = () => import('@/views/HousekeepingAssign.vue')
 
 // ─────────────────────────────────────────────
-// Routes — menu.ts 와 1:1 일치 (meta.routeName = DeptAccess 키)
+// Routes
 // ─────────────────────────────────────────────
 const routes: RouteRecordRaw[] = [
   // 인증/예외
@@ -81,11 +81,10 @@ const routes: RouteRecordRaw[] = [
   { path: '/admin/reports/rooms-summary', name: 'reports-rooms-summary', component: ReportsRooms, meta: { title: '객실 매출 요약', requiresAuth: true, routeName: 'reports-rooms-summary' } },
 
   // HR
-  { path: '/admin/hr/dashboard',    name: 'hr-dashboard',    component: HrDashboard,  meta: { title: 'HR 대시보드', requiresAuth: true, routeName: 'hr-dashboard' } },
-  { path: '/admin/hr/employees',    name: 'hr-employees',    component: HrEmployees,  meta: { title: '직원 목록',   requiresAuth: true, routeName: 'hr-employees' } },
-  { path: '/admin/hr/contracts',    name: 'hr-contracts',    component: HrContracts,  meta: { title: '계약 관리',   requiresAuth: true, routeName: 'hr-contracts' } },
-  { path: '/admin/hr/records',      name: 'hr-records',      component: HrRecords,    meta: { title: '근태 기록',   requiresAuth: true, routeName: 'hr-records' } },
-  { path: '/admin/hr/account-link', name: 'hr-account-link', component: HrAccountLink,meta: { title: '계정 매핑',   requiresAuth: true, routeName: 'hr-account-link' } },
+  { path: '/admin/hr/dashboard', name: 'hr-dashboard', component: HrDashboard, meta: { title: 'HR 대시보드', requiresAuth: true, routeName: 'hr-dashboard' } },
+  { path: '/admin/hr/employees', name: 'hr-employees', component: HrEmployees, meta: { title: '직원 목록',   requiresAuth: true, routeName: 'hr-employees' } },
+  { path: '/admin/hr/contracts', name: 'hr-contracts', component: HrContracts, meta: { title: '계약 관리',   requiresAuth: true, routeName: 'hr-contracts' } },
+  { path: '/admin/hr/records',   name: 'hr-records',   component: HrRecords,   meta: { title: '근태 기록',   requiresAuth: true, routeName: 'hr-records' } },
 
   // System / Users
   { path: '/admin/users',                name: 'users',                component: UsersList,        meta: { title: '사용자 목록',    requiresAuth: true, routeName: 'users' } },
@@ -97,7 +96,9 @@ const routes: RouteRecordRaw[] = [
   { path: '/account/info',      name: 'account-info',component: MyInfo,     meta: { title: '내 정보',   requiresAuth: true, routeName: 'account-info' } },
 
   // ✅ Housekeeping
-  { path: '/admin/housekeeping', name: 'housekeeping', component: HousekeepingBoard, meta: { title: '하우스키핑', requiresAuth: true, routeName: 'housekeeping' } },
+  { path: '/admin/housekeeping',             name: 'housekeeping',          component: HousekeepingBoard,   meta: { title: '객실 정비 현황', requiresAuth: true, routeName: 'housekeeping' } },
+  { path: '/admin/housekeeping/history',     name: 'housekeeping-history',  component: HousekeepingHistory, meta: { title: '정비 이력',       requiresAuth: true, routeName: 'housekeeping-history' } },
+  { path: '/admin/housekeeping/assign',      name: 'housekeeping-assign',   component: HousekeepingAssign,  meta: { title: '정비 배정',       requiresAuth: true, routeName: 'housekeeping-assign' } },
 
   // Fallback
   { path: '/:pathMatch(.*)*', redirect: '/' },
@@ -117,21 +118,18 @@ const router = createRouter({
 let isAccessError = false
 
 router.beforeEach(async (to, from, next) => {
-  // ─── 타이틀 설정 ───
   if (to.meta?.title) document.title = `Hotel Admin — ${to.meta.title}`
 
   const auth = useAuthStore()
-
-  // forbidden 루프 방지
   if (to.name === 'forbidden' && from.name === 'forbidden') return next(false)
 
-  // ─── 초기 부트스트랩 ───
+  // 초기 부트스트랩
   if (!auth.isInitialized) {
     try { await auth.bootstrap() } catch (err) { console.warn('[guard] bootstrap failed:', err) }
     auth.isInitialized = true
   }
 
-  // ─── 인증 필요 라우트 검사 ───
+  // 인증 필요 라우트 검사
   const requiresAuth = to.meta?.requiresAuth !== false
   if (requiresAuth && !auth.isAuthenticated) {
     if (to.name !== 'login')
@@ -139,12 +137,12 @@ router.beforeEach(async (to, from, next) => {
     return next()
   }
 
-  // ─── SUPERADMIN / DEV 모드 예외처리 ───
+  // SUPERADMIN / DEV 모드 예외처리
   const isSuper = (auth.user?.roles || []).map(r => r.toUpperCase()).includes('SUPERADMIN')
   const isDevMode = import.meta.env.MODE === 'development' || import.meta.env.DEV
-  if (isSuper || isDevMode) return next() // ✅ 모든 라우트 접근 허용
+  if (isSuper || isDevMode) return next()
 
-  // ─── 권한맵이 없으면 /roles/access/effective 로드 ───
+  // 권한맵 로드
   if (!auth.effectiveDeptAccess && !isAccessError) {
     try { auth.effectiveDeptAccess = await getEffectiveDeptAccess() }
     catch (err) {
@@ -155,7 +153,7 @@ router.beforeEach(async (to, from, next) => {
     }
   }
 
-  // ─── DeptAccess 검증 ───
+  // DeptAccess 검증
   const routeName: string =
     (to.meta?.routeName as string) ||
     (typeof to.name === 'string'
@@ -163,7 +161,6 @@ router.beforeEach(async (to, from, next) => {
       : String(to.path).slice(1).replaceAll('/', '-').toLowerCase())
 
   const ok = canAccessRoute(routeName, auth.effectiveDeptAccess, auth.user?.roles || null)
-
   if (requiresAuth && !ok) {
     if (to.name !== 'forbidden') return next({ name: 'forbidden' })
     return next(false)
