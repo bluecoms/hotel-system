@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # ============================================================================
 # File      : app/routers/contracts.py
-# Version   : 2025.11-10 · v4.0 (SSOT Final · Safe CRUD + Service Split)
+# Version   : 2025.11-10 · v4.1 (SSOT Final · Latest-only Filtered)
 # Purpose   : Hotel Admin — 직원 계약 관리 API (EmployeeContracts)
 # ----------------------------------------------------------------------------
 # 목적:
@@ -10,12 +10,11 @@
 #   • 계약이 없는 직원도 "미계약" 상태로 목록에 표시 (LEFT JOIN)
 #   • Property(지점 코드) 단위 필터 지원
 # ----------------------------------------------------------------------------
-# 개선사항 (v4.0)
-#   ✅ 서비스 분리(app.services.contract_service) 구조 반영
-#   ✅ Python 3.8 호환 — or_() / and_() 구문 유지
-#   ✅ append-only 원칙 준수 (is_latest=True)
-#   ✅ activate/terminate 시 직원 상태 자동 동기화
-#   ✅ SSOT 일관성 — Employee.dept는 코드만 보유, 부서명은 MasterDepartment에서 조회
+# 개선사항 (v4.1)
+#   ✅ 목록 조회 시 기본적으로 is_latest=True 만 포함
+#   ✅ 중복 계약 버전 노출 방지 (최신 계약만 표시)
+#   ✅ Python 3.8 호환 유지 (and_/or_)
+#   ✅ SSOT 규약: append-only, version_no 누적
 # ----------------------------------------------------------------------------
 # 엔드포인트:
 #   • GET    /api/contracts                     → 계약 목록 조회 (LEFT JOIN)
@@ -84,10 +83,17 @@ def list_contracts(
     LEFT JOIN:
       - Employee.id = EmployeeContract.employee_id
       - Employee.dept(코드) = MasterDepartment.dept_code AND property_code 동일
+    ✅ 기본적으로 is_latest=True 계약만 조회 (최신 계약 한 건만)
     """
     qset = (
         db.query(Employee, EmployeeContract, MasterDepartment.dept_name)
-        .outerjoin(EmployeeContract, Employee.id == EmployeeContract.employee_id)
+        .outerjoin(
+            EmployeeContract,
+            and_(
+                Employee.id == EmployeeContract.employee_id,
+                EmployeeContract.is_latest.is_(True),  # ✅ 최신 계약만 필터링
+            ),
+        )
         .outerjoin(
             MasterDepartment,
             and_(
@@ -317,5 +323,5 @@ def activate_contract(contract_id: int, db: Session = Depends(get_db)) -> Dict[s
 
 
 # ============================================================================
-# ✅ EOF — app/routers/contracts.py (v4.0 · SSOT Final Stable)
+# ✅ EOF — app/routers/contracts.py (v4.1 · SSOT Final Stable)
 # ============================================================================
