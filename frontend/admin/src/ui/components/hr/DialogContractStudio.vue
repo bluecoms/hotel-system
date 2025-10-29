@@ -1,15 +1,24 @@
 <!-- ============================================================================
-  File    : src/ui/components/hr/DialogContractStudio.vue
-  Version : 1.9.1 Hotfix (2025-10-24 · TS2695 Fix · 주석 정비 · 기능동일)
-  Purpose : 계약서 작성·확정 다이얼로그 (HTML 템플릿 자동 주입 + 인쇄 후 확정)
-  ------------------------------------------------------------------------------
-  변경 요약
-    ✅ TS2695 해결: `[100,300,700].forEach(...)` → for-of 반복으로 교체
-    ✅ 데이터 자동 주입(iframe postMessage) 3회 브로드캐스트 유지
-    ✅ afterprint + 3초 fallback로 인쇄 후 activate 보장
-    ✅ saving 플래그로 중복 클릭 방지
-    ✅ 주석/가독성 정리 (역할/흐름 분리)
-============================================================================ -->
+# File      : src/ui/components/hr/DialogContractStudio.vue
+# Version   : 2025-11-10 · v2.0 (SSOT Final · Full Commented Edition)
+# Purpose   : Hotel Admin — 계약서 작성/확정 다이얼로그
+# ----------------------------------------------------------------------------
+# 목적:
+#   • 계약서 템플릿(iframe)에 직원 정보 자동 주입
+#   • 인쇄 후 자동으로 계약 확정(activate)
+#   • afterprint + fallback(3초) 으로 확정 안정성 확보
+# ----------------------------------------------------------------------------
+# 설계 원칙:
+#   ✅ iframe postMessage 기반 데이터 주입 (3회 브로드캐스트)
+#   ✅ append-only 구조 / activate 로직 서버 단위 확정
+#   ✅ saving 플래그로 중복 클릭 방지
+#   ✅ 주민등록번호 → 생년월일 변환 (mask 기반)
+# ----------------------------------------------------------------------------
+# 연계:
+#   • EmployeesApi.getEmployee()   → 직원 기본정보 로드
+#   • ContractsApi.activate()      → 계약 확정 처리
+#   • HTML Template: /contracts/ocean-contract-v1.5.html
+# ============================================================================ -->
 <template>
   <v-dialog
     :model-value="open"
@@ -18,14 +27,14 @@
     @update:model-value="v => emit('update:open', v)"
   >
     <v-card class="rounded-2xl">
-      <!-- ───────────── 헤더 ───────────── -->
+      <!-- ▣ 헤더 -->
       <v-card-title class="d-flex align-center justify-space-between py-3">
         <div class="d-flex align-center gap-2">
           <v-icon icon="mdi-file-document-edit-outline" class="mr-1" />
           <div>
             <div class="text-subtitle-1 font-weight-bold">근로계약 작성</div>
             <div class="text-caption text-grey-darken-1">
-              인쇄용 템플릿 v1.5 (아이프레임) · <b>월급형 전용</b>
+              인쇄용 템플릿 v1.5 (iframe) · <b>월급형 전용</b>
             </div>
           </div>
         </div>
@@ -33,7 +42,7 @@
 
       <v-divider />
 
-      <!-- ───────────── 직원 요약 정보 ───────────── -->
+      <!-- ▣ 직원 요약 정보 -->
       <v-card-text class="px-5 py-3">
         <v-row dense align="center">
           <v-col cols="12" md="9">
@@ -58,7 +67,7 @@
 
       <v-divider />
 
-      <!-- ───────────── 본문(아이프레임) ───────────── -->
+      <!-- ▣ 본문 (계약서 iframe) -->
       <v-card-text class="p-0">
         <div class="iframe-wrap">
           <iframe
@@ -73,7 +82,7 @@
 
       <v-divider />
 
-      <!-- ───────────── 푸터(닫기/인쇄) ───────────── -->
+      <!-- ▣ 푸터 (닫기 / 인쇄·확정 버튼) -->
       <v-card-actions class="px-5 py-3 justify-end">
         <v-btn variant="text" @click="emit('update:open', false)">닫기</v-btn>
         <v-btn
@@ -92,17 +101,16 @@
 </template>
 
 <script setup lang="ts">
-/* ===========================================================================
-   로직 개요
-   ---------------------------------------------------------------------------
-   • props.open      : 다이얼로그 표시 제어
-   • props.contract  : 현재 작업 중인 계약(시작/종료/급여/메타 포함)
-   • 직원 컨텍스트   : employees API로 로드하여 iframe 템플릿에 주입
-   • maybeFill()     : iframe 준비 + 컨텍스트 준비 완료 시 3회 브로드캐스트
-   • onPrintAndActivate() :
-       - window.print() → afterprint 이벤트 수신 시 activate 호출
-       - 3초 후에도 afterprint 미도착 시 fallback으로 activate
-=========================================================================== */
+/* ============================================================================
+# Script Summary — 계약서 작성 & 확정 로직
+# ----------------------------------------------------------------------------
+# 구성:
+#   • props.open      : 다이얼로그 표시 여부
+#   • props.contract  : 계약 데이터 (id, emp_id, 기간 등)
+#   • Employees API   : 직원 기본정보 로드
+#   • iframe postMessage : 템플릿 데이터 주입
+#   • afterprint 이벤트 : 인쇄 완료 후 activate() 실행
+# ============================================================================ */
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useToast } from '@/ui/composables/useToast'
 import * as EmployeesApi from '@/services/employees'
@@ -128,7 +136,7 @@ const emit = defineEmits<{
 
 const { success, error } = useToast()
 
-/* ───────── 상태: 직원 컨텍스트/기간/플래그 ───────── */
+/* ───────── 상태 정의 ───────── */
 const employeeId = ref<number | null>(null)
 const empContext = ref({
   name: '',
@@ -142,12 +150,11 @@ const empContext = ref({
   salary: null as number | null,
 })
 const period = ref<{ start: string; end: string | null }>({ start: '', end: null })
+const iframeReady = ref(false)
+const contextReady = ref(false)
+const saving = ref(false)
 
-const iframeReady = ref(false)   // iframe 로드 여부
-const contextReady = ref(false)  // 직원 컨텍스트 로드 여부
-const saving = ref(false)        // 인쇄/확정 중 중복 방지
-
-/* ───────── 유틸: 주민등록번호 → 생년월일 ───────── */
+/* ───────── 유틸: 주민등록번호 → 생년월일 변환 ───────── */
 function rrnToBirth(rrn?: string): string {
   if (!rrn) return ''
   const clean = rrn.replace(/[^0-9]/g, '')
@@ -160,8 +167,9 @@ function rrnToBirth(rrn?: string): string {
 }
 
 /* ───────── iframe 데이터 브로드캐스트 ─────────
-   - 템플릿 측에서 수신: fill / fillForm / set
-   - N회(3회) 반복 전송으로 초기 로딩 타이밍 오차 보정
+   템플릿 측 수신 이벤트:
+     - fill / fillForm / set
+   초기화 타이밍 불일치 방지를 위해 3회(100·300·700ms) 전송
 ────────────────────────────────────────────── */
 const iframeRef = ref<HTMLIFrameElement | null>(null)
 function broadcastFill(p: any) {
@@ -173,7 +181,6 @@ function broadcastFill(p: any) {
     win.postMessage({ type: 'set', name, value }, '*')
   }
 }
-
 function maybeFill() {
   if (!iframeReady.value || !contextReady.value) return
   const p = {
@@ -189,14 +196,12 @@ function maybeFill() {
     start_date: period.value.start,
     end_date: period.value.end,
   }
-  // ✅ TS2695 회피: 배열 forEach 대신 for-of 루프로 setTimeout 호출
-  const delays = [100, 300, 700]
-  for (const delay of delays) {
+  for (const delay of [100, 300, 700]) {
     setTimeout(() => broadcastFill(p), delay)
   }
 }
 
-/* ───────── 다이얼로그 오픈 → 직원 정보 로드 ───────── */
+/* ───────── 다이얼로그 오픈 → 직원 데이터 로드 ───────── */
 watch(
   () => props.open,
   async (visible) => {
@@ -235,7 +240,7 @@ watch(
   }
 )
 
-/* ───────── iframe 초기화 ───────── */
+/* ───────── iframe 초기화 및 준비 이벤트 ───────── */
 const iframeUrl = '/contracts/ocean-contract-v1.5.html'
 function onIframeLoad() {
   iframeReady.value = true
@@ -246,7 +251,7 @@ function onIframeLoad() {
   maybeFill()
 }
 
-/* ───────── 메시지 수신(템플릿 ready 등) ───────── */
+/* ───────── postMessage 수신 처리 ───────── */
 function onMessage(ev: MessageEvent) {
   const msg = ev.data
   if (!msg || typeof msg !== 'object') return
@@ -256,10 +261,10 @@ function onMessage(ev: MessageEvent) {
   }
 }
 
-/* ───────── 인쇄 + 계약 확정(activate) ─────────
-   - window.print()
-   - afterprint 이벤트 → activate 호출
-   - 3초 내 afterprint 미수신 시 fallback으로 activate 보장
+/* ───────── 인쇄 & 계약 확정 로직 ─────────
+   1) window.print() 호출
+   2) afterprint 이벤트 → ContractsApi.activate()
+   3) 3초 fallback 으로 안정적 확정 보장
 ────────────────────────────────────────────── */
 async function onPrintAndActivate() {
   if (saving.value || !props.contract?.id) return
@@ -268,7 +273,6 @@ async function onPrintAndActivate() {
   win?.print()
 
   saving.value = true
-
   const handler = async () => {
     window.removeEventListener('afterprint', handler)
     try {
@@ -284,7 +288,7 @@ async function onPrintAndActivate() {
   }
 
   window.addEventListener('afterprint', handler)
-  setTimeout(() => { if (saving.value) handler() }, 3000) // fallback
+  setTimeout(() => { if (saving.value) handler() }, 3000)
 }
 
 /* ───────── 이벤트 등록/해제 ───────── */
@@ -293,7 +297,13 @@ onBeforeUnmount(() => window.removeEventListener('message', onMessage))
 </script>
 
 <style scoped>
-/* 레이아웃/톤: iframe 영역은 밝은 배경, 상단 라운드 유지 */
+/* ============================================================================
+# Style — 계약서 작성 뷰
+# ----------------------------------------------------------------------------
+# - iframe 영역은 밝은 배경과 상단 라운드 유지
+# - 화면 높이 가변 대응 (scrollable dialog)
+# ============================================================================
+*/
 .iframe-wrap { height: calc(100vh - 280px); background: #f8fafc; }
 .contract-iframe {
   width: 100%;
