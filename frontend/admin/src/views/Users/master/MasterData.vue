@@ -1,17 +1,19 @@
 <!-- ============================================================================
 # File      : src/views/Users/master/MasterData.vue
-# Version   : 2025.11-05 · v4.1 (SSOT Final · Property API Fix)
+# Version   : 2025.11-09 · v4.3 (SSOT Phase 4 Final · RoomType/HKUnitRule Added)
 # Purpose   : Hotel Admin — 기준/정제 정보 '카테고리 탭' 통합 관리 화면
 # ----------------------------------------------------------------------------
-# ✅ 이번 패치 요약 (v4.1)
-#   • Property(지점코드) API → /api/master/properties 로 교체 (SSOT 규약)
-#   • /api/properties 는 운영 조회 전용으로 분리 유지
-#   • MasterTable 공통 구조 및 탭 구성을 그대로 유지
+# ✅ 이번 패치 요약 (v4.3)
+#   • 객실 타입(Room Type) 마스터 추가 → /api/master/room-types
+#   • 하우스키핑 단위규칙(Unit Rule) 마스터 추가 → /api/master/hk-unit-rules
+#   • 모든 MasterTable 구조는 SSOT 기준으로 유지
+#   • 기존 OTA/하우스키핑 상태 탭과 병행 관리
 # ----------------------------------------------------------------------------
-# 카테고리/탭 구성:
+# 카테고리/탭 구성 (Phase 4 Final):
 #   1) 조직·인사  : 부서 / 직책 / 직위 / 직급 / 급여등급 / 사번정책(전용 폼)
 #   2) 재무·지점  : 지점코드(Property) / 은행코드(Bank)
-#   3) 운영기준정보: 하우스키핑 상태 / OTA 기준채널(SSOT) / OTA 운영채널 / OTA 수수료
+#   3) 운영기준정보: 객실타입(RoomType) / HK 단위규칙(UnitRule)
+#                   / 하우스키핑 상태 / OTA 기준채널 / OTA 운영채널 / OTA 수수료
 #   4) 콘텐츠관리 : 키워드 관리
 # ----------------------------------------------------------------------------
 # 트러블슈팅 팁:
@@ -20,6 +22,7 @@
 #   [TIP-2] Property는 /api/master/properties (관리자용 SSOT)
 #   [TIP-3] OTA 기준채널: /api/master/ota-channels (SSOT)
 #   [TIP-4] OTA 운영/수수료: /api/ota/channels, /api/ota/commissions
+#   [TIP-5] 객실타입과 하우스키핑 단위규칙은 Phase4 기준정보 추가 항목
 # ============================================================================ -->
 <template>
   <v-container class="page-shell py-6">
@@ -135,6 +138,12 @@
 </template>
 
 <script setup lang="ts">
+/* ============================================================================
+# Script 구성 요약:
+#  - 상단 탭/카테고리 구조 관리 (category, orgTab, financeTab, opTab, contentTab)
+#  - MasterTable 공통 컴포넌트로 각 기준정보 CRUD 표시
+#  - EmpNoPolicyForm 은 별도 폼 컴포넌트로 유지
+# ============================================================================ */
 import { ref } from 'vue'
 import MasterTable from '@/ui/components/users/master/MasterTable.vue'
 import EmpNoPolicyForm from '@/views/Users/master/EmpNoPolicyForm.vue'
@@ -168,20 +177,31 @@ const financeTabs = [
 ]
 
 /* ▣ 3) 운영 기준정보 */
-const opTab = ref('hk')
+const opTab = ref('room_type')
 const opTabs = [
-  { key: 'hk',          title: '하우스키핑 상태', kind: 'masterTable', apiBase: '/api/master/hk-status',    icon: 'mdi-broom', color: 'orange' },
-  { key: 'ota_master',  title: 'OTA 기준채널',    kind: 'masterTable', apiBase: '/api/master/ota-channels', icon: 'mdi-earth', color: 'deep-purple' },
-  { key: 'ota_active',  title: 'OTA 운영채널',    kind: 'otaActive',   icon: 'mdi-earth-box', color: 'purple' },
-  { key: 'ota_fee',     title: 'OTA 수수료',      kind: 'otaFee',      icon: 'mdi-cash-percent', color: 'purple-darken-2' },
+  // ✅ 새 기준정보 추가 (객실 타입)
+  { key: 'room_type', title: '객실 타입', kind: 'masterTable', apiBase: '/api/master/room-types', icon: 'mdi-bed-outline', color: 'teal' },
+  // ✅ 새 기준정보 추가 (하우스키핑 단위규칙)
+  { key: 'hk_unit_rule', title: '하우스키핑 단위규칙', kind: 'masterTable', apiBase: '/api/master/hk-unit-rules', icon: 'mdi-broom', color: 'amber-darken-1' },
+  // 기존 운영기준정보 유지
+  { key: 'hk',          title: '하우스키핑 상태', kind: 'masterTable', apiBase: '/api/master/hk-status', icon: 'mdi-broom', color: 'orange' },
+  { key: 'ota_master',  title: 'OTA 기준채널',    kind: 'masterTable', apiBase: '/api/ota/channels', icon: 'mdi-earth', color: 'deep-purple' },
+  { key: 'ota_active',  title: 'OTA 운영채널',    kind: 'otaActive', icon: 'mdi-earth-box', color: 'purple' },
+  { key: 'ota_fee',     title: 'OTA 수수료',      kind: 'otaFee', icon: 'mdi-cash-percent', color: 'purple-darken-2' },
 ]
 
 /* ▣ 4) 콘텐츠 관리 */
 const contentTab = ref('keywords')
-const contentTabs = [{ key: 'keywords', title: '키워드 관리' }]
+const contentTabs = [
+  { key: 'keywords', title: '키워드 관리' },
+]
 </script>
 
 <style scoped>
+/* ============================================================================
+# 스타일: 상단바 및 페이지 기본 정렬
+# ============================================================================
+*/
 .bar { align-items: center; }
 .page-shell { max-width: 1280px; margin: 0 auto; }
 </style>

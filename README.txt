@@ -10,6 +10,8 @@ source ../venv39_py39/bin/activate
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8001 --log-level debug
 
 # FE (Vite 5173)
+cd /volume1/web/hotel-system/backend
+source ../venv39_py39/bin/activate
 cd /volume1/web/hotel-system/frontend/admin
 npm run dev:all
 

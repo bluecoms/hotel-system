@@ -1,28 +1,28 @@
 # -*- coding: utf-8 -*-
-# ============================================================================
+# =============================================================================
 # File      : app/schemas/__init__.py
-# Version   : 2025-10-31 · v4.2 (SSOT Phase 3.5 Final · +Housekeeping Added)
+# Version   : 2025-11-09 · v4.3 (SSOT Phase 4 Final · RoomType/HkUnitRule Added)
 # Purpose   : Hotel Admin — Pydantic Schemas Auto Import (Unified SSOT Loader)
-# ----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # 목적:
-#   • schemas/*.py 내 BaseModel 상속 클래스를 자동 탐색 및 전역 등록
+#   • app/schemas/*.py 내 BaseModel 상속 클래스를 자동 탐색 및 전역 등록
 #   • 주요 도메인(auth, employees, contracts, ota, reports 등) 우선 로드
-#   • Master 기준정보 10개 도메인 + 하우스키핑 업무 스키마 통합
-# ----------------------------------------------------------------------------
-# 핵심 개선 (v4.2):
+#   • Master 기준정보 12개 도메인 + 하우스키핑 업무 스키마 통합
+# -----------------------------------------------------------------------------
+# 핵심 개선 (v4.3):
 #   ✅ DeptAccess 기반 Role/Dept 통합 유지
-#   ✅ Master/Operation 계열 완전 자동화
-#   ✅ HousekeepingTask 스키마 추가 (업무·유닛·상태관리)
-# ----------------------------------------------------------------------------
+#   ✅ MasterRoomType / MasterHkUnitRule 스키마 추가
+#   ✅ HousekeepingTask 스키마 포함 (업무·유닛·상태관리)
+# -----------------------------------------------------------------------------
 # 운영 방침:
 #   • OTA 수수료(commission)는 운영 데이터로 분리 (/api/ota/commissions)
 #   • HousekeepingTask 는 closing/rooms_status 와 병행 관리됨
 #   • 모든 BaseModel 스키마는 자동 탐색되어 FastAPI에서 전역 import 가능
-# ----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # 변경 로그:
-#   v4.1 (2025-10-31) ✅ DeptAccess 통합 및 RoleAccess 제거
 #   v4.2 (2025-10-31) ✅ HousekeepingTask 스키마 추가
-# ============================================================================
+#   v4.3 (2025-11-09) ✅ RoomType/HkUnitRule 기준정보 추가
+# =============================================================================
 
 import pkgutil
 import sys
@@ -114,6 +114,19 @@ _MODULES: Dict[str, List[str]] = {
     "master_ota_channel": [
         "MasterOtaChannelIn",
         "MasterOtaChannelOut",
+    ],
+    # ✅ 추가된 기준정보
+    "master_room_type": [
+        "RoomTypeBase",
+        "RoomTypeCreate",
+        "RoomTypeUpdate",
+        "RoomTypeOut",
+    ],
+    "master_hk_unit_rule": [
+        "HkUnitRuleBase",
+        "HkUnitRuleCreate",
+        "HkUnitRuleUpdate",
+        "HkUnitRuleOut",
     ],
 
     # ✅ HR / 계약
@@ -237,6 +250,8 @@ __all__ = sorted(set(__all__))
 # ============================================================================
 # 참고:
 #   • DeptAccess(roles_access)는 RoleAccess/UserRole을 완전히 대체합니다.
-#   • HousekeepingTask 스키마가 포함되어 하우스키핑 업무 연동 완결.
+#   • MasterRoomType, MasterHkUnitRule 스키마가 추가되어
+#     하우스키핑/객실 기준정보 SSOT 완결되었습니다.
+#   • HousekeepingTask 스키마 포함으로 업무 연동 완료.
 #   • Alembic 및 FastAPI 실행 시 자동 탐색 로그 출력은 정상입니다.
 # ============================================================================

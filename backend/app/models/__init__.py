@@ -1,27 +1,26 @@
 # -*- coding: utf-8 -*-
-# ============================================================================
+# =============================================================================
 # File      : app/models/__init__.py
-# Version   : 2025.10-31 · v4.2 (SSOT Phase 3.5 Final · Role/Access Unified)
+# Version   : 2025.11-09 · v4.3 (SSOT Phase 4 Final · HK/RoomType Unified)
 # Purpose   : Hotel Admin — SQLAlchemy Models Export (Unified ORM Loader)
-# ----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # 목적:
 #   • app/models/* 내 모든 ORM 클래스를 안전하게 통합 export
 #   • Base → ORM import 순서 보장, Alembic 호환
 #   • 중복 import / 중복 Table 등록 원천 차단
-# ----------------------------------------------------------------------------
-# 핵심 개선 (v4.2):
-#   ✅ UserRole / RoleAccess 완전 제거
-#   ✅ DeptAccess(roles_access.py) 로 통합
-#   ✅ Base.metadata.registered_tables() 중복 등록 방지 강화
+# -----------------------------------------------------------------------------
+# 핵심 개선 (v4.3):
+#   ✅ RoleAccess 완전 제거 → DeptAccess(roles_access.py) 로 통합
 #   ✅ properties 테이블 extend_existing=True 자동 처리
-#   ✅ Alembic / FastAPI 부팅 시 경고 억제
-# ----------------------------------------------------------------------------
+#   ✅ 하우스키핑(HousekeepingTask) 모델 포함
+#   ✅ 객실 타입/유닛 마스터 추가 (master_room_type, master_hk_unit_rule)
+# -----------------------------------------------------------------------------
 # 주의:
-#   • Master 계열 10종 통합 유지 (Departments / Ranks / Titles / Positions 등)
+#   • Master 계열 12종 통합 유지 (Departments / Ranks / Titles / Positions 등)
 #   • Base.metadata 는 app/db/base_class.py 단일 소스만 사용.
-#   • Role/Access 는 Role + DeptAccess(roles_access) 조합만 유지.
-#   • HousekeepingTask(하우스키핑) 모델 추가됨.
-# ============================================================================
+#   • Role/Access 는 Role + DeptAccess 조합만 유지.
+#   • HousekeepingTask(하우스키핑 업무) 및 HK 유닛마스터 추가됨.
+# =============================================================================
 
 from importlib import import_module
 from typing import Dict, List
@@ -41,11 +40,15 @@ _registered_tables = set(Base.metadata.tables.keys())
 
 # ──────────────────────────────────────────────
 # 1️⃣ 명시 등록 (우선 로드 대상)
+# -----------------------------------------------------------------------------
+# - app/models/ 내 주요 ORM을 명시적으로 먼저 로드
+# - Alembic과 FastAPI 부팅 시 import 순서 보장
+# - Master 계열, Role/Access, Housekeeping 등 주요 도메인 지정
 # ──────────────────────────────────────────────
 _MODULES: Dict[str, List[str]] = {
     # 사용자 / 권한
-    "role": ["Role"],
-    "roles_access": ["DeptAccess"],
+    "role": ["Role"],                   # 사용자 역할
+    "roles_access": ["DeptAccess"],     # 부서별 접근 권한 (RoleAccess 대체)
 
     # 인사 / 조직 / 계약
     "employee": ["Employee", "UserEmployeeMap"],
@@ -60,10 +63,12 @@ _MODULES: Dict[str, List[str]] = {
     "master_empno_policy": ["MasterEmpNoPolicy"],
     "master_salary_grade": ["MasterSalaryGrade"],
     "master_property": ["MasterProperty"],
-    "property": ["Property"],             # ✅ 여기 추가
+    "property": ["Property"],                    # ✅ 운영용 Property 모델
     "master_bank": ["MasterBank"],
     "master_hk_status": ["MasterHkStatus"],
     "master_ota_channel": ["MasterOtaChannel"],
+    "master_room_type": ["MasterRoomType"],      # ✅ 객실 타입 마스터 추가
+    "master_hk_unit_rule": ["MasterHkUnitRule"], # ✅ 하우스키핑 유닛 규칙 마스터 추가
 
     # OTA / Keyword
     "keyword": ["Keyword"],
@@ -72,7 +77,7 @@ _MODULES: Dict[str, List[str]] = {
     # 영업마감 / 업로드
     "closing": ["ClosingDay", "UploadSession", "UploadedFile"],
 
-    # 병합엔진
+    # 병합엔진 (SSOT Merge Engine)
     "merge": ["MergeBatch", "MergeChangeLog"],
 
     # 회계 / 은행
@@ -82,12 +87,15 @@ _MODULES: Dict[str, List[str]] = {
     "audit": ["AuditLog"],
     "board": ["BoardPost", "BoardFile", "BoardComment"],
 
-    # ✅ 하우스키핑 (신규)
+    # ✅ 하우스키핑 (업무 도메인)
     "housekeeping_task": ["HousekeepingTask"],
 }
 
 # ──────────────────────────────────────────────
 # 2️⃣ 안전 import 유틸
+# -----------------------------------------------------------------------------
+# - 지정된 모듈과 클래스(ORM)를 안전하게 import
+# - 중복 테이블 등록을 방지하며 extend_existing 적용
 # ──────────────────────────────────────────────
 def _import_symbols(module_name: str, symbols: List[str]) -> None:
     """모듈 내 지정된 ORM 클래스를 안전하게 import"""
@@ -128,12 +136,19 @@ def _import_symbols(module_name: str, symbols: List[str]) -> None:
 
 # ──────────────────────────────────────────────
 # 3️⃣ 명시 등록된 ORM 우선 로드
+# -----------------------------------------------------------------------------
+# - 위에서 정의한 _MODULES 목록 순서대로 import 수행
+# - 로드 성공 시 "[models:init] loaded: ..." 로그 출력
 # ──────────────────────────────────────────────
 for _mod, _symbols in _MODULES.items():
     _import_symbols(_mod, _symbols)
 
 # ──────────────────────────────────────────────
 # 4️⃣ 나머지 자동 탐색 (Base, mixins 제외)
+# -----------------------------------------------------------------------------
+# - app/models/ 내의 나머지 파일 자동 검색
+# - _MODULES 에 명시되지 않은 파일만 추가 로드
+# - 중복 테이블 방지
 # ──────────────────────────────────────────────
 _specified = set(_MODULES.keys())
 
@@ -165,15 +180,19 @@ for _, name, ispkg in pkgutil.iter_modules(__path__):  # type: ignore[name-defin
             print(f"[models:auto] loaded: {name}.{k}")
 
 # ──────────────────────────────────────────────
-# 5️⃣ 정리
-# ──────────────────────────────────────────────
+# 5️⃣ 정리 및 export 목록 구성
+# -----------------------------------------------------------------------------
+# - __all__ 정렬 및 중복 제거
+# - Base.metadata 와 Alembic 호환 유지
+# -----------------------------------------------------------------------------
 __all__ = sorted(set(__all__))
 
-# ----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # 참고:
-#   • UserRole / RoleAccess 는 완전히 폐기되었으며 DeptAccess 로 통합.
-#   • HousekeepingTask (하우스키핑 업무) 모델이 추가되어 ORM 완결.
-#   • properties 테이블 중복 경고는 v4.1 이후 완전 억제.
-#   • Base.metadata 는 app/db/base_class.py 단일 소스만 사용.
-#   • extend_existing=True 처리는 runtime conflict 없이 적용.
-# ============================================================================
+#   • RoleAccess 는 DeptAccess 로 완전히 통합됨.
+#   • HousekeepingTask, MasterRoomType, MasterHkUnitRule 가 추가되어
+#     호텔 기준정보(객실 타입/유닛 계산 규칙)까지 완결.
+#   • Base.metadata 는 app/db/base_class.py 단일 소스를 사용.
+#   • extend_existing=True 로 중복 테이블 경고 없이 안정 로드.
+#   • SSOT Phase 4 Final 버전 (2025-11-09)
+# =============================================================================

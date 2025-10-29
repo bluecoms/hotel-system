@@ -1,18 +1,17 @@
 // ============================================================================
 // File      : src/services/master.ts
-// Version   : 2.4 Final (2025-11-05 · SSOT Full · Property CRUD 포함)
+// Version   : 2.5 Final (2025-11-09 · SSOT Phase 4 Final · RoomType/HKUnitRule Added)
 // Purpose   : Hotel Admin — Master Data Service (HR/운영/기준정보 통합)
 // ----------------------------------------------------------------------------
 // 목적:
 //   • HR/운영/기준정보 API 통합 관리 (httpEx 기반).
-//   • 부서/직책/직급/급여등급/은행 + 지점(Property)까지 일원화.
+//   • 부서/직책/직급/급여등급/은행 + 지점(Property) + 객실타입/단위규칙 일원화.
 //   • DialogEmployeeForm / HR 모듈 / Reports / Master 관리화면 등과 완전 호환.
 // ----------------------------------------------------------------------------
-// 주요 개선 (v2.4):
-//   ✅ 지점(Property) CRUD 추가 (/api/master/properties)
-//   ✅ /options 405 대응 fallback 구조 유지
-//   ✅ 전체 섹션 SSOT 규약으로 통일
-//   ✅ Null-safe 매핑 + timeout/retry 동일 정책
+// 주요 개선 (v2.5):
+//   ✅ 객실 타입(RoomType) 기준정보 추가 (/api/master/room-types)
+//   ✅ 하우스키핑 단위규칙(UnitRule) 기준정보 추가 (/api/master/hk-unit-rules)
+//   ✅ Property/Bank/HR Master 구조와 동일한 httpEx 패턴 유지
 // ----------------------------------------------------------------------------
 // 기술 사양:
 //   • httpEx 기반 (Abort / Retry / Timeout 지원)
@@ -33,16 +32,15 @@ export type CodeNameItem = {
   order_no?: number | null
   is_active?: boolean | number | null
   annual_salary?: number | null
+  unit_value?: number | null
+  description?: string | null
 }
 
 const OPT = { timeoutMs: 15000, retry: { retries: 2 } }
 
 // ============================================================================
-// 0️⃣ Properties (지점 기준정보 · SSOT 구조)
+// 0) Properties (지점 기준정보 · SSOT 구조)
 // ----------------------------------------------------------------------------
-//   • 관리자용 CRUD  : /api/master/properties
-//   • 운영용 조회전용: /api/properties
-// ============================================================================
 export async function listMasterProperties(): Promise<CodeNameItem[]> {
   try {
     const res = await httpEx.getJSON<any>('master/properties', OPT)
@@ -93,7 +91,7 @@ export async function deleteMasterProperty(code: string) {
 }
 
 // ============================================================================
-// 1️⃣ Departments (부서)
+// 1) Departments (부서)
 // ----------------------------------------------------------------------------
 export async function listDepartments(): Promise<CodeNameItem[]> {
   try {
@@ -113,7 +111,7 @@ export async function listDepartments(): Promise<CodeNameItem[]> {
 }
 
 // ============================================================================
-// 2️⃣ Titles (직책)
+// 2) Titles (직책)
 // ----------------------------------------------------------------------------
 export async function listTitles(): Promise<CodeNameItem[]> {
   try {
@@ -133,7 +131,7 @@ export async function listTitles(): Promise<CodeNameItem[]> {
 }
 
 // ============================================================================
-// 3️⃣ Salary Grades (급여등급)
+// 3) Salary Grades (급여등급)
 // ----------------------------------------------------------------------------
 export async function listSalaryGrades(): Promise<CodeNameItem[]> {
   try {
@@ -154,14 +152,14 @@ export async function listSalaryGrades(): Promise<CodeNameItem[]> {
 }
 
 // ============================================================================
-// 4️⃣ (하위호환) Ranks (직급)
+// 4) (하위호환) Ranks (직급)
 // ----------------------------------------------------------------------------
 export async function listRanks(): Promise<CodeNameItem[]> {
   return await listSalaryGrades()
 }
 
 // ============================================================================
-// 5️⃣ Banks (은행코드)
+// 5) Banks (은행코드)
 // ----------------------------------------------------------------------------
 export async function listBanks(): Promise<CodeNameItem[]> {
   try {
@@ -182,7 +180,7 @@ export async function listBanks(): Promise<CodeNameItem[]> {
 }
 
 // ============================================================================
-// 6️⃣ 사번 정책 / EmpNoPolicy
+// 6) 사번 정책 / EmpNoPolicy
 // ----------------------------------------------------------------------------
 export async function getNextEmpNo() {
   return await httpEx.getJSON<{ ok: boolean; next_emp_no: string }>(
@@ -192,7 +190,7 @@ export async function getNextEmpNo() {
 }
 
 // ============================================================================
-// 7️⃣ ✅ 옵션형 조회 (v-select용)
+// 7) 옵션형 조회 (v-select용)
 // ----------------------------------------------------------------------------
 async function safeGetJSON(url: string, fallback: () => Promise<any>) {
   try {
@@ -228,7 +226,7 @@ export async function bankOptions() {
 }
 
 // ============================================================================
-// 8️⃣ ✅ HR 통합 로드 (DialogEmployeeForm / HR 페이지 공통)
+// 8) HR 통합 로드 (DialogEmployeeForm / HR 페이지 공통)
 // ----------------------------------------------------------------------------
 export async function loadHrMasterOptions() {
   try {
@@ -253,5 +251,46 @@ export async function loadHrMasterOptions() {
 }
 
 // ============================================================================
-// ✅ EOF — src/services/master.ts (v2.4 Final · SSOT 완정합판)
+// ️⃣9) 객실 타입 (RoomType · /api/master/room-types)
+// ----------------------------------------------------------------------------
+export async function listRoomTypes(): Promise<CodeNameItem[]> {
+  try {
+    const res = await httpEx.getJSON<any>('master/room-types', OPT)
+    const arr = Array.isArray(res?.items) ? res.items : Array.isArray(res) ? res : []
+    return arr.map((r: any) => ({
+      id: r.id ?? null,
+      code: r.code ?? '',
+      name: r.name ?? '',
+      unit_value: r.unit_value ?? 1.0,
+      description: r.description ?? '',
+      is_active: r.is_active ?? 1,
+    }))
+  } catch (err) {
+    console.warn('[listRoomTypes] failed:', err)
+    return []
+  }
+}
+
+// ============================================================================
+// 10) 하우스키핑 단위규칙 (HK Unit Rule · /api/master/hk-unit-rules)
+// ----------------------------------------------------------------------------
+export async function listHkUnitRules(): Promise<CodeNameItem[]> {
+  try {
+    const res = await httpEx.getJSON<any>('master/hk-unit-rules', OPT)
+    const arr = Array.isArray(res?.items) ? res.items : Array.isArray(res) ? res : []
+    return arr.map((r: any) => ({
+      id: r.id ?? null,
+      code: r.condition_code ?? '',
+      name: r.description ?? '',
+      unit_value: r.unit_value ?? 1.0,
+      is_active: r.is_active ?? 1,
+    }))
+  } catch (err) {
+    console.warn('[listHkUnitRules] failed:', err)
+    return []
+  }
+}
+
+// ============================================================================
+// ✅ EOF — src/services/master.ts (v2.5 Final · SSOT Phase 4 완전판)
 // ============================================================================
