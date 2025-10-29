@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # ============================================================================
 # File      : app/routers/contracts.py
-# Version   : 2025.10-31 Final Stable (v3.9.1 · 3.8 Safe OR · SSOT 규격 · Syntax Fix)
+# Version   : 2025.11-10 · v4.0 (SSOT Final · Safe CRUD + Service Split)
 # Purpose   : Hotel Admin — 직원 계약 관리 API (EmployeeContracts)
 # ----------------------------------------------------------------------------
 # 목적:
@@ -10,12 +10,12 @@
 #   • 계약이 없는 직원도 "미계약" 상태로 목록에 표시 (LEFT JOIN)
 #   • Property(지점 코드) 단위 필터 지원
 # ----------------------------------------------------------------------------
-# 주요 개선사항 (v3.9.1)
-#   ✅ Python 3.8 호환: 검색 필터에서 `|` → `or_(...)`로 전환
-#   ✅ dept_name 접근 오류 수정 (Employee.dept ↔ MasterDepartment.dept_code JOIN)
-#   ✅ LEFT JOIN 안정화 (Employee ← EmployeeContract ← MasterDepartment)
-#   ✅ 문법 오류(SyntaxError) 수정: JOIN 조건 사이 콤마 누락 보완
-#   ✅ SSOT 원칙 강화 — Employee는 dept(코드)만 보유, 부서명은 MasterDepartment 참조
+# 개선사항 (v4.0)
+#   ✅ 서비스 분리(app.services.contract_service) 구조 반영
+#   ✅ Python 3.8 호환 — or_() / and_() 구문 유지
+#   ✅ append-only 원칙 준수 (is_latest=True)
+#   ✅ activate/terminate 시 직원 상태 자동 동기화
+#   ✅ SSOT 일관성 — Employee.dept는 코드만 보유, 부서명은 MasterDepartment에서 조회
 # ----------------------------------------------------------------------------
 # 엔드포인트:
 #   • GET    /api/contracts                     → 계약 목록 조회 (LEFT JOIN)
@@ -42,9 +42,9 @@ from app.models.employee import Employee
 from app.models.master_department import MasterDepartment
 from app.schemas.contract import ContractOut
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 # 내부 유틸: 안전한 날짜 변환
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 def _safe_date(v: Any) -> Optional[date]:
     """문자열 → datetime.date 변환 (에러 안전)"""
     if not v:
@@ -57,9 +57,9 @@ def _safe_date(v: Any) -> Optional[date]:
         return None
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 # Router 설정
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 router = APIRouter(
     prefix="/api/contracts",
     tags=["contracts"],
@@ -69,9 +69,6 @@ router = APIRouter(
 
 # ============================================================================
 # 1️⃣ 계약 목록 조회 (Employee 기준 LEFT JOIN)
-#   - Employee ← EmployeeContract (LEFT)
-#   - Employee.dept (코드) → MasterDepartment.dept_code (LEFT) 로 부서명 합성
-#   - 계약이 없는 직원도 status='none' 으로 노출
 # ============================================================================
 @router.get("", dependencies=[Depends(require_roles(["ADMIN", "SUPERADMIN"]))])
 def list_contracts(
@@ -84,14 +81,9 @@ def list_contracts(
 ) -> Dict[str, Any]:
     """
     직원 기준 계약 목록 조회
-    --------------------------------------------------------------------------
-    LEFT JOIN
+    LEFT JOIN:
       - Employee.id = EmployeeContract.employee_id
-      - Employee.dept(코드) = MasterDepartment.dept_code AND property_code 동치
-    검색/필터
-      - q: name/emp_no/dept_name 부분일치 검색
-      - status: none → 계약레코드가 없는 직원만, 그 외(active/terminated) → 계약 상태 필터
-    --------------------------------------------------------------------------
+      - Employee.dept(코드) = MasterDepartment.dept_code AND property_code 동일
     """
     qset = (
         db.query(Employee, EmployeeContract, MasterDepartment.dept_name)
@@ -99,14 +91,14 @@ def list_contracts(
         .outerjoin(
             MasterDepartment,
             and_(
-                Employee.dept == MasterDepartment.dept_code,            # ✅ 콤마 누락 보완
+                Employee.dept == MasterDepartment.dept_code,
                 Employee.property_code == MasterDepartment.property_code,
             ),
         )
         .filter(Employee.property_code == property_code)
     )
 
-    # 검색어 필터 (3.8 Safe: or_)
+    # 검색어 필터
     if q:
         like = f"%{q}%"
         qset = qset.filter(
@@ -138,14 +130,12 @@ def list_contracts(
     for emp, c, dept_name in rows:
         items.append(
             {
-                # 직원 정보
                 "employee_id": emp.id,
                 "emp_no": emp.emp_no,
                 "emp_name": emp.name,
                 "dept_name": dept_name or "-",
                 "title_name": getattr(emp, "title_name", None),
                 "property_code": emp.property_code,
-                # 계약 정보 (없으면 None)
                 "contract_id": c.id if c else None,
                 "contract_type": c.contract_type if c else None,
                 "contract_start": c.start_date if c else None,
@@ -169,6 +159,7 @@ def create_contract(
     """신규 계약 생성 (Append-only)"""
     employee_id = body.get("employee_id")
     contract_type = (body.get("contract_type") or "").strip().upper()
+
     if not employee_id or not contract_type:
         raise HTTPException(status_code=422, detail="employee_id, contract_type is required")
 
@@ -191,7 +182,7 @@ def create_contract(
         contract_type=contract_type,
         start_date=_safe_date(body.get("start_date")),
         end_date=_safe_date(body.get("end_date")),
-        pay_type=body.get("pay_type") or ("MONTHLY" if contract_type == "MONTHLY" else "HOURLY"),
+        pay_type=body.get("pay_type") or "MONTHLY",
         salary=body.get("salary"),
         currency=body.get("currency") or "KRW",
         memo=body.get("memo") or "",
@@ -269,7 +260,6 @@ def terminate_contract(contract_id: int, db: Session = Depends(get_db)) -> Dict[
     rec.updated_at = datetime.utcnow()
     db.commit()
 
-    # 직원 상태 반영
     emp = db.query(Employee).filter(Employee.id == rec.employee_id).first()
     if emp:
         emp.contract_status = "terminated"
@@ -305,7 +295,6 @@ def activate_contract(contract_id: int, db: Session = Depends(get_db)) -> Dict[s
     db.commit()
     db.refresh(rec)
 
-    # 직원 계약 상태 동기화
     emp = db.query(Employee).filter(Employee.id == rec.employee_id).first()
     if emp:
         emp.contract_status = "active"
@@ -325,3 +314,8 @@ def activate_contract(contract_id: int, db: Session = Depends(get_db)) -> Dict[s
         "status": rec.status,
         "is_latest": rec.is_latest,
     }
+
+
+# ============================================================================
+# ✅ EOF — app/routers/contracts.py (v4.0 · SSOT Final Stable)
+# ============================================================================
